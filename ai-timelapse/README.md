@@ -2,20 +2,57 @@
 
 Before → after timelapse videos from two construction photos, in two flavours:
 
-| | Local renderer | AI pipeline |
-| --- | --- | --- |
-| Entry point | `render_timelapse.py` | `n8n/*.json` |
-| Needs API keys | No | Yes (6 services) |
-| Cost | Free | Per-render API cost |
-| What it does | Interpolates *your* frames — dissolve/wipe plus a slow push-in | Invents a halfway frame and generates real motion with Veo 3.1 |
-| Output | One MP4, any length | 3 × 8s clips + music, stitched to 24s |
+| | `render_timelapse.py` | `construct_timelapse.py` | `ai_pipeline.py` |
+| --- | --- | --- | --- |
+| Needs API keys | No | No | Yes (Gemini, Fal.ai, Kie.ai) |
+| Needs a GPU | No | No | No (the models run remotely) |
+| Cost | Free | Free | Per-render API cost |
+| What it does | Holds and dissolves between your frames | Stages the build: the structure rises, scaffolding shows, days pass | Invents a halfway frame and generates real motion with Veo 3.1 |
+| Honest description | A slideshow with transitions | A staged reveal built from your two frames | A generated timelapse |
 
-Start with the local renderer to see the shot working, move to the AI pipeline
-when you want workers moving and the structure genuinely rising.
+Start with `construct_timelapse.py`: it needs nothing but the two photos and
+is the best result available without paying for generation. Move to
+`ai_pipeline.py` when you want workers, cranes and traffic that were never in
+either photo.
 
 ---
 
-## 1. Local renderer (works right now)
+## 1. Staged construction timelapse (no keys, no GPU)
+
+```bash
+pip install -r requirements.txt
+
+python3 construct_timelapse.py \
+  --before input/site.jpg --after input/render.jpg \
+  --duration 20 --stages 5 --days 3
+```
+
+A cross-dissolve between a site photo and a finished render is a slideshow:
+nothing new appears between the two frames. This renderer stages the
+transformation instead.
+
+- A construction line sweeps upward; the finished building appears below it
+  while the raw site stays above, so the structure **rises** rather than fades.
+- Above that line sits a band of skeletal detail derived from the finished
+  frame's edges, which reads as formwork and scaffolding.
+- A day/night cycle runs across the video, so elapsed time is visible.
+- The build pauses at discrete stage holds, because real progress is lumpy.
+
+It invents no geometry. What it invents is a plausible **order of assembly**,
+and that is what makes it read as a timelapse.
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--stages` | `5` | Discrete build stages to pause on. |
+| `--days` | `3` | Day/night cycles across the video. |
+| `--daylight` | `0.45` | Strength of that cycle; `0` disables it. |
+| `--skeleton` | `0.22` | Height of the scaffolding band, as a fraction of the frame. |
+| `--settle` | `0.12` | Share of the video held on the finished building. |
+| `--zoom` | `1.10` | Ken Burns push-in. `1.0` disables it. |
+
+---
+
+## 2. Simple dissolve renderer
 
 ```bash
 pip install -r requirements.txt
@@ -65,12 +102,31 @@ python3 render_timelapse.py -f input/sample-before.jpg input/sample-after.jpg
 
 ---
 
-## 2. AI pipeline (n8n)
+## 3. AI pipeline
 
-The `n8n/` directory holds the **AI Construction Timelapse Generator** template
-by [Alex Safari](https://github.com/Alex-safari/AI-Timelapse-Video) — see
-[`n8n/CREDITS.md`](n8n/CREDITS.md). These are n8n workflow graphs, not runnable
-scripts: they have to be imported into an n8n instance.
+`ai_pipeline.py` is a runnable port of the n8n graphs in `n8n/`, which are
+workflow definitions rather than code and need an n8n instance to do anything.
+The original template is by
+[Alex Safari](https://github.com/Alex-safari/AI-Timelapse-Video) — see
+[`n8n/CREDITS.md`](n8n/CREDITS.md).
+
+```bash
+cp .env.example .env      # fill in the three keys
+python3 ai_pipeline.py --before site.jpg --after render.jpg --dry-run
+python3 ai_pipeline.py --before site.jpg --after render.jpg
+```
+
+`--dry-run` prints every prompt and request that would be sent, touches no
+network and costs nothing. Run it first.
+
+The port drops three of the six services the template used: the Airtable job
+queue is unnecessary for a single render, Gemini returns structured JSON so the
+OpenRouter parsing agent is redundant, and stitching is done locally with
+ffmpeg instead of Shotstack. Gemini, Fal.ai and Kie.ai remain.
+
+> The n8n subworkflow submits its image edit to `fal-ai/nano-banana-pro/edit`
+> but polls `fal-ai/nano-banana/requests/...` — mismatched model paths.
+> `ai_pipeline.py` follows the `status_url` the queue returns instead.
 
 ### How it works
 
