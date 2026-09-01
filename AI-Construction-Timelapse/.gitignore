@@ -1,0 +1,21 @@
+# Model weights: tens of gigabytes, never committed.
+models/*
+!models/.gitkeep
+
+# User data and results.
+inputs/*
+!inputs/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+.env
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.venv/
+venv/
+.DS_Store

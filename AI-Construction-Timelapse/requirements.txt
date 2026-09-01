@@ -1,0 +1,25 @@
+# Application dependencies. Python 3.11 or newer.
+#
+# PyTorch is listed without a CUDA index on purpose: install the build that
+# matches your driver first (see README), then install this file. The CPU build
+# is enough to start the UI and run the test suite in MOCK_MODE.
+torch>=2.4.0
+torchvision>=0.19.0
+
+gradio>=5.0.0
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+
+pillow>=10.2
+numpy>=1.23.5
+opencv-python-headless>=4.9.0.80
+scikit-image>=0.22
+
+# Bundled ffmpeg fallback; a system ffmpeg is preferred and takes precedence.
+imageio-ffmpeg>=0.4.9
+
+# Wan2.1 itself is NOT installed from here. It is a separate clone plus an 82 GB
+# checkpoint; see "Wan2.1 model installation" in the README. Its own
+# requirements.txt pulls diffusers, transformers, accelerate, easydict, ftfy and
+# flash_attn.

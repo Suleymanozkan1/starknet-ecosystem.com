@@ -1,0 +1,34 @@
+services:
+  timelapse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-construction-timelapse:latest
+    ports:
+      - "7860:7860"
+    volumes:
+      # Weights live on the host: the image stays small and the 82 GB download
+      # survives a rebuild.
+      - ./models:/app/models
+      - ./inputs:/app/inputs
+      - ./outputs:/app/outputs
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SERVER_NAME: 0.0.0.0
+      WAN_MODEL_PATH: /app/models/Wan2.1-FLF2V-14B-720P
+      WAN_REPO_PATH: /opt/Wan2.1
+    # Requires the NVIDIA Container Toolkit on the host.
+    # For a CPU-only MOCK_MODE run, comment out this whole `deploy` block
+    # and set MOCK_MODE=true in .env.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Wan2.1 uses shared memory heavily during sampling.
+    shm_size: "8gb"
+    restart: unless-stopped
