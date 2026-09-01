@@ -1,0 +1,5 @@
+# Local renderer (render_timelapse.py) - no API keys needed.
+pillow>=10.0
+numpy>=1.24
+imageio>=2.31
+imageio-ffmpeg>=0.4.9

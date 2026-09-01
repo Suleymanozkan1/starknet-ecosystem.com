@@ -1,0 +1,13 @@
+# Rendered videos - regenerate them, do not commit them.
+output/*.mp4
+output/*.mov
+output/*.gif
+
+# Your own source photos (the sample-* files are tracked on purpose).
+input/*
+!input/sample-*.jpg
+!input/.gitkeep
+
+.env
+__pycache__/
+*.pyc
