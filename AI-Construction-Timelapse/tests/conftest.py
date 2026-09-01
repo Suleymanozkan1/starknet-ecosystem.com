@@ -11,6 +11,47 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+#: Settings read these from the environment, so an ambient value — a shell that
+#: exports MOCK_MODE, a CI runner, a stray .env — would otherwise decide what
+#: the "default" tests see.
+_SETTINGS_ENV_VARS = (
+    "MOCK_MODE",
+    "WAN_MODEL_PATH",
+    "WAN_TASK",
+    "WAN_REPO_PATH",
+    "OFFLOAD_MODEL",
+    "T5_CPU",
+    "INPUT_DIR",
+    "OUTPUT_DIR",
+    "FFMPEG_PATH",
+    "MAX_UPLOAD_MB",
+    "MAX_IMAGE_PIXELS",
+    "DEFAULT_SAMPLING_STEPS",
+    "DEFAULT_GUIDANCE_SCALE",
+    "DEFAULT_SHIFT_720P",
+    "DEFAULT_SHIFT_480P",
+    "FINAL_FRAME_SSIM_THRESHOLD",
+    "CAMERA_SIMILARITY_THRESHOLD",
+    "SERVER_NAME",
+    "SERVER_PORT",
+    "SHARE",
+    "LOG_LEVEL",
+)
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings_env(monkeypatch):
+    """Run every test against a clean environment.
+
+    Tests that want a value set do so explicitly with monkeypatch.setenv.
+    """
+    for name in _SETTINGS_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: exercises the full mock pipeline")
+
 
 def _site_image(size: tuple[int, int] = (640, 360)) -> Image.Image:
     """An empty plot: sky above, bare ground below, no structure."""
