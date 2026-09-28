@@ -10,4 +10,9 @@ export const REDACT_PATHS = [
   "body.token",
   "*.nonce",
   "*.csrfToken",
+  "*.private_key",
+  "*.assertion",
+  "*.access_token",
+  "FCM_SERVICE_ACCOUNT_JSON",
+  "APNS_KEY_P8",
 ];

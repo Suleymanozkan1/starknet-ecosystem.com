@@ -44,6 +44,7 @@ body {
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: rgba(140, 200, 255, 0.2); border-radius: 8px; }
 
+@layer components {
 /* ---------- Typography helpers ---------- */
 .nf-display { font-family: var(--nf-font-display); letter-spacing: 0.08em; }
 .nf-ui { font-family: var(--nf-font-ui); }
@@ -254,4 +255,6 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .nf-backdrop__nebula, .nf-play__ring, .nf-warp__streaks, .nf-page, .nf-hexspin { animation: none !important; }
+}
+
 }

@@ -457,11 +457,11 @@ export default function WalletPage() {
                 ["Pending review", <CurrencyAmount key="p" amount={w.balances.pendingRewards} currency="NEBX" symbol={w.rewardAsset.symbol} decimals={w.rewardAsset.decimals} size={20} />],
               ] as const).map(([k, v]) => <HoloPanel key={k}><div className="nf-label mb-1">{k}</div>{v}</HoloPanel>)}
             </div>
-            <div className="grid gap-5 xl:grid-cols-2">
+            <div className="grid items-start gap-5 xl:grid-cols-2">
               <WalletConnection w={w} />
               <RewardsPanel w={w} />
             </div>
-            <div className="grid gap-5 xl:grid-cols-2">
+            <div className="grid items-start gap-5 xl:grid-cols-2">
               {order.map((o) => (o === "deposit" ? <DepositPanel key="d" w={w} productParam={productParam} /> : <WithdrawPanel key="w" w={w} />))}
             </div>
             <History w={w} />

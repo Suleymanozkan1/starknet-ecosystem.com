@@ -30,6 +30,7 @@
   --nf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+@layer components {
 /* ---------------- Holo panel ---------------- */
 .nf-panel {
   position: relative;
@@ -256,6 +257,8 @@
 select.nf-input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--nf-text-dim) 50%), linear-gradient(135deg, var(--nf-text-dim) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
 .nf-ring { transform: rotate(-90deg); }
 .nf-emblem { filter: drop-shadow(0 0 10px var(--fc)); }
+
+}
 
 @keyframes nf-spin { to { transform: rotate(360deg); } }
 @keyframes nf-fade-in { from { opacity: 0; } to { opacity: 1; } }

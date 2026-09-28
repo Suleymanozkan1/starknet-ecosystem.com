@@ -44,8 +44,9 @@ export function configurePush(rt: PushRuntime | null): void {
   runtime = rt;
 }
 
+/** Interactive-transaction clients have no `$connect`; only writes through the root client are already committed. */
 function isRootClient(db: DbOrTx): db is Db {
-  return typeof (db as { $transaction?: unknown }).$transaction === "function";
+  return typeof (db as unknown as Record<string, unknown>).$connect === "function";
 }
 
 export async function notify(

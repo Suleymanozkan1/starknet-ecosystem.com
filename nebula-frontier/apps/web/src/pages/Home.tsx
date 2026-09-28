@@ -116,7 +116,9 @@ function EventBanner() {
         </div>
         <div className="text-right">
           <div className="nf-label">{live ? "Ends in" : "Starts in"}</div>
-          <Countdown to={live ? eventTimes(e).end : eventTimes(e).start} className="text-[18px] text-ink" />
+          {live && new Date(eventTimes(e).end).getTime() - Date.now() > 90 * 86_400_000
+            ? <div className="nf-ui text-[16px] font-bold uppercase tracking-[0.12em] text-ink">Season-long</div>
+            : <Countdown to={live ? eventTimes(e).end : eventTimes(e).start} className="text-[18px] text-ink" />}
         </div>
       </div>
     </Link>
@@ -211,7 +213,7 @@ export default function HomePage() {
               {[
                 { k: "Level", v: me.level },
                 { k: "Honor", v: me.honor },
-                { k: "Rank", v: me.rank },
+                { k: "Rank", v: humanize(me.rank) },
                 { k: "Prestige", v: me.prestige },
               ].map((s) => (
                 <div key={s.k}>

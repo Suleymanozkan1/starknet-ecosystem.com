@@ -32,9 +32,16 @@ function layout(): { nodes: Node[]; sectors: { id: string; name: string; x: numb
     maps.forEach((mid, j) => {
       const m = MAPS_BY_ID.get(mid);
       if (!m) return;
-      const b = a + (maps.length > 1 ? (j - (maps.length - 1) / 2) * 0.9 : 0);
-      const r = maps.length > 1 ? 7 : 0;
-      nodes.push({ map: m, x: x + Math.cos(b + Math.PI / 2) * r, y: y + Math.sin(b + Math.PI / 2) * r, sector: s.name, color: mapColor(m) });
+      // Spread multiple maps of one sector along the ring tangent, alternating slightly in/out.
+      const t = maps.length > 1 ? (j - (maps.length - 1) / 2) * 10 : 0;
+      const radial = maps.length > 1 ? (j % 2 === 0 ? -2.5 : 2.5) : 0;
+      nodes.push({
+        map: m,
+        x: x + Math.cos(a + Math.PI / 2) * t + Math.cos(a) * radial,
+        y: y + Math.sin(a + Math.PI / 2) * t + Math.sin(a) * radial,
+        sector: s.name,
+        color: mapColor(m),
+      });
     });
     return { id: s.id, name: s.name, x, y };
   });
@@ -82,8 +89,8 @@ export default function GalaxyPage() {
             {[14, 26, 34, 42].map((r) => <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="rgba(140,200,255,0.08)" strokeWidth="0.15" strokeDasharray="0.6 0.8" />)}
             {sectors.map((s) => (
               <g key={s.id}>
-                <circle cx={s.x} cy={s.y} r="10.5" fill="rgba(140,200,255,0.025)" stroke="rgba(140,200,255,0.12)" strokeWidth="0.15" />
-                <text x={s.x} y={s.y - 11.8} textAnchor="middle" fontSize="1.9" fill="var(--nf-text-mute)" style={{ fontFamily: "var(--nf-font-ui)", letterSpacing: "0.25em", textTransform: "uppercase" }}>{s.name}</text>
+                <circle cx={s.x} cy={s.y} r="11.5" fill="rgba(140,200,255,0.025)" stroke="rgba(140,200,255,0.12)" strokeWidth="0.15" />
+                <text x={s.x} y={s.y - 13} textAnchor="middle" fontSize="1.9" fill="var(--nf-text-mute)" style={{ fontFamily: "var(--nf-font-ui)", letterSpacing: "0.25em", textTransform: "uppercase" }}>{s.name}</text>
               </g>
             ))}
             {edges.map((e, i) => (

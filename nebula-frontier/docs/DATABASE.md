@@ -17,8 +17,9 @@ Redis never loses money or items.
 | World | `Galaxy`, `Sector`, `StarSystem`, `Map`, `Zone`, `NPC`, `NPCSpawn`, `GameRoom`, `GameMatch`, `GameMatchPlayer` | `GameRoom` heartbeats from game servers (admin overview). |
 | Progression | `PlayerStat`, `Quest`, `UserQuest`, `Achievement`, `UserAchievement`, `Season`, `SeasonReward`, `BattlePass`, `Event`, `EventParticipation`, `Leaderboard`, `LeaderboardEntry` | `UserQuest` unique (user, quest, periodKey) → daily/weekly quests once per period. |
 | Market | `MarketplaceListing`, `Auction`, `AuctionBid`, `Trade` | Listings/auctions carry `version`; `Trade.referenceId` UNIQUE (one settlement per listing/auction). |
-| Social | `Clan`, `ClanMember`, `ClanWar`, `ClanTerritory`, `ClanStation`, `ClanStationModule`, `Squad`, `SquadMember`, `Friend`, `ChatMessage`, `ChatReport`, `Notification`, `Mail`, `Bounty` | `ClanMember` PK = userId (one clan per player). Clan treasury: see §2.3. |
+| Social | `Clan`, `ClanMember`, `ClanMission`, `ClanWar`, `ClanTerritory`, `ClanStation`, `ClanStationModule`, `Squad`, `SquadMember`, `Friend`, `ChatMessage`, `ChatReport`, `Notification`, `Mail`, `Bounty` | `ClanMember` PK = userId (one clan per player). Clan treasury: see §2.3. `ClanMission` unique (clan, quest, period): progress from member PlayerStat deltas (`baseline`) or game-server `contributions`; claim pays the clan bank (`clanmission:<id>:credits`, GAME_ISSUANCE → ESCROW). `ClanTerritory.mapId` unique: owner = winner of the latest decided war on that map. |
 | Shop | `ShopProduct`, `Purchase` | `Purchase` unique (userId, idempotencyKey). Prices only here. |
+| Analytics & push | `AnalyticsEvent` (batched writer: LOGIN, LOGOUT, PURCHASE, TRADE, AUCTION, REWARD_CLAIM), `Notification.pushedAt` (set only when FCM/APNs accepted the push) | |
 | Ledger & economy | `BalanceAccount`, `BalanceLedger`, `Reward`, `RewardClaim`, `RewardLiability`, `Deposit`, `Withdrawal`, `ChainTransaction`, `EconomyConfig`, `EconomySnapshot`, `CircuitBreaker`, `RiskSignal`, `FeatureFlag`, `AnalyticsEvent` | See §2. |
 
 Money is always `BigInt` base units (credits/gems integers; NEBX/SOL lamports) and travels as

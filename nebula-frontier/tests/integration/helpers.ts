@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { generateKeyPairSigner, getBase58Decoder, getUtf8Encoder, signBytes, type KeyPairSigner } from "@solana/kit";
-import { buildApp } from "../../apps/api/src/app.js";
+import { buildApp, type BuildAppOptions } from "../../apps/api/src/app.js";
 import { createDb, post, system, userWallet, type Db } from "../../packages/database/src/index.js";
 import { Currency, LedgerAccountType } from "../../packages/shared/src/index.js";
 
@@ -17,9 +17,9 @@ export interface TestCtx {
   db: Db;
 }
 
-export async function setup(): Promise<TestCtx> {
+export async function setup(opts: Omit<BuildAppOptions, "db"> = {}): Promise<TestCtx> {
   const db = createDb(process.env.DATABASE_URL ?? "postgresql://nebula:nebula@localhost:5432/nebula");
-  const app = await buildApp({ db, logger: false, rateLimitScale: 1000, rateLimitNamespace: `nf:test:${randomUUID()}:` });
+  const app = await buildApp({ db, logger: false, rateLimitScale: 1000, rateLimitNamespace: `nf:test:${randomUUID()}:`, ...opts });
   await app.ready();
   return { app, db };
 }

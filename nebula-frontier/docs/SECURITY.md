@@ -60,10 +60,10 @@ emails run a dummy argon2 verification (no user-enumeration timing oracle).
 
 | Token | Format | Lifetime | Storage |
 |---|---|---|---|
-| Access | JWT HS256, `aud=api`, `iss=nebula-frontier`, claims `sub, username, roles, sid` | 15 min | cookie `nf_access` (httpOnly) or `Authorization: Bearer` |
+| Access | JWT HS256 with `kid` (key ring, §7.1), `aud=api`, `iss=nebula-frontier`, claims `sub, username, roles, sid` | 15 min | cookie `nf_access` (httpOnly) or `Authorization: Bearer` |
 | Refresh | `<sessionId>.<32 random bytes b64url>` | 30 days (sliding on rotation) | cookie `nf_refresh` (httpOnly, `Path=/api/auth`); DB keeps `sha256(secret)` only |
 | CSRF | 24 random bytes b64url | 30 days | cookie `nf_csrf` (readable by JS) |
-| Game ticket | JWT HS256 `aud=game`, `jti`, `mapId` | 60 s | returned by `POST /api/game/ticket`, `gt:<jti>` in Redis for single use |
+| Game ticket | JWT HS256 with `kid`, `aud=game`, `jti`, `mapId` | 60 s | returned by `POST /api/game/ticket`, `gt:<jti>` in Redis for single use |
 
 `app.authenticate` verifies the JWT **and** loads the session every request: revoked/expired
 session → `401 SESSION_REVOKED`; banned user → `403 ACCOUNT_BANNED`. Roles come from the DB
@@ -167,6 +167,7 @@ implicitly has every permission. ✔ = allowed.
 | rulesManage `…/rules` | ✔ | ✔ | | | ✔ |
 | mailGrant `POST /api/admin/mail` (compensation) | ✔ | ✔ | | | |
 | auditRead `GET /api/admin/audit` | ✔ | ✔ | | | |
+| analytics `GET /api/admin/analytics` | ✔ | ✔ | | | ✔ |
 | economyRead / economyManage / withdrawalReview (economy routes) | ✔ | ✔ / – / ✔ | | | ✔ / ✔ / ✔ |
 
 Every admin mutation writes an `AuditLog` row **in the same transaction** as the change
@@ -196,8 +197,47 @@ default, 18+), `nft_mint`. Crypto-priced (`NEBX`) market listings/purchases requ
 | Staging | Platform secret store (e.g. Fly/Render/Kubernetes Secrets sealed with SOPS), per-environment secrets, rotation runbook. |
 | Production | Cloud KMS / Secret Manager for app secrets with short-lived workload identity; **treasury signing in an HSM or KMS-backed signer** (the key never leaves the HSM; blockchain-service sends transactions for signing), multi-sig for cold reserves, dual control for limit changes. |
 
-Rotation: `JWT_SECRET` rotation invalidates access tokens (≤15 min impact) — refresh continues via
-DB sessions. Supporting a key-id (`kid`) set for zero-downtime rotation is the next step.
+### 7.1 JWT key rotation (zero downtime)
+
+Access tokens and game tickets are HS256 JWTs signed from a **key ring** (`packages/authentication`
+`parseKeyRing` / `keyRingFromEnv`):
+
+| Variable | Format | Meaning |
+|---|---|---|
+| `JWT_SECRETS` | `kid:secret,kid:secret,…` | First entry = **active** signing key; every entry is accepted for verification. |
+| `JWT_SECRET` | `secret` | Legacy single key, used (as kid `default`) only when `JWT_SECRETS` is empty. |
+| `GAME_TICKET_SECRETS` / `GAME_TICKET_SECRET` | same | Independent ring for game tickets (API signs, game server verifies). |
+
+Rules: kid `[A-Za-z0-9._-]{1,32}`, unique; every secret ≥ 32 chars; production refuses
+placeholder-looking secrets. New tokens carry the active `kid` in the JWS header; verification
+selects the key by `kid` (an unknown `kid` is rejected — never "try all keys" for a kid-bearing
+token) and tries every key only for legacy tokens without `kid`. The exported functions keep their
+signatures: passing a plain string still signs/verifies without `kid`.
+
+Rotation runbook:
+1. Generate a new secret (`openssl rand -base64 48`) and **prepend** it: `JWT_SECRETS=k2:<new>,default:<old>`
+   (use `default:<old>` when migrating from `JWT_SECRET`). For tickets, first add the new key to the
+   game servers' verification ring, then make it active in the API.
+2. Roll out all API replicas (and game servers for tickets). Old tokens keep verifying; new tokens use `k2`.
+3. Wait at least the maximum token lifetime (access 15 min, tickets 60 s; refresh tokens are opaque
+   DB secrets and are unaffected).
+4. Remove the old entry: `JWT_SECRETS=k2:<new>`. Tokens signed with the retired key now fail (401).
+Emergency revocation (key leak): skip step 3 — replace the ring with only the new key; all users
+re-authenticate transparently through `/api/auth/refresh` (sessions are DB-backed).
+
+### 7.2 Service-to-service token
+
+`INTERNAL_SERVICE_TOKEN` (≥ 32 chars) authenticates game server → API calls on `/api/internal/*`
+(header `x-internal-token`, constant-time compare). Player credentials are never accepted there; if
+the variable is unset the internal API answers 503. Rotate like any shared secret (deploy API
+accepting both is not supported yet: rotate during a short maintenance window).
+
+### 7.3 Push provider credentials
+
+`FCM_SERVICE_ACCOUNT_JSON` (raw JSON or base64; only `project_id`, `client_email`, `private_key`
+are used, the private key signs a short-lived OAuth assertion) and `APNS_KEY_ID`, `APNS_TEAM_ID`,
+`APNS_KEY_P8`, `APNS_TOPIC` (+ `APNS_ENV=production` for the production gateway) are secrets and
+are redacted from logs. When absent, push is disabled and notifications remain in-app only.
 
 ---
 

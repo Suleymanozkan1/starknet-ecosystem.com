@@ -617,6 +617,9 @@ importers:
       '@colyseus/sdk':
         specifier: ^0.18.4
         version: 0.18.4(@colyseus/core@0.18.17)(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@nebula/config':
+        specifier: workspace:*
+        version: link:../config
       '@nebula/game-core':
         specifier: workspace:*
         version: link:../game-core

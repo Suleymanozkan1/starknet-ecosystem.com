@@ -229,15 +229,15 @@ export default function HangarPage() {
         <div className="grid content-start gap-4">
           <HoloPanel padded={false} corners glow className="relative h-[clamp(320px,52vh,600px)]">
             <ShipViewer def={def} cosmetics={ship.cosmetics} preview={preview} autoRotate={autoRotate} compare={compareDef ?? null} />
-            <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+            <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
               {PREVIEWS.map((p) => (
                 <button key={p.key} type="button" className="nf-chip cursor-pointer" style={p.key === preview ? { color: "var(--nf-accent)", borderColor: "var(--nf-accent)" } : undefined} onClick={() => setPreview(p.key)}>{p.label}</button>
               ))}
             </div>
-            <button type="button" className="nf-chip absolute right-3 top-3 cursor-pointer" onClick={() => setAutoRotate((a) => !a)} aria-pressed={autoRotate}>
+            <button type="button" className="nf-chip absolute bottom-3 right-3 cursor-pointer" onClick={() => setAutoRotate((a) => !a)} aria-pressed={autoRotate}>
               <Icon name="refresh" size={12} /> {autoRotate ? "Auto-rotate on" : "Auto-rotate off"}
             </button>
-            <div className="nf-ui pointer-events-none absolute bottom-3 left-4 text-[11px] uppercase tracking-[0.2em] text-mute">Drag to rotate · Scroll / pinch to zoom</div>
+            <div className="nf-ui pointer-events-none absolute bottom-4 left-4 hidden text-[11px] uppercase tracking-[0.2em] text-mute sm:block">Drag to rotate · Scroll / pinch to zoom</div>
           </HoloPanel>
           <HoloPanel title="Performance">
             <ShipStatBars stats={statsNow} compare={compareDef ? (compareDef.stats as unknown as Record<string, number>) : null} />
@@ -252,7 +252,7 @@ export default function HangarPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {ship.loadouts.map((l) => (
                   <button key={l.id} type="button" className="nf-chip cursor-pointer" onClick={() => setLoadoutId(l.id)} style={l.id === loadout.id ? { color: "var(--nf-accent)", borderColor: "var(--nf-accent)" } : undefined}>
-                    {l.id === ship.activeLoadoutId && <span className="h-1.5 w-1.5 rounded-full bg-good" />}{l.name} · {l.preset}
+                    {l.id === ship.activeLoadoutId && <span className="h-1.5 w-1.5 rounded-full bg-good" />}{l.name.toUpperCase() === l.preset ? l.name : `${l.name} · ${humanize(l.preset)}`}
                   </button>
                 ))}
                 <button type="button" className="nf-chip cursor-pointer" onClick={() => setNewLoadout({ name: "", preset: "PVP" })}><Icon name="plus" size={12} /> New</button>
