@@ -78,7 +78,6 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     trustProxy: env.TRUST_PROXY,
     bodyLimit: 256 * 1024,
     requestIdHeader: false,
-    requestIdLogLabel: "requestId",
     genReqId: (req) => {
       const h = req.headers["x-request-id"];
       return typeof h === "string" && REQUEST_ID_RE.test(h) ? h : randomUUID();

@@ -1,34 +1,22 @@
 /**
- * Typed REST client for apps/api. All DTOs come from @nebula/shared where they exist,
- * otherwise from ./dto.ts. Every call goes through ./http.ts (cookies + CSRF + refresh-once).
+ * Typed REST client for apps/api (routes in apps/api/src/routes/*). DTOs come from @nebula/shared where
+ * they exist, otherwise from ./dto.ts. Every call goes through ./http.ts (cookies + CSRF + refresh-once).
  */
 import type {
-  AuthResponse, DepositDto, DepositPrepareRequest, DepositPrepareResponse, DepositVerifyRequest, EconomyStatusResponse,
-  EquipRequest, FeesResponse, InventoryResponse, LeaderboardResponse, LedgerEntryDto, LoginRequest, MeResponse,
-  NonceRequest, NonceResponse, ProfileResponse, PurchaseRequest, PurchaseResponse, QuestDto, RegisterRequest,
-  RewardsResponse, ShipInstanceDto, UnequipRequest, VerifyRequest, WalletResponse, WithdrawQuoteDto,
-  WithdrawRequest, WithdrawalDto, LoadoutDto, BlueprintDef,
+  AuthResponse, BlueprintDef, DepositPrepareRequest, DepositPrepareResponse, DepositVerifyRequest, EconomyStatusResponse,
+  EquipRequest, FeesResponse, InventoryResponse, LeaderboardResponse, LedgerEntryDto, LoadoutDto, LoginRequest, MeResponse,
+  NonceRequest, NonceResponse, ProfileResponse, PurchaseRequest, PurchaseResponse, QuestDto, RegisterRequest, RewardsResponse,
+  ShipInstanceDto, UnequipRequest, VerifyRequest, WalletResponse, WithdrawRequest, WithdrawalDto, BalancesDto,
 } from "@nebula/shared";
 import { http } from "./http.js";
 import type {
-  AchievementDto, AuctionsResponse, MarketListingDto, ShopProductView, UpgradeCostResponse, UpgradeResult, BattlePassResponse, BountyDto, ChatMessageDto, ClanDetailDto, ClanSummaryDto,
-  CraftJobDto, EventsResponse, FactionDto, FriendDto, GalaxyResponse, GameTicketResponse, MailDto,
-  MarketResponse, NotificationDto, SeasonDto, ShipsResponse, SquadDto,
+  AchievementDto, AuctionsResponse, BattlePassResponse, BountyDto, ChatMessageDto, ClanDetailDto, ClanSummaryDto, ClanWarDto,
+  CraftJobDto, DepositPending, DepositVerifyResponse, EventsView, FactionDto, FriendsResponse, GameEventDto, GameTicketResponse,
+  MailDto, MapLiveResponse, MarketListingDto, MarketResponse, NotificationsResponse, SeasonDto, ShipsResponse, ShopProductView,
+  SquadDto, UpgradeCostResponse, UpgradeResult, WithdrawQuoteResponse,
 } from "./dto.js";
 
-/** Some list endpoints return a bare array, others `{ <key>: [...] }` — normalize. */
-function list<T>(key: string) {
-  return (data: unknown): T[] => {
-    if (Array.isArray(data)) return data as T[];
-    if (data && typeof data === "object") {
-      const v = (data as Record<string, unknown>)[key];
-      if (Array.isArray(v)) return v as T[];
-      const items = (data as Record<string, unknown>).items;
-      if (Array.isArray(items)) return items as T[];
-    }
-    return [];
-  };
-}
+type Ok = { ok: boolean };
 
 export const api = {
   auth: {
@@ -36,31 +24,35 @@ export const api = {
     verify: (body: VerifyRequest) => http.post<AuthResponse>("/api/auth/verify", body, { noRefresh: true }),
     register: (body: RegisterRequest & { deviceId?: string }) => http.post<AuthResponse>("/api/auth/register", body, { noRefresh: true }),
     login: (body: LoginRequest) => http.post<AuthResponse>("/api/auth/login", body, { noRefresh: true }),
-    logout: () => http.post<void>("/api/auth/logout", {}, { noRefresh: true }),
+    logout: () => http.post<Ok>("/api/auth/logout", {}, { noRefresh: true }),
+    logoutAll: () => http.post<Ok>("/api/auth/logout-all", {}),
+    sessions: () => http.get<{ sessions: { id: string; userAgent: string | null; ip: string | null; createdAt: string; lastUsedAt: string; current: boolean }[] }>("/api/auth/sessions"),
   },
   me: {
     get: () => http.get<MeResponse>("/api/me"),
-    update: (body: { username?: string; title?: string | null }) => http.patch<MeResponse>("/api/me", body),
+    rename: (username: string) => http.patch<MeResponse>("/api/me", { username }),
     setFaction: (factionId: string) => http.post<MeResponse>("/api/me/faction", { factionId }),
-    profile: (userId?: string) => http.get<ProfileResponse>(userId ? `/api/profile/${encodeURIComponent(userId)}` : "/api/me/profile"),
+    profile: (userId?: string) => http.get<ProfileResponse>(userId ? `/api/profile/${encodeURIComponent(userId)}` : "/api/profile"),
   },
   factions: {
-    list: () => http.get<unknown>("/api/factions").then(list<FactionDto>("factions")),
+    list: () => http.get<{ factions: FactionDto[] }>("/api/factions").then((d) => d.factions),
   },
   game: {
-    ticket: (body: { mapId?: string; portalId?: string } = {}) => http.post<GameTicketResponse>("/api/game/ticket", body),
+    ticket: () => http.post<GameTicketResponse>("/api/game/ticket", {}),
   },
   ships: {
     list: () => http.get<ShipsResponse>("/api/ships"),
     unlock: (shipId: string, idempotencyKey: string) => http.post<{ purchaseId: string; ships: ShipInstanceDto[] }>("/api/ships/unlock", { shipId, idempotencyKey }),
     activate: (shipInstanceId: string) => http.post<{ ships: ShipInstanceDto[] }>("/api/ships/activate", { shipInstanceId }),
-    upgradeCost: (shipInstanceId: string) => http.get<UpgradeCostResponse>(`/api/ships/${shipInstanceId}/upgrade-cost`),
+    upgradeCost: (shipInstanceId: string) => http.get<UpgradeCostResponse>(`/api/ships/${encodeURIComponent(shipInstanceId)}/upgrade-cost`),
     upgrade: (shipInstanceId: string, idempotencyKey: string) => http.post<UpgradeResult & { ships: ShipInstanceDto[] }>("/api/ships/upgrade", { shipInstanceId, idempotencyKey }),
-    createLoadout: (shipInstanceId: string, body: { name: string; preset: LoadoutDto["preset"]; copyFromLoadoutId?: string }) => http.post<LoadoutDto>(`/api/ships/${shipInstanceId}/loadouts`, body),
+    createLoadout: (shipInstanceId: string, body: { name: string; preset: LoadoutDto["preset"]; copyFromLoadoutId?: string }) =>
+      http.post<LoadoutDto>(`/api/ships/${encodeURIComponent(shipInstanceId)}/loadouts`, body),
     updateLoadout: (shipInstanceId: string, loadoutId: string, body: { name?: string; preset?: LoadoutDto["preset"]; formation?: string; ammo?: string | null }) =>
-      http.put<LoadoutDto>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}`, body),
-    activateLoadout: (shipInstanceId: string, loadoutId: string) => http.post<{ ships: ShipInstanceDto[] }>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}/activate`, {}),
-    deleteLoadout: (shipInstanceId: string, loadoutId: string) => http.del<{ ok: boolean }>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}`),
+      http.put<LoadoutDto>(`/api/ships/${encodeURIComponent(shipInstanceId)}/loadouts/${encodeURIComponent(loadoutId)}`, body),
+    activateLoadout: (shipInstanceId: string, loadoutId: string) =>
+      http.post<{ ships: ShipInstanceDto[] }>(`/api/ships/${encodeURIComponent(shipInstanceId)}/loadouts/${encodeURIComponent(loadoutId)}/activate`, {}),
+    deleteLoadout: (shipInstanceId: string, loadoutId: string) => http.del<Ok>(`/api/ships/${encodeURIComponent(shipInstanceId)}/loadouts/${encodeURIComponent(loadoutId)}`),
     setCosmetic: (shipInstanceId: string, slot: string, inventoryItemId: string | null) => http.post<{ ships: ShipInstanceDto[] }>("/api/ships/cosmetics", { shipInstanceId, slot, inventoryItemId }),
   },
   inventory: {
@@ -70,13 +62,13 @@ export const api = {
     upgrade: (inventoryItemId: string, idempotencyKey: string) => http.post<UpgradeResult>("/api/inventory/upgrade", { inventoryItemId, idempotencyKey }),
   },
   shop: {
-    list: () => http.get<unknown>("/api/shop").then(list<ShopProductView>("products")),
-    purchase: (body: PurchaseRequest) => http.post<PurchaseResponse>("/api/shop/purchase", body),
+    list: () => http.get<{ products: ShopProductView[] }>("/api/shop").then((d) => d.products),
+    purchase: (body: PurchaseRequest) => http.post<PurchaseResponse & { duplicate?: boolean }>("/api/shop/purchase", body),
   },
   crafting: {
     blueprints: () => http.get<{ blueprints: BlueprintDef[]; jobs: CraftJobDto[] }>("/api/crafting/blueprints"),
     start: (blueprintId: string, idempotencyKey: string) => http.post<CraftJobDto>("/api/crafting/start", { blueprintId, idempotencyKey }),
-    claim: (jobId: string) => http.post<{ success: boolean; outputItem: string; quantity: number }>(`/api/crafting/${jobId}/claim`, {}),
+    claim: (jobId: string) => http.post<{ success: boolean; outputItem: string; quantity: number }>(`/api/crafting/${encodeURIComponent(jobId)}/claim`, {}),
   },
   quests: {
     list: () => http.get<{ active: QuestDto[]; available: QuestDto[] }>("/api/quests"),
@@ -91,96 +83,111 @@ export const api = {
     mine: () => http.get<MarketResponse>("/api/market/mine"),
     create: (body: { inventoryItemId: string; quantity: number; price: string; currency: "CREDITS" | "GEMS" | "NEBX"; durationHours: number }) =>
       http.post<{ listing: MarketListingDto; feeRate: number }>("/api/market/list", body),
-    buy: (id: string) => http.post<unknown>(`/api/market/buy/${id}`, {}),
-    cancel: (id: string) => http.post<unknown>(`/api/market/cancel/${id}`, {}),
+    buy: (id: string) => http.post<unknown>(`/api/market/buy/${encodeURIComponent(id)}`, {}),
+    cancel: (id: string) => http.post<unknown>(`/api/market/cancel/${encodeURIComponent(id)}`, {}),
   },
   auctions: {
-    list: (q: { type?: string; mine?: boolean } = {}) => http.get<AuctionsResponse>("/api/auctions", q),
-    create: (body: { inventoryItemId: string; quantity: number; type: string; currency: string; startPrice: string; buyoutPrice?: string | null; idempotencyKey: string }) => http.post<unknown>("/api/auctions", body),
-    bid: (id: string, amount: string, idempotencyKey: string) => http.post<unknown>(`/api/auctions/${id}/bid`, { amount, idempotencyKey }),
-    buyout: (id: string, idempotencyKey: string) => http.post<unknown>(`/api/auctions/${id}/buyout`, { idempotencyKey }),
-    cancel: (id: string) => http.post<unknown>(`/api/auctions/${id}/cancel`, {}),
+    list: (q: { type?: string } = {}) => http.get<AuctionsResponse>("/api/auctions", q),
+    create: (body: { inventoryItemId: string; quantity: number; type: "HOURLY" | "DAILY" | "WEEKLY"; currency: "CREDITS" | "GEMS"; startPrice: string; buyoutPrice?: string }) =>
+      http.post<unknown>("/api/auctions", body),
+    bid: (id: string, amount: string) => http.post<unknown>(`/api/auctions/${encodeURIComponent(id)}/bid`, { amount }),
+    buyout: (id: string) => http.post<unknown>(`/api/auctions/${encodeURIComponent(id)}/buyout`, {}),
+    cancel: (id: string) => http.post<unknown>(`/api/auctions/${encodeURIComponent(id)}/cancel`, {}),
   },
   clans: {
-    list: (q: { search?: string } = {}) => http.get<unknown>("/api/clans", q).then(list<ClanSummaryDto>("clans")),
-    mine: () => http.get<ClanDetailDto | null>("/api/clans/mine"),
-    get: (id: string) => http.get<ClanDetailDto>(`/api/clans/${id}`),
-    create: (body: { name: string; tag: string; description?: string }) => http.post<ClanDetailDto>("/api/clans", body),
-    join: (id: string) => http.post<unknown>(`/api/clans/${id}/join`, {}),
-    leave: () => http.post<unknown>("/api/clans/leave", {}),
-    setRole: (userId: string, role: string) => http.post<unknown>("/api/clans/role", { userId, role }),
-    kick: (userId: string) => http.post<unknown>("/api/clans/kick", { userId }),
-    deposit: (amount: string, idempotencyKey: string) => http.post<unknown>("/api/clans/treasury/deposit", { amount, idempotencyKey }),
-    declareWar: (targetClanId: string) => http.post<unknown>("/api/clans/war/declare", { targetClanId }),
+    list: (q: { search?: string } = {}) => http.get<{ clans: ClanSummaryDto[] }>("/api/clans", q).then((d) => d.clans),
+    get: (id: string) => http.get<ClanDetailDto>(`/api/clans/${encodeURIComponent(id)}`),
+    wars: (id: string) => http.get<{ wars: ClanWarDto[] }>(`/api/clans/${encodeURIComponent(id)}/wars`).then((d) => d.wars),
+    create: (body: { name: string; tag: string; description?: string }) => http.post<{ id: string; name: string; tag: string }>("/api/clans", body),
+    join: (id: string) => http.post<Ok>(`/api/clans/${encodeURIComponent(id)}/join`, {}),
+    invite: (id: string, userId: string) => http.post<Ok>(`/api/clans/${encodeURIComponent(id)}/invite`, { userId }),
+    leave: () => http.post<Ok>("/api/clans/leave", {}),
+    promote: (id: string, userId: string, role: string) => http.post<Ok>(`/api/clans/${encodeURIComponent(id)}/promote`, { userId, role }),
+    kick: (id: string, userId: string) => http.post<Ok>(`/api/clans/${encodeURIComponent(id)}/kick`, { userId }),
+    deposit: (id: string, amount: string, idempotencyKey: string) => http.post<Ok>(`/api/clans/${encodeURIComponent(id)}/treasury/deposit`, { amount, idempotencyKey }),
+    announce: (id: string, announcement: string) => http.patch<Ok>(`/api/clans/${encodeURIComponent(id)}/announcement`, { announcement }),
+    declareWar: (id: string, targetClanId: string) => http.post<unknown>(`/api/clans/${encodeURIComponent(id)}/wars`, { targetClanId }),
+    acceptWar: (warId: string) => http.post<Ok>(`/api/clans/wars/${encodeURIComponent(warId)}/accept`, {}),
   },
   squad: {
-    get: () => http.get<SquadDto | null>("/api/squad"),
-    create: () => http.post<SquadDto>("/api/squad", {}),
-    invite: (userId: string) => http.post<unknown>("/api/squad/invite", { userId }),
-    leave: () => http.post<unknown>("/api/squad/leave", {}),
+    get: () => http.get<{ squad: SquadDto | null }>("/api/squad").then((d) => d.squad),
+    create: () => http.post<{ id: string }>("/api/squad", {}),
+    invite: (userId: string) => http.post<Ok>("/api/squad/invite", { userId }),
+    join: (squadId: string) => http.post<Ok>(`/api/squad/${encodeURIComponent(squadId)}/join`, {}),
+    leave: () => http.post<Ok>("/api/squad/leave", {}),
+    kick: (userId: string) => http.post<Ok>("/api/squad/kick", { userId }),
   },
   friends: {
-    list: () => http.get<unknown>("/api/friends").then(list<FriendDto>("friends")),
-    add: (username: string) => http.post<unknown>("/api/friends", { username }),
-    accept: (id: string) => http.post<unknown>(`/api/friends/${id}/accept`, {}),
-    remove: (id: string) => http.del<unknown>(`/api/friends/${id}`),
+    list: () => http.get<FriendsResponse>("/api/friends"),
+    add: (target: { username: string } | { userId: string }) => http.post<{ status: string }>("/api/friends/add", target),
+    remove: (userId: string) => http.post<Ok>("/api/friends/remove", { userId }),
+    block: (userId: string) => http.post<Ok>("/api/friends/block", { userId }),
+    unblock: (userId: string) => http.post<Ok>("/api/friends/unblock", { userId }),
   },
   chat: {
-    list: (channel: string, key?: string) => http.get<unknown>("/api/chat", { channel, key }).then(list<ChatMessageDto>("messages")),
-    send: (channel: string, text: string, to?: string) => http.post<ChatMessageDto>("/api/chat", { channel, text, ...(to ? { to } : {}) }),
-    report: (messageId: string, reason: string) => http.post<unknown>("/api/chat/report", { messageId, reason }),
+    /** Chat is sent through the game server (ClientMsg.CHAT); REST only serves history. */
+    history: (channel: string, key?: string) => http.get<{ messages: ChatMessageDto[] }>("/api/chat/history", { channel, key }).then((d) => d.messages),
+    report: (messageId: string, reason: string) => http.post<Ok>("/api/chat/report", { messageId, reason }),
   },
   notifications: {
-    list: () => http.get<unknown>("/api/notifications").then(list<NotificationDto>("notifications")),
-    read: (ids: string[] | "all") => http.post<unknown>("/api/notifications/read", ids === "all" ? { all: true } : { ids }),
+    list: () => http.get<NotificationsResponse>("/api/notifications"),
+    read: (ids: string[] | "all") => http.post<{ updated: number }>("/api/notifications/read", ids === "all" ? { all: true } : { ids }),
+    registerPushToken: (body: { token: string; platform: "ios" | "android" | "web"; deviceId: string }) => http.post<Ok>("/api/notifications/push-token", body),
   },
   mail: {
-    list: () => http.get<unknown>("/api/mail").then(list<MailDto>("mail")),
-    read: (id: string) => http.post<unknown>(`/api/mail/${id}/read`, {}),
-    claim: (id: string) => http.post<unknown>(`/api/mail/${id}/claim`, {}),
-    remove: (id: string) => http.del<unknown>(`/api/mail/${id}`),
+    list: () => http.get<{ mail: MailDto[] }>("/api/mail").then((d) => d.mail),
+    read: (id: string) => http.post<Ok>(`/api/mail/${encodeURIComponent(id)}/read`, {}),
+    claim: (id: string) => http.post<unknown>(`/api/mail/${encodeURIComponent(id)}/claim`, {}),
   },
   bounties: {
-    list: () => http.get<unknown>("/api/bounties").then(list<BountyDto>("bounties")),
+    list: () => http.get<{ bounties: BountyDto[] }>("/api/bounties").then((d) => d.bounties),
+    place: (targetUserId: string, amount: string, idempotencyKey: string) => http.post<{ id: string }>("/api/bounties", { targetUserId, amount, idempotencyKey }),
   },
   achievements: {
-    list: () => http.get<unknown>("/api/achievements").then(list<AchievementDto>("achievements")),
+    list: () => http.get<{ achievements: AchievementDto[] }>("/api/achievements").then((d) => d.achievements),
+    claim: (id: string) => http.post<Ok>(`/api/achievements/${encodeURIComponent(id)}/claim`, {}),
   },
   battlepass: {
     get: () => http.get<BattlePassResponse>("/api/battlepass"),
-    claim: (tier: number, track: "FREE" | "PREMIUM") => http.post<unknown>("/api/battlepass/claim", { tier, track }),
+    claim: (tier: number, track: "free" | "premium") => http.post<Ok>("/api/battlepass/claim", { tier, track }),
   },
   seasons: {
-    list: () => http.get<unknown>("/api/seasons").then(list<SeasonDto>("seasons")),
+    list: () => http.get<{ seasons: SeasonDto[] }>("/api/seasons").then((d) => d.seasons),
   },
   events: {
-    list: () => http.get<EventsResponse | unknown>("/api/events").then((d): EventsResponse => {
-      if (d && typeof d === "object" && "active" in d) return d as EventsResponse;
-      const all = list<import("./dto.js").GameEventDto>("events")(d);
-      return { active: all.filter((e) => e.active), upcoming: all.filter((e) => !e.active) };
-    }),
+    list: () => http.get<{ events: GameEventDto[] }>("/api/events").then((d): EventsView => ({
+      active: d.events.filter((e) => e.active),
+      upcoming: d.events.filter((e) => !e.active && e.next).sort((a, b) => (a.next?.start ?? "").localeCompare(b.next?.start ?? "")),
+    })),
   },
   galaxy: {
-    get: () => http.get<GalaxyResponse>("/api/galaxy"),
+    map: (mapId: string) => http.get<MapLiveResponse>(`/api/galaxy/maps/${encodeURIComponent(mapId)}`),
   },
   wallet: {
     get: () => http.get<WalletResponse>("/api/wallet"),
-    /** Link an additional wallet (nonce purpose LINK_WALLET). */
-    link: (body: { address: string; nonce: string; signature: string }) => http.post<MeResponse>("/api/auth/link-wallet", body),
+    /** Link a wallet to the signed-in account (nonce purpose LINK_WALLET). */
+    connect: (body: { address: string; nonce: string; signature: string }) => http.post<WalletResponse>("/api/wallet/connect", body),
     depositPrepare: (body: DepositPrepareRequest & { productId?: string }) => http.post<DepositPrepareResponse>("/api/wallet/deposit/prepare", body),
-    depositVerify: (body: DepositVerifyRequest) => http.post<DepositDto>("/api/wallet/deposit/verify", body),
-    withdrawQuote: (amount: string) => http.get<WithdrawQuoteDto>("/api/wallet/withdraw/quote", { amount }),
+    depositVerify: (body: DepositVerifyRequest) => http.post<DepositVerifyResponse | DepositPending>("/api/wallet/deposit/verify", body),
+    withdrawQuote: (amount: string) => http.get<WithdrawQuoteResponse>("/api/wallet/withdraw/quote", { amount }),
+    withdrawCheck: (amount: string, address: string) =>
+      http.get<{ ok: boolean; errors: { code: string; message: string }[]; reviewRequired: boolean }>("/api/wallet/withdraw/check", { amount, address }),
     withdraw: (body: WithdrawRequest) => http.post<WithdrawalDto>("/api/wallet/withdraw", body),
   },
   economy: {
     status: () => http.get<EconomyStatusResponse>("/api/economy/status"),
-    rewards: () => http.get<RewardsResponse>("/api/economy/rewards"),
-    transactions: (q: { asset?: string; cursor?: string } = {}) => http.get<unknown>("/api/economy/transactions", q).then(list<LedgerEntryDto>("entries")),
+    rewards: () => http.get<RewardsResponse & { nextClaimAt: string | null }>("/api/economy/rewards"),
+    transactions: (q: { asset?: string; cursor?: string } = {}) => http.get<{ entries: LedgerEntryDto[]; nextCursor: string | null }>("/api/economy/transactions", q),
     fees: () => http.get<FeesResponse>("/api/economy/fees"),
   },
   rewards: {
-    claim: (body: { rewardIds?: string[]; idempotencyKey: string }) => http.post<{ claimed: string; count: number }>("/api/rewards/claim", body),
+    claim: (body: { rewardIds?: string[]; all?: boolean }) => http.post<{ claimed: { rewardId: string; amount: string; alreadyClaimed: boolean }[]; balances: BalancesDto }>("/api/rewards/claim", body),
   },
 };
+
+/** Event start/end regardless of active/upcoming. */
+export function eventTimes(e: GameEventDto): { start: string; end: string } {
+  return e.window ?? e.next ?? { start: new Date().toISOString(), end: new Date().toISOString() };
+}
 
 export type Api = typeof api;

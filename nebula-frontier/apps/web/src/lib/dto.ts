@@ -1,9 +1,15 @@
 /**
- * Client-side view of REST payloads that are not (yet) part of @nebula/shared/api.ts.
- * Shapes mirror apps/api/src/routes/* responses; every optional field is rendered defensively.
+ * Client-side view of REST payloads that are not part of @nebula/shared/api.ts.
+ * Shapes mirror apps/api/src/routes/* responses exactly (see each comment for the route).
  */
-import type { Currency, Rarity, ShipDef, ShipInstanceDto, ShopProductDto } from "@nebula/shared";
+import type {
+  AchievementDef, BattlePassTierDef, Currency, Rarity, RewardBundle, SeasonDef, ShipDef, ShipInstanceDto, ShopProductDto, WalletResponse,
+  WithdrawQuoteDto, WithdrawalLimitsDto, BalancesDto, DepositDto,
+} from "@nebula/shared";
 
+export type RewardBundleView = RewardBundle & { items?: { itemId: string; quantity: number; name?: string }[] };
+
+/** GET /api/factions */
 export interface FactionDto {
   id: string;
   name: string;
@@ -14,14 +20,18 @@ export interface FactionDto {
   secondaryColor: string;
   emblem: string;
   homeMap: string;
+  homeSector?: string;
   starterShip: string;
   bonus: Record<string, number>;
   members?: number;
-  controlledMaps?: number;
+  score?: string;
+  territory?: number;
 }
 
-export interface GameTicketResponse { ticket: string; mapId: string; gameServerUrl: string; roomName?: string }
+/** POST /api/game/ticket */
+export interface GameTicketResponse { ticket: string; mapId: string; gameServerUrl: string; expiresAt: string }
 
+/** GET /api/ships */
 export interface ShipCatalogEntry {
   id: string;
   name: string;
@@ -47,6 +57,7 @@ export interface UpgradeCost { toLevel: number; credits: number; gems: number; r
 export interface UpgradeCostResponse { maxed: boolean; cost: UpgradeCost | null }
 export interface UpgradeResult { success: boolean; fromLevel: number; toLevel: number; cost: UpgradeCost }
 
+/** GET /api/shop */
 export interface ShopProductView extends ShopProductDto {
   stock?: number | null;
   limitPerUser?: number | null;
@@ -54,15 +65,10 @@ export interface ShopProductView extends ShopProductDto {
   purchaseFlow?: "LEDGER" | "DEPOSIT";
 }
 
-export interface CraftJobDto {
-  id: string;
-  blueprintId: string;
-  status: string;
-  startedAt?: string;
-  completesAt: string;
-  ready?: boolean;
-}
+/** GET /api/crafting/blueprints → jobs */
+export interface CraftJobDto { id: string; blueprintId: string; status: string; startedAt?: string; completesAt: string; ready?: boolean }
 
+/** GET /api/market, /api/market/mine */
 export interface MarketListingDto {
   id: string;
   sellerId: string;
@@ -84,13 +90,13 @@ export interface MarketListingDto {
 }
 export interface MarketResponse { listings: MarketListingDto[]; feeRate?: number }
 
+/** GET /api/auctions */
 export interface AuctionDto {
   id: string;
   sellerId: string;
-  sellerName?: string;
   itemId: string;
   name: string;
-  rarity: Rarity;
+  rarity: Rarity | null;
   quantity: number;
   type: string;
   currency: Currency;
@@ -98,140 +104,116 @@ export interface AuctionDto {
   buyoutPrice: string | null;
   currentBid: string | null;
   currentBidderId: string | null;
-  minNextBid?: string;
-  bidCount?: number;
-  listingFee?: string;
+  listingFee: string;
+  minNextBid: string;
   status: string;
   endsAt: string;
-  mine?: boolean;
-  leading?: boolean;
+  createdAt: string;
 }
-export interface AuctionsResponse { auctions: AuctionDto[]; fees?: { listing: number; sale: number; cancellation: number } }
+export interface AuctionsResponse { auctions: AuctionDto[]; fees: { listing: number; sale: number; cancellation: number } }
 
-export interface ClanSummaryDto {
+/** GET /api/clans */
+export interface ClanSummaryDto { id: string; name: string; tag: string; level: number; score: string; members: number; factionId: string | null }
+export interface ClanMemberDto { userId: string; username: string; level: number; role: string; contribution: string; joinedAt: string }
+export interface ClanStationDto { id: string; mapId: string; level: number; hull: number; maxHull: number; shield: number; maxShield: number; modules: { kind: string; level: number }[] }
+/** GET /api/clans/:id (announcement/treasury only for members) */
+export interface ClanDetailDto {
   id: string;
   name: string;
   tag: string;
+  description: string;
   level: number;
+  score: string;
   factionId: string | null;
-  score: string | number;
-  memberCount: number;
-  description?: string;
-}
-export interface ClanMemberDto { userId: string; username: string; role: string; level: number; contribution: string; joinedAt: string; online?: boolean }
-export interface ClanWarDto { id: string; opponent: { id: string; name: string; tag: string }; phase: string; mapId: string; scoreUs: number; scoreThem: number; startsAt: string; endsAt: string; winnerId: string | null }
-export interface ClanStationDto { id: string; mapId: string; level: number; hull: number; maxHull: number; shield: number; maxShield: number; modules: { kind: string; level: number }[]; underAttackAt: string | null }
-export interface ClanDetailDto extends ClanSummaryDto {
-  announcement?: string;
-  bankCredits: string;
-  xp?: string | number;
+  announcement: string | null;
+  treasury: string | null;
+  diplomacy: Record<string, string>;
   members: ClanMemberDto[];
-  wars?: ClanWarDto[];
-  stations?: ClanStationDto[];
-  territories?: { mapId: string; capturedAt: string }[];
-  myRole?: string | null;
+  stations: ClanStationDto[];
+  territories: string[];
 }
+/** GET /api/clans/:id/wars (raw rows) */
+export interface ClanWarDto { id: string; clanAId: string; clanBId: string; phase: string; mapId: string; scoreA: number; scoreB: number; winnerId: string | null; startsAt: string; endsAt: string }
 
-export interface FriendDto { id: string; userId: string; username: string; level: number; faction: string | null; status: "PENDING" | "ACCEPTED" | "BLOCKED" | string; online?: boolean; incoming?: boolean }
-export interface ChatMessageDto { id: string; channel: string; senderId: string; from: string; text: string; createdAt: string; faction?: string | null }
-export interface NotificationDto { id: string; type: string; title: string; body: string; data?: Record<string, unknown>; readAt: string | null; createdAt: string }
+/** GET /api/friends */
+export interface FriendUser { id: string; username: string; level: number; online?: boolean }
+export interface FriendsResponse { friends: FriendUser[]; incoming: FriendUser[]; outgoing: FriendUser[]; blocked: FriendUser[] }
+
+/** GET /api/chat/history */
+export interface ChatMessageDto { id: string; channel: string; from: string; fromId: string; text: string; at: number }
+
+/** GET /api/notifications */
+export interface NotificationDto { id: string; type: string; title: string; body: string; data?: Record<string, unknown>; read: boolean; createdAt: string }
+export interface NotificationsResponse { unread: number; notifications: NotificationDto[] }
+
+/** GET /api/mail */
 export interface MailDto {
   id: string;
   fromUserId: string | null;
-  fromName?: string | null;
   system: boolean;
   subject: string;
   body: string;
-  attachments: { credits?: number; gems?: number; items?: { itemId: string; quantity: number; name?: string }[] } | null;
-  claimedAt: string | null;
-  readAt: string | null;
+  attachments: RewardBundleView | null;
+  hasAttachments: boolean;
+  claimed: boolean;
+  read: boolean;
   expiresAt: string | null;
   createdAt: string;
 }
 
-export interface AchievementDto { id: string; name: string; description: string; category: string; progress: number; threshold: number; unlockedAt: string | null; hidden?: boolean }
-
-export interface BattlePassTierDto {
-  tier: number;
-  xpRequired: number;
-  free?: RewardBundleView | null;
-  premium?: RewardBundleView | null;
-  freeClaimed: boolean;
-  premiumClaimed: boolean;
-}
-export interface RewardBundleView {
-  xp?: number;
-  honor?: number;
-  credits?: number;
-  gems?: number;
-  seasonPoints?: number;
-  resources?: Record<string, number>;
-  items?: { itemId: string; quantity: number; name?: string }[];
-  cryptoEligible?: { source: string; weight: number };
-}
-export interface BattlePassResponse {
-  passId: string;
-  seasonId: string;
-  name: string;
-  xp: number;
-  tier: number;
-  premium: boolean;
-  premiumProductId?: string | null;
-  tiers: BattlePassTierDto[];
+/** GET /api/achievements */
+export interface AchievementDto extends Pick<AchievementDef, "id" | "name" | "description" | "category" | "metric" | "threshold"> {
+  progress: number;
+  rewards: RewardBundleView;
+  unlocked: boolean;
+  unlockedAt: string | null;
+  claimed: boolean;
 }
 
-export interface SeasonDto {
-  id: string;
-  number: number;
-  name: string;
-  theme: string;
-  startAt: string;
-  endAt: string;
-  active: boolean;
-  bossId?: string;
-  battlePassId?: string;
-  myPoints?: number;
-  myRank?: number | null;
-  leaderboardRewards?: { rankFrom: number; rankTo: number; bundle: RewardBundleView }[];
-  rankedRewards?: { tier: string; minRating: number; bundle: RewardBundleView }[];
-}
+/** GET /api/battlepass */
+export type BattlePassResponse =
+  | { active: false; pass: null }
+  | {
+      active: true;
+      seasonId: string;
+      pass: { id: string; name: string; tiers: BattlePassTierDef[] };
+      premiumProductId: string | null;
+      state: { xp: number; tier: number; premium: boolean; claimedFree: number[]; claimedPremium: number[] };
+    };
 
+/** GET /api/seasons */
+export type SeasonDto = SeasonDef & { active: boolean };
+
+/** GET /api/events */
 export interface GameEventDto {
   id: string;
   name: string;
   type: string;
   description: string;
-  startAt: string;
-  endAt: string;
-  active: boolean;
   maps: string[];
-  boss?: string | null;
-  xpMultiplier?: number;
-  dropMultiplier?: number;
-  rewards?: { tier: string; minContribution: number; bundle: RewardBundleView }[];
+  boss: string | null;
+  xpMultiplier: number;
+  dropMultiplier: number;
+  rewards: { tier: string; minContribution: number; bundle: RewardBundleView }[];
+  active: boolean;
+  window: { start: string; end: string } | null;
+  next: { start: string; end: string } | null;
 }
-export interface EventsResponse { active: GameEventDto[]; upcoming: GameEventDto[] }
+export interface EventsView { active: GameEventDto[]; upcoming: GameEventDto[] }
 
-export interface GalaxyMapNode {
-  id: string;
-  name: string;
-  sector: string;
-  system: string;
-  roomType: string;
-  pvp: boolean;
-  levelRange: [number, number];
-  zoneTypes: string[];
-  factionHome?: string | null;
-  population?: number;
-  controlledBy?: { clanTag?: string; faction?: string } | null;
-  portals: { id: string; targetMap: string; kind: string; requiredLevel: number }[];
-}
-export interface GalaxyResponse {
-  id: string;
-  name: string;
-  sectors: { id: string; name: string; systems: { id: string; name: string; maps: string[] }[] }[];
-  maps: GalaxyMapNode[];
-}
+/** GET /api/galaxy/maps/:id */
+export interface MapLiveResponse { rooms: { id: string; clients: number; maxClients: number; region: string }[] }
 
-export interface SquadDto { id: string; leaderId: string; members: { userId: string; username: string; level: number; online?: boolean }[] }
-export interface BountyDto { id: string; targetId: string; targetName?: string; amount: string; currency: Currency; status: string; expiresAt: string }
+/** GET /api/squad */
+export interface SquadDto { id: string; leaderId: string; minSize: number; maxSize: number; members: { userId: string; username: string; level: number; online: boolean }[] }
+
+/** GET /api/bounties */
+export interface BountyDto { targetId: string; username: string | null; level: number | null; total: string; count: number }
+
+/** POST /api/wallet/deposit/verify */
+export interface DepositVerifyResponse { deposit: DepositDto; balances: BalancesDto; gems?: number; explorerUrl?: string; alreadyCredited?: boolean }
+/** 202 from verify: the transaction is not final yet — retry. */
+export interface DepositPending { error: { code: string; message: string; retryable: true } }
+/** GET /api/wallet/withdraw/quote */
+export type WithdrawQuoteResponse = WithdrawQuoteDto & { limits: WithdrawalLimitsDto };
+export type { WalletResponse };

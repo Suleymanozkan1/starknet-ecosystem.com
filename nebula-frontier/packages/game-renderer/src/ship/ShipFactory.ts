@@ -343,7 +343,6 @@ export class ShipModel {
         const f = new Mesh(factory.flameGeometry, flameMat);
         f.position.set(n[0], n[1], n[2]);
         f.scale.set(r, r, r * 3);
-        f.frustumCulled = false;
         f.renderOrder = 2;
         this.flames.push(f);
         this.root.add(f);

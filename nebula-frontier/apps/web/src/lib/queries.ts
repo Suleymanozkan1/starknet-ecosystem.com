@@ -32,7 +32,6 @@ export const qk = {
   market: (q: Record<string, unknown>) => ["market", q] as const,
   auctions: (q: Record<string, unknown>) => ["auctions", q] as const,
   clans: (search: string) => ["clans", search] as const,
-  myClan: ["clans", "mine"] as const,
   squad: ["squad"] as const,
   friends: ["friends"] as const,
   chat: (channel: string, key?: string) => ["chat", channel, key ?? ""] as const,
@@ -78,18 +77,19 @@ export const useMarket = (q: Parameters<typeof api.market.list>[0] = {}) => useQ
 export const useMyListings = () => useQuery({ queryKey: ["market", "mine"], queryFn: api.market.mine });
 export const useAuctions = (q: Parameters<typeof api.auctions.list>[0] = {}) => useQuery({ queryKey: qk.auctions(q), queryFn: () => api.auctions.list(q), refetchInterval: 10_000 });
 export const useClans = (search = "") => useQuery({ queryKey: qk.clans(search), queryFn: () => api.clans.list(search ? { search } : {}) });
-export const useMyClan = (enabled = true) => useQuery({ queryKey: qk.myClan, queryFn: api.clans.mine, enabled });
-export const useSquad = () => useQuery({ queryKey: qk.squad, queryFn: api.squad.get });
-export const useFriends = () => useQuery({ queryKey: qk.friends, queryFn: api.friends.list });
+export const useClan = (id: string | null | undefined) => useQuery({ queryKey: ["clans", "detail", id], queryFn: () => api.clans.get(id!), enabled: Boolean(id) });
+export const useClanWars = (id: string | null | undefined) => useQuery({ queryKey: ["clans", "wars", id], queryFn: () => api.clans.wars(id!), enabled: Boolean(id) });
+export const useSquad = () => useQuery({ queryKey: qk.squad, queryFn: api.squad.get, refetchInterval: 20_000 });
+export const useFriends = () => useQuery({ queryKey: qk.friends, queryFn: api.friends.list, refetchInterval: 30_000 });
 export const useChat = (channel: string, key?: string, enabled = true) =>
-  useQuery({ queryKey: qk.chat(channel, key), queryFn: () => api.chat.list(channel, key), refetchInterval: 5_000, enabled });
+  useQuery({ queryKey: qk.chat(channel, key), queryFn: () => api.chat.history(channel, key), refetchInterval: 5_000, enabled, retry: false });
 export const useNotifications = (enabled = true) => useQuery({ queryKey: qk.notifications, queryFn: api.notifications.list, refetchInterval: 30_000, enabled });
 export const useMail = () => useQuery({ queryKey: qk.mail, queryFn: api.mail.list });
 export const useAchievements = () => useQuery({ queryKey: qk.achievements, queryFn: api.achievements.list });
 export const useBattlePass = () => useQuery({ queryKey: qk.battlepass, queryFn: api.battlepass.get });
 export const useSeasons = () => useQuery({ queryKey: qk.seasons, queryFn: api.seasons.list, staleTime: 5 * 60_000 });
 export const useEvents = () => useQuery({ queryKey: qk.events, queryFn: api.events.list, refetchInterval: 60_000 });
-export const useGalaxy = () => useQuery({ queryKey: qk.galaxy, queryFn: api.galaxy.get, staleTime: 60_000 });
+export const useMapLive = (mapId: string | null | undefined) => useQuery({ queryKey: ["galaxy", "map", mapId], queryFn: () => api.galaxy.map(mapId!), enabled: Boolean(mapId), refetchInterval: 30_000 });
 export const useWallet = (enabled = true) => useQuery({ queryKey: qk.wallet, queryFn: api.wallet.get, enabled });
 export const useEconomyStatus = () => useQuery({ queryKey: qk.economyStatus, queryFn: api.economy.status, staleTime: 60_000 });
 export const useRewards = () => useQuery({ queryKey: qk.rewards, queryFn: api.economy.rewards });

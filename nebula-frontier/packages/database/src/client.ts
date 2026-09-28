@@ -9,9 +9,10 @@ export type DbOrTx = Db | Tx;
 let singleton: Db | undefined;
 
 /** Create a Prisma client backed by the pg driver adapter (Prisma 7 requires an adapter). */
-export function createDb(url = process.env.DATABASE_URL): Db {
+export function createDb(url = process.env.DATABASE_URL, opts: { schema?: string } = {}): Db {
   if (!url) throw new Error("DATABASE_URL is not set");
-  const adapter = new PrismaPg({ connectionString: url, max: Number(process.env.DB_POOL_SIZE ?? 10) });
+  // `schema` (optional) targets a non-public schema, e.g. isolated test sandboxes.
+  const adapter = new PrismaPg({ connectionString: url, max: Number(process.env.DB_POOL_SIZE ?? 10) }, opts.schema ? { schema: opts.schema } : undefined);
   return new PrismaClient({ adapter });
 }
 
