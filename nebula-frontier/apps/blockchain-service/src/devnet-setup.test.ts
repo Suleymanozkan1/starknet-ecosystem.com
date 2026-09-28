@@ -25,7 +25,7 @@ describe("upsertEnv", () => {
     const dir = mkdtempSync(join(tmpdir(), "nf-env-"));
     dirs.push(dir);
     const file = join(dir, ".env");
-    writeFileSync(file, "TREASURY_PUBLIC_KEY=pk\nTREASURY_SECRET=[1,2,3]\nFOO=1\n");
+    writeFileSync(file, "TREASURY_PUBLIC_KEY=pk\nTREASURY_SECRET=[1,2,3]\nFOO=1\nTREASURY_SECRET=[4,5,6]\n");
     upsertEnv({ TREASURY_SECRET_FILE: "/abs/treasury.json", TREASURY_SECRET: null }, file);
     const out = readFileSync(file, "utf8");
     expect(out).not.toContain("TREASURY_SECRET=");

@@ -88,6 +88,9 @@ export async function bootstrapTreasury(db: Db, input: BootstrapInput): Promise<
       if (spl ? delta < 0n : delta < -buffer) warnings.push(`Ledger accounts for ${accounted} ${spl ? "reward-token base units" : "lamports"} but chain holds ${held}; NOT funding. Investigate (network fees / manual transfers).`);
       return { accounted, delta, funded: 0n, allocation, seasonId, warnings };
     }
+    // Audit trail: record which balance actually backed the funding (reward token in SPL mode).
+    const mode = input.rewardTokenBalance !== undefined ? "SPL" : "NATIVE";
+    const backing = input.rewardTokenBalance ?? input.onChainBalance;
     const key = `bootstrap:${input.treasuryAddress}:${input.slot}`;
     const res = await post(tx, {
       from: system(LedgerAccountType.EXTERNAL_CHAIN, Currency.NEBX),
@@ -96,7 +99,7 @@ export async function bootstrapTreasury(db: Db, input: BootstrapInput): Promise<
       type: "ADMIN_ADJUSTMENT",
       reference: input.treasuryAddress,
       idempotencyKey: key,
-      metadata: { onChainBalance: input.onChainBalance.toString(), slot: input.slot.toString(), accounted: accounted.toString(), reason: "Treasury funding reconciled from on-chain balance" }
+      metadata: { mode, backingBalance: backing.toString(), onChainLamports: input.onChainBalance.toString(), slot: input.slot.toString(), accounted: accounted.toString(), reason: "Treasury funding reconciled from on-chain balance" }
     });
     if (res.duplicate) return { accounted, delta: 0n, funded: 0n, allocation, seasonId, warnings: ["Already bootstrapped at this slot"] };
     const splits: [LedgerAccountType, number][] = [
@@ -131,7 +134,7 @@ export async function bootstrapTreasury(db: Db, input: BootstrapInput): Promise<
         targetId: input.treasuryAddress,
         oldValue: { accounted: accounted.toString() },
         newValue: { funded: delta.toString(), allocation: Object.fromEntries(Object.entries(allocation).map(([k, v]) => [k, v.toString()])) },
-        reason: `On-chain balance ${input.onChainBalance} at slot ${input.slot}`
+        reason: `${mode} backing balance ${backing} (treasury lamports ${input.onChainBalance}) at slot ${input.slot}`
       }
     });
     return { accounted, delta, funded: delta, allocation, seasonId, warnings };

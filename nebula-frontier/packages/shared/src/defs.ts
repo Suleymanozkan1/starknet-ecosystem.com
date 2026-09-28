@@ -585,7 +585,7 @@ export interface EconomyConfigDoc {
   fees: { marketplace: number; auctionListing: number; auctionSale: number; auctionCancellation: number; withdrawalServicePercent: number; withdrawalFlat: number; estimatedNetworkFee: number; tradeTax: number };
   withdrawal: { min: number; max: number; dailyLimit: number; cooldownMinutes: number; minAccountAgeHours: number; walletChangeLockHours: number; reviewThreshold: number };
   inflation: { dailyThreshold: number; weeklyThreshold: number; responses: { rewardMultiplier: number; dropMultiplier: number; sinkMultiplier: number } };
-  circuitBreaker: { reserveCoverageMin: number; liabilityRatioMax: number; withdrawalSpikeMultiplier: number; depositSpikeMultiplier: number; botRiskShareMax: number; inflationSpike: number; abnormalOutflowMultiplier: number };
+  circuitBreaker: { reserveCoverageMin: number; liabilityRatioMax: number; withdrawalSpikeMultiplier: number; depositSpikeMultiplier: number; depositSpikeFloorLamports: number; botRiskShareMax: number; inflationSpike: number; abnormalOutflowMultiplier: number };
   rewardExpiryDays: number;
   tokenomics: {
     symbol: string;

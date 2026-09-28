@@ -237,6 +237,24 @@ export interface VerifyPayoutInput {
   skipClusterCheck?: boolean;
 }
 
+/** Sum of `owner`'s token-account balances for `mint` (base units) at `commitment`. */
+export async function getTokenBalance(rpc: SolanaRpcClient, owner: string, mint: string, commitment: Commitment = "finalized"): Promise<bigint> {
+  const { value } = await rpc
+    .getTokenAccountsByOwner(owner as Parameters<SolanaRpcClient["getTokenAccountsByOwner"]>[0], { mint: mint as Parameters<SolanaRpcClient["getBalance"]>[0] }, { encoding: "jsonParsed", commitment })
+    .send();
+  return value.reduce((sum, a) => sum + BigInt(a.account.data.parsed.info.tokenAmount.amount), 0n);
+}
+
+/** Fee payer (first account key) of a landed transaction, or null when it is not available. */
+export async function getTransactionFeePayer(rpc: SolanaRpcClient, signature: string): Promise<string | null> {
+  if (!isSignature(signature)) return null;
+  const raw = await rpc
+    .getTransaction(toSignature(signature), { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" })
+    .send();
+  const keys = (raw as unknown as ParsedTx | null)?.transaction?.message?.accountKeys;
+  return Array.isArray(keys) ? (keys[0]?.pubkey ?? null) : null;
+}
+
 /**
  * Verifies that `signature` is a genuine treasury payout: successful + confirmed, treasury is fee
  * payer and signer, exactly `amount` moves treasury → `destination` (SOL or SPL `mint`) and the

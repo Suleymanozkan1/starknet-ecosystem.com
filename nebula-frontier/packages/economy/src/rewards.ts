@@ -2,7 +2,7 @@ import { CircuitBreakerMode, Currency, LedgerAccountType, RewardSource, RiskLeve
 import { post, system, userWallet, withSerializableTx, LedgerError, type Db, type Tx } from "@nebula/database";
 import { loadEconomyConfig, type EconomyConfig } from "./config.js";
 import { isBreakerActive } from "./breakers.js";
-import { checkRewardEligibility, claimCooldownUntil } from "./eligibility.js";
+import { checkRewardEligibility, claimCooldownUntil, REWARD_BLOCKING_RESTRICTIONS } from "./eligibility.js";
 import { applyCaps, getCapUsage } from "./caps.js";
 import { getTreasuryState, getOutstandingLiability } from "./treasury.js";
 import { dailyEmissionCap, emissionFromConfig, rewardAmountForWeight } from "./emission.js";
@@ -189,8 +189,10 @@ export async function claimReward(db: Db, userId: string, rewardId: string, opts
     if (reward.status === "PENDING_REVIEW") throw new RewardClaimError("UNDER_REVIEW", "Reward is under review");
     if (reward.status !== "CLAIMABLE") throw new RewardClaimError("NOT_CLAIMABLE", `Reward is ${reward.status.toLowerCase()}`);
     if (reward.expiresAt && reward.expiresAt < now) throw new RewardClaimError("EXPIRED", "Reward has expired");
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { riskLevel: true, bannedAt: true } });
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { riskLevel: true, bannedAt: true, restrictions: true } });
     if (!user || user.bannedAt) throw new RewardClaimError("FORBIDDEN", "Account cannot claim rewards");
+    // A restriction added after the grant freezes rewards that are already claimable.
+    if (user.restrictions.some((r) => REWARD_BLOCKING_RESTRICTIONS.includes(r))) throw new RewardClaimError("FORBIDDEN", "Account is restricted from rewards");
     if (user.riskLevel === RiskLevel.HIGH || user.riskLevel === RiskLevel.CRITICAL) throw new RewardClaimError("UNDER_REVIEW", "Account is under security review");
     if (!opts.skipCooldown) {
       const last = await tx.rewardClaim.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
@@ -264,6 +266,7 @@ export async function reviewReward(db: Db, rewardId: string, approve: boolean, a
     const r = await tx.reward.findUnique({ where: { id: rewardId } });
     if (!r) throw new RewardClaimError("NOT_FOUND", "Reward not found");
     if (r.status !== "PENDING_REVIEW") throw new RewardClaimError("NOT_REVIEWABLE", `Reward is ${r.status}`);
+    if (r.userId === adminId) throw new RewardClaimError("SELF_REVIEW", "Reviewers cannot decide their own reward");
     const status = approve ? "CLAIMABLE" : "REJECTED";
     // Conditional: a concurrent expiry (EXPIRED + liability EXPIRED) must not be overwritten by CLAIMABLE.
     const upd = await tx.reward.updateMany({ where: { id: rewardId, status: "PENDING_REVIEW" }, data: { status, reviewedBy: adminId } });

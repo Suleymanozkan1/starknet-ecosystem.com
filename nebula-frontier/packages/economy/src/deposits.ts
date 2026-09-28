@@ -23,8 +23,9 @@ export interface GemPack {
 export async function getGemPacks(db: DbOrTx): Promise<GemPack[]> {
   const rows = await db.shopProduct.findMany({ where: { category: "GEMS", currency: Currency.SOL, active: true } });
   const fromDb = rows
-    .map((r) => ({ id: r.id, price: r.price, gems: Number((r.grants as { gems?: number } | null)?.gems ?? 0) }))
-    .filter((p) => p.gems > 0 && p.price > 0n);
+    // grants is admin-editable JSON: keep only safe positive integer gem counts (BigInt-convertible).
+    .map((r) => ({ id: r.id, price: r.price, gems: Number((r.grants as { gems?: unknown } | null)?.gems ?? 0) }))
+    .filter((p) => Number.isSafeInteger(p.gems) && p.gems > 0 && p.price > 0n);
   if (fromDb.length) return fromDb.sort((a, b) => (a.price < b.price ? -1 : 1));
   return SHOP.filter((p) => p.category === "GEMS" && p.currency === Currency.SOL && p.active && (p.grants.gems ?? 0) > 0)
     .map((p) => ({ id: p.id, price: BigInt(p.price), gems: p.grants.gems ?? 0 }))

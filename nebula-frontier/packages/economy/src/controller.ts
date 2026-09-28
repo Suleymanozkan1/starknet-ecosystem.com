@@ -159,7 +159,8 @@ export function detectAnomalies(m: EconomyMetrics, cfg: EconomyConfig): Anomaly[
   if (spike(m.withdrawals24h, m.withdrawalsAvg7d, cb.withdrawalSpikeMultiplier, wFloor)) {
     out.push({ kind: "WITHDRAWAL_SPIKE", severity: "CRITICAL", message: `Withdrawals 24h ${m.withdrawals24h} vs 7d avg ${m.withdrawalsAvg7d}`, breakers: [CircuitBreakerMode.WITHDRAWAL_REVIEW], throttle: false });
   }
-  if (spike(m.deposits24h, m.depositsAvg7d, cb.depositSpikeMultiplier, wFloor)) {
+  // Deposits are SOL lamports: the floor must be SOL-denominated, never the NEBX withdrawal limit.
+  if (spike(m.deposits24h, m.depositsAvg7d, cb.depositSpikeMultiplier, BigInt(cb.depositSpikeFloorLamports))) {
     out.push({ kind: "DEPOSIT_SPIKE", severity: "WARN", message: `Deposits 24h ${m.deposits24h} vs 7d avg ${m.depositsAvg7d}`, breakers: [CircuitBreakerMode.WITHDRAWAL_REVIEW], throttle: false });
   }
   if (m.rewardUsers24h >= 20 && m.riskyRewardUsers24h / m.rewardUsers24h > cb.botRiskShareMax) {

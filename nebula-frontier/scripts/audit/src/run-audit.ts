@@ -7,9 +7,10 @@
  *
  *  BLOCKED          requirement.blocked is set (external constraint, explained)
  *  NOT_IMPLEMENTED  no implementation evidence found
- *  PARTIAL          some implementation/integration/test evidence missing, or runtime FAIL, or marked partial
+ *  PARTIAL          some implementation/integration/test evidence missing, or a declared runtime check
+ *                   is not PASS (FAIL, NOT_RUN, BLOCKED or missing), or marked partial
  *  IMPLEMENTED      all implementation + integration evidence present, test evidence present
- *                   (unless testExempt) and runtime not FAIL
+ *                   (unless testExempt) and every declared runtime check PASS
  *
  * Output: docs/REQUIREMENTS_CHECKLIST.md and docs/audit/requirements-summary.json
  */

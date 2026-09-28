@@ -13,7 +13,8 @@ import {
   setCircuitBreaker,
   updateEconomyConfig,
   loadEconomyConfig,
-  getOutstandingLiability
+  getOutstandingLiability,
+  reviewReward
 } from "./index.js";
 
 const SOL = 1_000_000_000n;
@@ -66,6 +67,19 @@ describe("grantCryptoReward / claimReward", () => {
     await expect(claimReward(db, risky.id, g.rewardId as string)).rejects.toMatchObject({ code: "UNDER_REVIEW" });
     const user = await db.user.findUniqueOrThrow({ where: { id: risky.id } });
     expect(user.bannedAt).toBeNull(); // never auto-banned
+    // Four-eyes: the reward owner cannot approve their own reward; another admin can.
+    await expect(reviewReward(db, g.rewardId as string, true, risky.id, "self")).rejects.toMatchObject({ code: "SELF_REVIEW" });
+    const admin = await createTestUser(db);
+    expect((await reviewReward(db, g.rewardId as string, true, admin.id, "ok")).status).toBe("CLAIMABLE");
+  });
+
+  it("a reward-blocking restriction added after the grant freezes the claim", async () => {
+    const u = await createTestUser(db);
+    const g = await grantCryptoReward(db, { userId: u.id, source: "EVENT", sourceRef: "restr-1", weight: 1, reason: "Event Reward" });
+    expect(g.status).toBe("GRANTED");
+    await db.user.update({ where: { id: u.id }, data: { restrictions: ["NO_REWARDS"] } });
+    await expect(claimReward(db, u.id, g.rewardId as string)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect((await db.reward.findUniqueOrThrow({ where: { id: g.rewardId as string } })).status).toBe("CLAIMABLE");
   });
 
   it("REWARD_PAUSE breaker pauses grants", async () => {
@@ -106,6 +120,11 @@ describe("config & controller", () => {
   it("rejects allocation > 100% and audits valid changes with old/new value", async () => {
     await expect(updateEconomyConfig(db, "rewardAllocation.LEADERBOARD", 0.9, null, "try to over-allocate")).rejects.toBeInstanceOf(EconomyConfigError);
     await expect(updateEconomyConfig(db, "nope.key", 1, null, "unknown")).rejects.toBeInstanceOf(EconomyConfigError);
+    // Money is integer base units; a subtree cannot smuggle a string past a numeric leaf.
+    await expect(updateEconomyConfig(db, "caps.daily", 1.5, null, "fractional")).rejects.toBeInstanceOf(EconomyConfigError);
+    await expect(updateEconomyConfig(db, "caps.daily", 2 ** 60, null, "unsafe")).rejects.toBeInstanceOf(EconomyConfigError);
+    await expect(updateEconomyConfig(db, "caps", { daily: "60000000", weekly: 200_000_000, season: 1_000_000_000 }, null, "string leaf")).rejects.toBeInstanceOf(EconomyConfigError);
+    await expect(updateEconomyConfig(db, "sinks.npcServiceFee", 0.5, null, "fractional sink")).rejects.toBeInstanceOf(EconomyConfigError);
     try {
       const r = await updateEconomyConfig(db, "caps.daily", 60_000_000, null, "raise daily cap");
       expect(r.oldValue).toBe(50_000_000);

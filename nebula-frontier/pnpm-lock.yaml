@@ -217,6 +217,9 @@ importers:
       '@nebula/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
+      '@nebula/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
       '@solana-program/memo':
         specifier: ^0.15.0
         version: 0.15.0(@solana/kit@8.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
@@ -238,6 +241,9 @@ importers:
       ioredis:
         specifier: ^5.8.0
         version: 5.11.1
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.5
 
   apps/game-client:
     dependencies:

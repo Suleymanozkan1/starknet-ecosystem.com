@@ -43,7 +43,7 @@ function deps(rpc: SolanaRpcClient, over: Partial<ProcessorDeps> = {}): Processo
   };
 }
 
-async function newWithdrawal(amount = 20_000_000n): Promise<{ id: string; userId: string; wallet: string }> {
+async function newWithdrawal(amount = 20_000_000n): Promise<{ id: string; userId: string; wallet: string; player: Awaited<ReturnType<typeof generateKeyPairSigner>> }> {
   const player = await generateKeyPairSigner();
   const u = await createTestUser(db, { wallet: player.address });
   await db.$transaction((tx) =>
@@ -58,7 +58,7 @@ async function newWithdrawal(amount = 20_000_000n): Promise<{ id: string; userId
   );
   const w = await createWithdrawal(db, { userId: u.id, amount, address: player.address, idempotencyKey: `wd-${u.id}` });
   expect(w.status).toBe("PENDING");
-  return { id: w.withdrawalId, userId: u.id, wallet: player.address };
+  return { id: w.withdrawalId, userId: u.id, wallet: player.address, player };
 }
 
 async function runUntilDone(d: ProcessorDeps, id: string, max = 20): Promise<string> {
@@ -147,7 +147,7 @@ describe("withdrawal payout pipeline", () => {
     expect(transfersTo(state, w.wallet).length).toBe(1);
   });
 
-  it("never adopts a spoofed inbound tx carrying the withdrawal memo; pays out for real and flags it", async () => {
+  it("never adopts a spoofed inbound tx carrying the withdrawal memo; pays out for real without blaming the player", async () => {
     const { rpc, state } = chain();
     const w = await newWithdrawal();
     const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
@@ -163,8 +163,22 @@ describe("withdrawal payout pipeline", () => {
     expect(payouts.length).toBe(1);
     expect(payouts[0]?.transfers.some((t) => t.source === treasury.address && t.destination === w.wallet)).toBe(true);
     expect(state.balances.get(w.wallet)).toBe(row.final);
+    // A third party's spoof must not raise the victim's risk score.
     const signals = await db.riskSignal.findMany({ where: { userId: w.userId, type: "FAKE_TRANSACTION", source: "withdrawal" } });
-    expect(signals.length).toBeGreaterThan(0);
+    expect(signals).toHaveLength(0);
+  });
+
+  it("a spoof paid by the player's own linked wallet is flagged exactly once", async () => {
+    const { rpc, state } = chain();
+    const w = await newWithdrawal();
+    const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    state.balances.set(w.wallet, SOL);
+    const spoof = await sendSolWithMemo({ rpc, signer: w.player, destination: treasury.address, amount: row.final, memo: withdrawalMemo(w.id) });
+    expect(spoof.status).toBe("CONFIRMED");
+    expect(await runUntilDone(deps(rpc), w.id)).toBe("COMPLETED");
+    const signals = await db.riskSignal.findMany({ where: { userId: w.userId, type: "FAKE_TRANSACTION", source: "withdrawal" } });
+    expect(signals).toHaveLength(1);
+    expect((signals[0]?.details as { signature?: string }).signature).toBe(spoof.signature);
   });
 
   it("max attempts → FAILED with a compensating refund (never COMPLETED)", async () => {

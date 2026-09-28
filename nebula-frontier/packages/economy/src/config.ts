@@ -85,6 +85,11 @@ export function validateEconomyConfig(cfg: EconomyConfig): string[] {
   const num = (v: unknown, name: string, min = 0, max = Number.POSITIVE_INFINITY) => {
     if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) errs.push(`${name} must be a number in [${min}, ${max}]`);
   };
+  // Money (and every count/duration consumed through BigInt) is integer base units: fractional or
+  // unsafe values would make BigInt(...) throw in the controller and fail the safety loop open.
+  const units = (v: unknown, name: string, min = 0) => {
+    if (typeof v !== "number" || !Number.isSafeInteger(v) || v < min) errs.push(`${name} must be a safe integer >= ${min} (base units)`);
+  };
   const alloc = Object.values(cfg.rewardAllocation);
   alloc.forEach((v, i) => num(v, `rewardAllocation[${i}]`, 0, 1));
   const allocSum = alloc.reduce((s, v) => s + v, 0);
@@ -95,7 +100,11 @@ export function validateEconomyConfig(cfg: EconomyConfig): string[] {
   num(cfg.emission.baseRate, "emission.baseRate", 0, 1);
   num(cfg.emission.maxRewardRate, "emission.maxRewardRate", 0, 1);
   if (cfg.emission.baseRate > cfg.emission.maxRewardRate) errs.push("emission.baseRate must be <= emission.maxRewardRate");
-  num(cfg.emission.rewardUnitLamports, "emission.rewardUnitLamports", 1);
+  units(cfg.emission.rewardUnitLamports, "emission.rewardUnitLamports", 1);
+  for (const [k, v] of Object.entries(cfg.caps)) units(v, `caps.${k}`, 1);
+  for (const [k, v] of Object.entries(cfg.withdrawal)) units(v, `withdrawal.${k}`, 0);
+  for (const [k, v] of Object.entries(cfg.sinks)) units(v, `sinks.${k}`, 0);
+  units(cfg.circuitBreaker.depositSpikeFloorLamports, "circuitBreaker.depositSpikeFloorLamports", 0);
   num(cfg.emission.activityMultiplierMax, "emission.activityMultiplierMax", 0, 10);
   num(cfg.emission.seasonMultiplier, "emission.seasonMultiplier", 0, 10);
   const th = cfg.treasuryHealth;
@@ -105,7 +114,7 @@ export function validateEconomyConfig(cfg: EconomyConfig): string[] {
   const w = cfg.withdrawal;
   if (!(w.min > 0 && w.min <= w.max && w.max <= w.dailyLimit)) errs.push("withdrawal must satisfy 0 < min <= max <= dailyLimit");
   for (const [k, v] of Object.entries(cfg.fees)) {
-    if (k === "withdrawalFlat" || k === "estimatedNetworkFee") num(v, `fees.${k}`, 0);
+    if (k === "withdrawalFlat" || k === "estimatedNetworkFee") units(v, `fees.${k}`, 0);
     else num(v, `fees.${k}`, 0, 0.5);
   }
   const tok = Object.values(cfg.tokenomics.allocation).reduce((s, v) => s + v, 0);
@@ -147,10 +156,19 @@ export function isKnownConfigKey(key: string): boolean {
   return getPath(defaultEconomyConfig(), path) !== undefined;
 }
 
+/**
+ * `b` (the new value) must have the shape of `a` (the default). Subtrees are compared leaf by leaf with
+ * the same key set, so `{ caps: { daily: "60000000" } }` cannot slip a string past a numeric leaf.
+ */
 function sameShape(a: unknown, b: unknown): boolean {
   if (a === null || b === null) return true; // nullable runtime fields
   if (Array.isArray(a)) return Array.isArray(b);
-  if (isPlainObject(a)) return isPlainObject(b);
+  if (isPlainObject(a)) {
+    if (!isPlainObject(b)) return false;
+    const ka = Object.keys(a);
+    const kb = Object.keys(b);
+    return ka.length === kb.length && kb.every((k) => Object.hasOwn(a, k) && sameShape(a[k], b[k]));
+  }
   return typeof a === typeof b;
 }
 

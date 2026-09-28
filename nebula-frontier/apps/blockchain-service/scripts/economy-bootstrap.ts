@@ -9,7 +9,7 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDb, disconnectDb, getDb } from "@nebula/database";
-import { createRpcFromEnv, getTreasuryAddress, assertRpcCluster, explorerUrl, getSolanaNetwork, type SolanaRpcClient } from "@nebula/blockchain";
+import { createRpcFromEnv, getTokenBalance, getTreasuryAddress, assertRpcCluster, explorerUrl, getSolanaNetwork, type SolanaRpcClient } from "@nebula/blockchain";
 import { bootstrapTreasury, type BootstrapResult } from "@nebula/economy";
 import type { Db } from "@nebula/database";
 
@@ -18,12 +18,7 @@ export async function runBootstrap(db: Db, rpc: SolanaRpcClient, treasuryAddress
   // SPL reward-mint mode: NEBX is backed only by the treasury's reward-token balance (never by SOL).
   const mint = process.env.REWARD_MINT?.trim();
   let rewardTokenBalance: bigint | undefined;
-  if (mint) {
-    const { value: accounts } = await rpc
-      .getTokenAccountsByOwner(treasuryAddress as Parameters<SolanaRpcClient["getTokenAccountsByOwner"]>[0], { mint: mint as Parameters<SolanaRpcClient["getBalance"]>[0] }, { encoding: "jsonParsed", commitment: "finalized" })
-      .send();
-    rewardTokenBalance = accounts.reduce((sum, a) => sum + BigInt(a.account.data.parsed.info.tokenAmount.amount), 0n);
-  }
+  if (mint) rewardTokenBalance = await getTokenBalance(rpc, treasuryAddress, mint);
   const r = await bootstrapTreasury(db, { onChainBalance: onChain, rewardTokenBalance, slot: context.slot, treasuryAddress });
   return { ...r, onChain, slot: context.slot };
 }

@@ -7,9 +7,12 @@
  */
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { z } from "zod";
 import { ITEMS, SHIPS } from "@nebula/config";
+import { solanaAddressSchema } from "@nebula/validation";
 import {
   assertNftEligible,
+  assertRpcCluster,
   buildNftMetadataJson,
   createRpcFromEnv,
   explorerUrl,
@@ -19,6 +22,13 @@ import {
   mintNft,
   NftFamily
 } from "@nebula/blockchain";
+
+/** CLI input is external: the owner must be a Solana address and the metadata/image URIs http(s). */
+export const mintArgsSchema = z.object({
+  owner: solanaAddressSchema,
+  uri: z.url({ protocol: /^https?$/ }),
+  image: z.url({ protocol: /^https?$/ })
+});
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -35,14 +45,21 @@ export async function main(): Promise<void> {
   if (!def) throw new Error(itemId !== undefined ? `Unknown item ${itemId}` : "No NFT-eligible item found");
   assertNftEligible({ id: def.id, name: def.name, nftEligible: def.nftEligible });
   const signer = await loadTreasurySigner();
-  const owner = arg("owner") ?? signer.address;
+  const webUrl = process.env.PUBLIC_WEB_URL ?? "http://localhost:5173";
+  const parsed = mintArgsSchema.safeParse({
+    owner: arg("owner") ?? signer.address,
+    uri: arg("uri") ?? `${webUrl}/nft/${def.id}.json`,
+    image: arg("image") ?? `${webUrl}/nft/${def.id}.png`
+  });
+  if (!parsed.success) throw new Error(`Invalid mint arguments: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`);
+  const { owner, uri, image } = parsed.data;
   const family = ship && def === ship ? NftFamily.LEGENDARY_SHIP : item?.category === "SKIN" ? NftFamily.LIMITED_SKIN : NftFamily.FOUNDER_COSMETIC;
   const json = buildNftMetadataJson({
     family,
     itemId: def.id,
     name: def.name.slice(0, 24),
     description: `NEBULA FRONTIER ${family.replace(/_/g, " ").toLowerCase()} — cosmetic ownership record (devnet).`,
-    image: arg("image") ?? `${process.env.PUBLIC_WEB_URL ?? "http://localhost:5173"}/nft/${def.id}.png`,
+    image,
     rarity: "rarity" in def ? String(def.rarity) : "LEGENDARY",
     shipClass: ship && def === ship ? ship.class : null,
     faction: null,
@@ -50,8 +67,9 @@ export async function main(): Promise<void> {
   });
   console.info("Metadata JSON (host this at --uri):");
   console.info(JSON.stringify(json, null, 2));
-  const uri = arg("uri") ?? `${process.env.PUBLIC_WEB_URL ?? "http://localhost:5173"}/nft/${def.id}.json`;
   const rpc = createRpcFromEnv();
+  // Never submit a treasury-funded mint to an unintended cluster.
+  await assertRpcCluster(rpc);
   const { mint, outcome } = await mintNft(rpc, { payer: signer, owner, name: json.name, symbol: json.symbol, uri });
   console.info(`Mint: ${mint}  status: ${outcome.status}`);
   console.info(`Tx: ${explorerUrl(outcome.signature, getSolanaNetwork())}`);

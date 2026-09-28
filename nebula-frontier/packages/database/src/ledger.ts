@@ -99,6 +99,10 @@ export async function post(tx: Tx, input: PostingInput): Promise<PostingResult> 
     data: { balance: { decrement: input.amount }, version: { increment: 1 } },
   });
   if (dec.count !== 1) {
+    // READ COMMITTED replay that waited on the original posting's row lock: once the original commits,
+    // the re-evaluated balance check fails. That is a duplicate, not an overdraft.
+    const winner = await tx.balanceLedger.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: { id: true } });
+    if (winner) return { id: winner.id, duplicate: true };
     throw new LedgerError("INSUFFICIENT_BALANCE", `Insufficient ${input.from.asset} balance in ${from.key}`);
   }
   await tx.balanceAccount.update({

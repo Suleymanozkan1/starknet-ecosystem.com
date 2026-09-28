@@ -24,6 +24,7 @@ import {
   buildAndSendPayout,
   checkSignature,
   findPayoutsByMemo,
+  getTransactionFeePayer,
   verifyPayoutTransaction,
   type ConfirmationOutcome,
   type SolanaRpcClient,
@@ -128,6 +129,29 @@ async function preflightGate(deps: ProcessorDeps, w: WithdrawalRow): Promise<Ste
  * verified genuine payout. "retry" = lookup/verification could not complete (never resubmit then);
  * null = no genuine payout. Spoofed memo matches are logged + risk-scored and ignored.
  */
+/**
+ * Anyone who knows the withdrawal id can send the treasury a tx carrying its memo, so a spoof only
+ * counts against the player when THEIR linked wallet paid for it, and each signature is recorded once
+ * (findGenuinePayout runs on every submit pass and every EXPIRED re-check).
+ */
+async function flagSpoofedPayout(deps: ProcessorDeps, w: WithdrawalRow, signature: string, v: { reason: string; message: string }): Promise<void> {
+  const feePayer = await getTransactionFeePayer(deps.rpc, signature);
+  const linked = feePayer ? await deps.db.wallet.count({ where: { userId: w.userId, address: feePayer } }) : 0;
+  if (!linked) {
+    log.warn("spoofed memo sent by an unlinked wallet; not attributed to the player", { withdrawalId: w.id, signature, feePayer });
+    return;
+  }
+  const seen = await deps.db.riskSignal.count({ where: { type: "FAKE_TRANSACTION", source: "withdrawal", details: { path: ["signature"], equals: signature } } });
+  if (seen) return;
+  await recordRiskSignal(deps.db, {
+    userId: w.userId,
+    type: "FAKE_TRANSACTION",
+    score: 10,
+    details: { withdrawalId: w.id, signature, feePayer, reason: v.reason, message: v.message },
+    source: "withdrawal"
+  });
+}
+
 async function findGenuinePayout(deps: ProcessorDeps, w: WithdrawalRow, exclude: string | null = null): Promise<{ signature: string } | "retry" | null> {
   const memo = withdrawalMemo(w.id);
   let candidates: Awaited<ReturnType<typeof findPayoutsByMemo>>;
@@ -148,13 +172,7 @@ async function findGenuinePayout(deps: ProcessorDeps, w: WithdrawalRow, exclude:
     }
     log.warn("memo-matched transaction is not a genuine payout; ignoring it", { withdrawalId: w.id, signature: c.signature, reason: v.reason });
     deps.metrics?.inc("withdrawal_spoofed_memo_total");
-    await recordRiskSignal(deps.db, {
-      userId: w.userId,
-      type: "FAKE_TRANSACTION",
-      score: 10,
-      details: { withdrawalId: w.id, signature: c.signature, reason: v.reason, message: v.message },
-      source: "withdrawal"
-    }).catch(() => undefined);
+    await flagSpoofedPayout(deps, w, c.signature, v).catch((err: Error) => log.warn("spoof risk signal failed", { withdrawalId: w.id, error: err.message }));
   }
   return pending ? "retry" : null;
 }

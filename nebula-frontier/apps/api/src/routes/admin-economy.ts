@@ -7,7 +7,7 @@ import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { circuitBreakerSchema, economyConfigUpdateSchema, idSchema, rewardRateSchema, safeTextSchema } from "@nebula/validation";
 import { AdminRole, Currency, LedgerAccountType, RewardStatus, type AdminEconomyResponse } from "@nebula/shared";
-import { createRpcFromEnv, explorerUrl, getSolanaNetwork, getTreasuryAddress, type SolanaRpcClient } from "@nebula/blockchain";
+import { createRpcFromEnv, explorerUrl, getRewardMint, getSolanaNetwork, getTokenBalance, getTreasuryAddress, type SolanaRpcClient } from "@nebula/blockchain";
 import {
   EconomyConfigError,
   EconomyController,
@@ -205,21 +205,29 @@ const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) 
   app.get("/api/admin/treasury", { preHandler: guard, config: { rateLimit: app.rateLimits.admin } }, async () => {
     const cfg = await loadEconomyConfig(db);
     const [treasury, budget, integrity] = await Promise.all([getTreasuryState(db, cfg), getRewardBudgetState(db, cfg), verifyLedgerIntegrity(db)]);
-    let onChain: { address: string; lamports: string | null; explorerUrl: string | null; error?: string } = { address: "", lamports: null, explorerUrl: null };
+    // Same split as bootstrapTreasury: in native mode one lamport wallet backs both ledger assets; in
+    // SPL reward-mint mode lamports back SOL claims only and NEBX is backed by the reward-token balance.
+    const rewardMint = getRewardMint().mint;
+    let onChain: { address: string; lamports: string | null; rewardTokenBalance: string | null; explorerUrl: string | null; error?: string } = { address: "", lamports: null, rewardTokenBalance: null, explorerUrl: null };
     try {
       const address = getTreasuryAddress();
       const bal = await getRpc().getBalance(address, { commitment: "confirmed" }).send();
-      onChain = { address, lamports: bal.value.toString(), explorerUrl: explorerUrl(address, getSolanaNetwork(), "address") };
+      const tokens = rewardMint ? await getTokenBalance(getRpc(), address, rewardMint, "confirmed") : null;
+      onChain = { address, lamports: bal.value.toString(), rewardTokenBalance: tokens?.toString() ?? null, explorerUrl: explorerUrl(address, getSolanaNetwork(), "address") };
     } catch (err) {
       onChain.error = (err as Error).message;
     }
     const accounts = await db.balanceAccount.findMany({ where: { userId: null, asset: { in: [Currency.NEBX, Currency.SOL] } } });
     const ext = (asset: string) => accounts.find((a) => a.type === LedgerAccountType.EXTERNAL_CHAIN && a.asset === asset)?.balance ?? 0n;
-    const ledgerOnChain = -ext(Currency.NEBX) - ext(Currency.SOL);
+    const ledgerOnChain = rewardMint ? -ext(Currency.SOL) : -ext(Currency.NEBX) - ext(Currency.SOL);
+    const ledgerRewardToken = rewardMint ? -ext(Currency.NEBX) : null;
     return jsonBig({
       onChain,
+      mode: rewardMint ? "SPL" : "NATIVE",
       ledgerExpectedOnChain: ledgerOnChain,
       reconciliationDelta: onChain.lamports !== null ? BigInt(onChain.lamports) - ledgerOnChain : null,
+      ledgerExpectedRewardToken: ledgerRewardToken,
+      rewardTokenReconciliationDelta: ledgerRewardToken !== null && onChain.rewardTokenBalance !== null ? BigInt(onChain.rewardTokenBalance) - ledgerRewardToken : null,
       treasury: { ...treasury, coverage: Number.isFinite(treasury.coverage) ? treasury.coverage : null },
       budget,
       systemAccounts: accounts.map((a) => ({ type: a.type, asset: a.asset, balance: a.balance })),

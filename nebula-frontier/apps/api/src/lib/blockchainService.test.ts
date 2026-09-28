@@ -2,12 +2,13 @@
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { blockchainServiceBaseUrl, notifyBlockchainServiceEnqueue } from "./blockchainService.js";
+import { blockchainServiceBaseUrl, internalServiceToken, notifyBlockchainServiceEnqueue } from "./blockchainService.js";
 
 let server: Server;
 let status = 200;
 const seen: { url: string | undefined; method: string | undefined; headers: IncomingHttpHeaders }[] = [];
 const envBackup = { ...process.env };
+const TOKEN = "t".repeat(32);
 
 beforeAll(async () => {
   server = createServer((req, res) => {
@@ -36,17 +37,30 @@ describe("blockchain-service notifier", () => {
   it("POSTs the enqueue request with the internal token and honours BLOCKCHAIN_SERVICE_PORT", async () => {
     delete process.env.BLOCKCHAIN_SERVICE_URL;
     process.env.BLOCKCHAIN_SERVICE_PORT = String((server.address() as AddressInfo).port);
-    process.env.INTERNAL_SERVICE_TOKEN = "tok";
+    process.env.INTERNAL_SERVICE_TOKEN = `  ${TOKEN}  `;
     await notifyBlockchainServiceEnqueue("w/1");
     expect(seen).toHaveLength(1);
     expect(seen[0]?.method).toBe("POST");
     expect(seen[0]?.url).toBe("/internal/withdrawals/w%2F1/enqueue");
-    expect(seen[0]?.headers.authorization).toBe("Bearer tok");
+    expect(seen[0]?.headers.authorization).toBe(`Bearer ${TOKEN}`);
   });
 
   it("rejects on non-2xx responses so callers can log the failure", async () => {
     process.env.BLOCKCHAIN_SERVICE_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    process.env.INTERNAL_SERVICE_TOKEN = TOKEN;
     status = 401;
     await expect(notifyBlockchainServiceEnqueue("w1")).rejects.toThrow(/401/);
+  });
+
+  it("refuses to send a request without a valid internal token", async () => {
+    process.env.BLOCKCHAIN_SERVICE_PORT = String((server.address() as AddressInfo).port);
+    delete process.env.BLOCKCHAIN_SERVICE_URL;
+    for (const bad of [undefined, "", "   ", "short"]) {
+      if (bad === undefined) delete process.env.INTERNAL_SERVICE_TOKEN;
+      else process.env.INTERNAL_SERVICE_TOKEN = bad;
+      await expect(notifyBlockchainServiceEnqueue("w2")).rejects.toThrow(/INTERNAL_SERVICE_TOKEN/);
+    }
+    expect(seen).toHaveLength(0);
+    expect(internalServiceToken({ INTERNAL_SERVICE_TOKEN: ` ${TOKEN} ` })).toBe(TOKEN);
   });
 });

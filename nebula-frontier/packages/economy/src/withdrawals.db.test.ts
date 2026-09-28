@@ -94,7 +94,11 @@ describe("withdrawals", () => {
     const w = await createWithdrawal(db, { userId: u.id, amount: 600_000_000n, address: u.wallet as string, idempotencyKey: "big-1" });
     expect(w.status).toBe("PENDING_REVIEW");
     expect(await getBalance(db, userWallet(u.id, Currency.NEBX))).toBe(200_000_000n);
-    await reviewWithdrawal(db, w.withdrawalId, false, u.id, "test reject");
+    // Four-eyes: the owner can never decide their own withdrawal, even with an admin role.
+    await expect(reviewWithdrawal(db, w.withdrawalId, true, u.id, "self approve")).rejects.toMatchObject({ errors: [{ code: "SELF_REVIEW" }] });
+    expect((await db.withdrawal.findUniqueOrThrow({ where: { id: w.withdrawalId } })).status).toBe("PENDING_REVIEW");
+    const admin = await createTestUser(db);
+    await reviewWithdrawal(db, w.withdrawalId, false, admin.id, "test reject");
     expect(await getBalance(db, userWallet(u.id, Currency.NEBX))).toBe(800_000_000n);
     expect((await verifyLedgerIntegrity(db)).every((a) => a.ok)).toBe(true);
   });

@@ -282,6 +282,8 @@ export async function reviewWithdrawal(db: Db, withdrawalId: string, approve: bo
     const w = await tx.withdrawal.findUnique({ where: { id: withdrawalId } });
     if (!w) throw new WithdrawalError([{ code: "NOT_FOUND", message: "Withdrawal not found" }]);
     if (w.status !== WithdrawalStatus.PENDING_REVIEW) throw new WithdrawalError([{ code: "NOT_REVIEWABLE", message: `Withdrawal is ${w.status}` }]);
+    // Four-eyes rule: an admin who also plays may never decide their own withdrawal.
+    if (w.userId === adminId) throw new WithdrawalError([{ code: "SELF_REVIEW", message: "Reviewers cannot decide their own withdrawal" }]);
     if (approve) {
       await tx.withdrawal.update({ where: { id: w.id }, data: { status: WithdrawalStatus.PENDING, reviewedBy: adminId } });
     } else {

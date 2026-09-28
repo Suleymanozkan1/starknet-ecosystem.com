@@ -36,10 +36,13 @@ export async function loadOrCreateKeypair(file: string): Promise<{ address: Addr
 export function upsertEnv(vars: Record<string, string | null>, file = ENV_FILE): void {
   const lines = existsSync(file) ? readFileSync(file, "utf8").split("\n") : [];
   for (const [k, v] of Object.entries(vars)) {
-    const idx = lines.findIndex((l) => l.startsWith(`${k}=`));
     if (v === null) {
-      if (idx >= 0) lines.splice(idx, 1);
-    } else if (idx >= 0) lines[idx] = `${k}=${v}`;
+      // Remove EVERY occurrence: a duplicated legacy secret line must not survive in the shared file.
+      for (let i = lines.length - 1; i >= 0; i--) if (lines[i]?.startsWith(`${k}=`)) lines.splice(i, 1);
+      continue;
+    }
+    const idx = lines.findIndex((l) => l.startsWith(`${k}=`));
+    if (idx >= 0) lines[idx] = `${k}=${v}`;
     else {
       if (lines.length && lines[lines.length - 1] === "") lines.pop();
       lines.push(`${k}=${v}`, "");
