@@ -333,7 +333,7 @@ Final run on the current branch head:
 
 | Suite | Result |
 |---|---|
-| **vitest total** | **58 files, 455 tests, 455 passed, 0 failed, 0 skipped** |
+| **vitest total** | **59 files, 458 tests, 458 passed, 0 failed, 0 skipped** |
 | Unit | game-core (combat, movement, anti-cheat, progression, social, world, review fixes); game-network (prediction, interpolation, clock); game-renderer (ship factory, materials, FX, camera, tiers, pool); game-client (input, radar, audio, relations); web (HTTP/CSRF, i18n, deep links); authentication; config data; telemetry: **PASS** |
 | Game server | `game-server.test.ts` (auth, AOI, combat, PvP, portals, events, bounties, raids, gates, clan wars, reputation, pets, faction war, docking), `reconnection.test.ts`, `review-fixes`, `tickets` (incl. concurrent redemption, memory and Redis), `clan-missions`, `retry-queue`: **PASS** |
 | Database | ledger (idempotency, concurrency, reversal, drift detection), client pool parsing: **PASS** |
@@ -362,7 +362,7 @@ Final run on the current branch head:
 | Android | PASS: `./gradlew assembleDebug`, app-debug.apk about 11 MB |
 | iOS | **BLOCKED**: needs macOS and Xcode |
 | Anchor | `cargo check` and `cargo test` PASS. BPF `anchor build` NOT RUN: no Anchor/Solana CLI here. |
-| Vercel preview | `vercel.json` added to build the web SPA from the monorepo; the same build command passes locally |
+| Vercel preview | `vercel.json` plus a root `package.json` (Node 22.x pin) build the web SPA from the monorepo. The same commands pass in a clean clone; the Vercel run on `c37d220` is pending |
 
 ## 23. Runtime Results
 
