@@ -19,7 +19,7 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 | PR | Slice | Files | Status |
 |---|---|---|---|
 | [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 queued |
-| [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Round 2 re-review requested at 21:54 UTC on the refreshed branch (86 files) |
+| [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Round 2 (refreshed branch, 86 files): 14 findings, all fixed in `424ae31` |
 | [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API, auth, validation, shared, Prisma | 93 | Review requested |
 | [#5](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/5) | web app | 91 | Queued (rate limit) |
 | [#6](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/6) | game client, renderer, networking | 72 | Queued (rate limit) |
@@ -30,12 +30,12 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 | Metric | Count |
 |---|---|
 | Files reviewed | 160 (PR #2 75 + PR #3 85) |
-| Findings | 72 (PR #2: 22 + 2 + 16; PR #3: 32) |
+| Findings | 86 (PR #2: 22 + 2 + 16; PR #3: 32 + 14) |
 | Critical | 1 |
-| High (CodeRabbit "Major") | 35 |
-| Warning (CodeRabbit "Minor") | 27 |
-| Info (CodeRabbit "Trivial"/nitpick) | 9 |
-| Fixed | 71 |
+| High (CodeRabbit "Major") | 41 |
+| Warning (CodeRabbit "Minor") | 34 |
+| Info (CodeRabbit "Trivial"/nitpick) | 10 |
+| Fixed | 85 |
 | Accepted as already addressed | 1 (PR #3 BC-05/BC-07 audit paths, already correct) |
 | Remaining open | 0 from completed rounds |
 
@@ -157,9 +157,30 @@ Verification after the fixes:
 - vitest for the affected packages: 16 files, 134 tests passed.
 - `cargo test -p nebula_settlement`: 6 passed.
 
+### PR #3 round 2 (14 findings: 6 Major, 7 Minor, 1 Trivial), all fixed in `424ae31`
+
+| Finding | Severity | Resolution |
+|---|---|---|
+| Admin can approve their own withdrawal or reward | Major | `SELF_REVIEW` in `reviewWithdrawal` and `reviewReward` (four-eyes rule); tests |
+| Restriction added after the grant does not freeze the claim | Major | `claimReward` re-checks `REWARD_BLOCKING_RESTRICTIONS`; test |
+| Money config accepts fractional or unsafe values; subtree bypasses the leaf type check | Major | `units()` safe-integer check on every money field; recursive `sameShape`; tests |
+| Duplicated `TREASURY_SECRET` line survives in `.env` | Major | Every matching line is removed; test |
+| Mint CLI arguments are not validated | Major | zod `mintArgsSchema` (Solana owner, http(s) URIs); test |
+| Mint does not check the cluster | Major | `assertRpcCluster` before `mintNft` |
+| Missing internal token sends `Bearer ` | Minor | `internalServiceToken()` fails fast (at least 32 characters); test |
+| Admin treasury view wrong in SPL mode | Minor | Mode-aware reconciliation plus reward-token delta (shared `getTokenBalance`) |
+| READ COMMITTED replay reports `INSUFFICIENT_BALANCE` | Minor | Re-reads the idempotency key and returns `duplicate` |
+| Spoof signals repeated and blamed on the victim | Minor | Attributed only to the player's own linked fee payer; deduplicated per signature; tests |
+| Fractional gem grants | Minor | Safe positive integers only |
+| `DEPOSIT_SPIKE` uses a NEBX floor for SOL deposits | Minor | `circuitBreaker.depositSpikeFloorLamports` |
+| Bootstrap audit records only lamports | Minor | Records the mode, backing balance and lamports |
+| Audit header out of date | Trivial | Updated |
+
+Verification: lint clean, typecheck and build pass on every workspace, and the full vitest suite passes (60 files, 463 tests).
+
 ## Remaining / follow-up
 
-- PR #2 round 4 and PR #3 round 2: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).
+- PR #2 round 4 and PR #3 round 3: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).
 - PR #4–#7 cover the API, web, client and platform. Their results are added here as they arrive.
 
 ## History note
