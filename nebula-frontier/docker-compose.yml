@@ -7,8 +7,18 @@ services:
     image: postgres:16-alpine
     environment: { POSTGRES_USER: nebula, POSTGRES_PASSWORD: nebula, POSTGRES_DB: nebula }
     ports: ["5432:5432"]
-    volumes: [pgdata:/var/lib/postgresql/data]
+    # WAL archiving (base for point-in-time recovery together with the daily dumps below).
+    command: ["sh", "-c", "mkdir -p /wal-archive && chown postgres:postgres /wal-archive && exec docker-entrypoint.sh postgres -c wal_level=replica -c archive_mode=on -c 'archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/%f'"]
+    volumes: [pgdata:/var/lib/postgresql/data, walarchive:/wal-archive]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U nebula"], interval: 5s, retries: 20 }
+  backup:
+    restart: unless-stopped
+    image: postgres:16-alpine
+    # Daily pg_dump (custom format, verified, sha256) with 30-day retention: scripts/backup/pg-backup.sh
+    command: ["sh", "-c", "while true; do /scripts/pg-backup.sh || echo 'backup FAILED'; sleep 86400; done"]
+    environment: { DATABASE_URL: "postgresql://nebula:nebula@postgres:5432/nebula", BACKUP_DIR: /backups, RETENTION_DAYS: "30" }
+    volumes: ["./scripts/backup:/scripts:ro", "backups:/backups"]
+    depends_on: { postgres: { condition: service_healthy } }
   redis:
     restart: unless-stopped
     image: redis:7-alpine
@@ -58,4 +68,4 @@ services:
     build: { context: ., dockerfile: docker/web.Dockerfile }
     ports: ["8088:80"]
     depends_on: [api, game-server]
-volumes: { pgdata: {}, redisdata: {} }
+volumes: { pgdata: {}, redisdata: {}, walarchive: {}, backups: {} }

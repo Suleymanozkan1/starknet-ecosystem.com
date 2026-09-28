@@ -30,7 +30,9 @@ The `migrate` service runs `prisma migrate deploy` + seed before services start.
 - Production: KMS/HSM/Secret Manager — the treasury key must be a KMS-backed signer (or HSM) used only by blockchain-service; rotate `JWT_SECRET`/`GAME_TICKET_SECRET` with dual-key verification.
 
 ## Backup & disaster recovery
-- PostgreSQL: daily `pg_dump` (retain 30 days) + continuous WAL archiving for point-in-time recovery; weekly restore drill. `EconomyConfig`, `FeatureFlag`, `ShopProduct` are additionally exported to object storage on every admin change. `AuditLog` retained ≥ 2 years (append-only role).
+- **PostgreSQL daily backup:** `scripts/backup/pg-backup.sh` writes a custom-format, compressed `pg_dump`, verifies it with `pg_restore --list`, writes a sha256 checksum, and keeps 30 days. It runs as the `backup` service in `docker-compose.yml` once every 24 h, into the `backups` volume.
+- **Restore drill:** `scripts/backup/pg-restore-drill.sh` restores the newest dump into a scratch database and compares row counts of the critical tables (users, ledger, balances, withdrawals, rewards, audit log). Run it weekly.
+- **Point-in-time recovery:** WAL archiving is enabled on the compose `postgres` service (`archive_mode=on`, archiving to the `walarchive` volume). A PITR restore needs a base backup (`pg_basebackup`) plus that WAL archive. In production, prefer a managed Postgres that has PITR built in. `EconomyConfig`, `FeatureFlag`, `ShopProduct` are additionally exported to object storage on every admin change. `AuditLog` retained ≥ 2 years (append-only role).
 - Blockchain service crash: queued work lives in `Withdrawal`/`ChainTransaction` rows; on boot the service re-enqueues non-terminal states and re-checks signatures before resubmitting (no double payouts).
 - Game server crash: players' progress is persisted on events and periodically; reconnect restores from DB.
 - Redis loss: sessions, balances, inventory, rewards and queue records remain in Postgres; only presence/rate-limit counters reset.

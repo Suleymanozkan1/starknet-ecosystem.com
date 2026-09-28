@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-28T20:53:16.816Z",
+  "generatedAt": "2026-09-28T21:20:21.404Z",
   "total": 249,
   "implemented": 235,
   "partial": 13,
@@ -2495,7 +2495,8 @@
       "requirement": "Daily backup + PITR + DR plan",
       "status": "PARTIAL",
       "why": [
-        "Documented architecture only; no automated backup job in repo"
+        "some implementation evidence missing",
+        "Daily dump + restore drill verified; WAL archiving configured in compose but a PITR restore has not been drilled (Docker daemon unavailable when added)"
       ]
     },
     {

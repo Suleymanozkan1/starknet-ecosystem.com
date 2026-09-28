@@ -146,5 +146,9 @@
   "anchor_cargo_test": {
     "status": "PASS",
     "evidence": "cd programs && cargo test -p nebula_settlement: 6 passed (config/emission-epoch/fee-cap/refund rules), 2026-09-28"
+  },
+  "backup_drill": {
+    "status": "PASS",
+    "evidence": "scripts/backup/pg-backup.sh against local Postgres 16 (11.9 MB dump, pg_restore --list ok, sha256) + pg-restore-drill.sh restored into a scratch DB with identical row counts for User/BalanceLedger/BalanceAccount/Withdrawal/Reward/AuditLog, 2026-09-28"
   }
 }
