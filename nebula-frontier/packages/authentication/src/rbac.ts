@@ -26,6 +26,7 @@ export const ADMIN_PERMISSIONS = {
   rulesManage: [ADMIN, ECONOMY_MANAGER],
   mailGrant: [ADMIN],
   auditRead: [ADMIN],
+  analytics: [ADMIN, ECONOMY_MANAGER],
   economyRead: [ADMIN, ECONOMY_MANAGER],
   economyManage: [ECONOMY_MANAGER],
   withdrawalReview: [ADMIN, ECONOMY_MANAGER],

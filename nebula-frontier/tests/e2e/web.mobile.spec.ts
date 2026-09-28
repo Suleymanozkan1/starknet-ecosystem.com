@@ -18,6 +18,7 @@ test.describe("web · mobile (touch)", () => {
 
   test("onboarding + bottom navigation (needs API)", async ({ page, request }) => {
     test.skip(!(await apiUp(request)), "API not reachable — skipping authenticated flow");
+    test.setTimeout(240_000);
     await registerThroughUi(page);
     await page.getByTestId("faction-nova").tap();
     await shot(page, "mobile-faction-select");

@@ -1,4 +1,7 @@
+import { fileURLToPath } from "node:url";
 import type { APIRequestContext, Page } from "@playwright/test";
+
+const SHOT_DIR = fileURLToPath(new URL("../../docs/screenshots/", import.meta.url));
 
 /** API origin used to decide whether the full (authenticated) flow can run. */
 export const API_URL = process.env.E2E_API_URL ?? "http://localhost:8080";
@@ -29,5 +32,5 @@ export async function registerThroughUi(page: Page): Promise<{ username: string 
 export async function shot(page: Page, name: string): Promise<void> {
   if (!process.env.E2E_SCREENSHOTS) return;
   await page.waitForTimeout(900);
-  await page.screenshot({ path: `../../docs/screenshots/${name}.png`, fullPage: false });
+  await page.screenshot({ path: `${SHOT_DIR}${name}.png`, fullPage: false, timeout: 45_000 });
 }

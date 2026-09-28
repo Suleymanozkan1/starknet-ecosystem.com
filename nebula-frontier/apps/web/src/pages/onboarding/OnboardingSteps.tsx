@@ -16,7 +16,7 @@ export function OnboardingSteps({ step }: { step: number }) {
               <span className="grid h-5 w-5 place-items-center rounded-full border text-[10px]" style={{ borderColor: "currentColor", background: current ? "color-mix(in oklab, var(--nf-accent) 20%, transparent)" : undefined }}>
                 {done ? <Icon name="check" size={11} /> : i + 1}
               </span>
-              <span className="hidden sm:inline">{s}</span>
+              <span className="hidden whitespace-nowrap sm:inline">{s}</span>
             </span>
           </div>
         );

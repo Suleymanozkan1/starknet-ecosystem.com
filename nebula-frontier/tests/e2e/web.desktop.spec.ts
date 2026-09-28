@@ -29,6 +29,7 @@ test.describe("web · desktop", () => {
 
   test("full onboarding → dashboard → hangar → wallet (needs API)", async ({ page, request }) => {
     test.skip(!(await apiUp(request)), "API not reachable — skipping authenticated flow");
+    test.setTimeout(240_000);
     await registerThroughUi(page);
     await expect(page.getByTestId("faction-aurora")).toBeVisible();
     await page.getByTestId("faction-aurora").click();

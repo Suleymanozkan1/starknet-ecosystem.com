@@ -6,12 +6,13 @@ import type { FastifyInstance } from "fastify";
 import { ADMIN_PERMISSIONS } from "@nebula/authentication";
 import { AdminRole } from "@nebula/shared";
 import {
-  adminAuditQuerySchema, adminBanSchema, adminCatalogSchema, adminEventSchema, adminFeatureFlagSchema, adminMuteSchema,
+  adminAnalyticsQuerySchema, adminAuditQuerySchema, adminBanSchema, adminCatalogSchema, adminEventSchema, adminFeatureFlagSchema, adminMuteSchema,
   adminReportResolveSchema, adminRiskReviewSchema, adminRolesSchema, adminShopProductPatchSchema, adminShopProductSchema,
   adminUserSearchSchema, defIdSchema, idSchema,
 } from "@nebula/validation";
 import { z } from "zod";
 import { badRequest, conflict, notFound } from "../errors.js";
+import { adminAnalytics } from "../lib/adminAnalytics.js";
 import { balancesDto } from "../lib/balances.js";
 import { invalidateCatalog } from "../lib/catalog.js";
 import { toJsonValue } from "../lib/json.js";
@@ -93,6 +94,13 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
       reports: { open: reports },
       health: { dbLatencyMs: Math.round(dbMs), redisLatencyMs: Math.round(redisMs), rssMb: Math.round(mem.rss / 1e6), heapMb: Math.round(mem.heapUsed / 1e6), uptimeSec: Math.round(process.uptime()) },
     };
+  });
+
+  // ------------------------------------------------------------------ analytics
+  app.get("/api/admin/analytics", guard(P.analytics), async (req) => {
+    const q = app.parse(adminAnalyticsQuerySchema, req.query);
+    await app.analytics.flush();
+    return adminAnalytics(db, q.days);
   });
 
   // ------------------------------------------------------------------ users

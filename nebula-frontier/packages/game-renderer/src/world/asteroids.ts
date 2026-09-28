@@ -30,11 +30,12 @@ export function createAsteroidGeometry(detail: number, seed: number): BufferGeom
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const n = fbm3(x * 1.6 + seed, y * 1.6, z * 1.6, 4, seed);
-    const crater = Math.max(0, fbm3(x * 3.1, y * 3.1 + seed, z * 3.1, 2, seed + 3) - 0.62) * 1.4;
-    const r = 0.72 + n * 0.55 - crater;
+    const fine = fbm3(x * 6.5, y * 6.5, z * 6.5 + seed, 2, seed + 7);
+    const crater = Math.max(0, fbm3(x * 3.1, y * 3.1 + seed, z * 3.1, 2, seed + 3) - 0.6) * 1.6;
+    const r = 0.7 + n * 0.6 - crater + (fine - 0.5) * 0.12;
     pos.setXYZ(i, x * r * sx, y * r * sy, z * r * sz);
-    const vein = fbm3(x * 4.5, y * 4.5, z * 4.5 + seed, 3, seed + 11) > 0.6 ? 1 : 0;
-    const base = 0.22 + n * 0.12;
+    const vein = fbm3(x * 5.5, y * 5.5, z * 5.5 + seed, 3, seed + 11) > 0.66 ? 1 : 0;
+    const base = 0.1 + n * 0.1 + crater * 0.05;
     colors[i * 3] = vein ? 1 : base;
     colors[i * 3 + 1] = vein ? 1 : base;
     colors[i * 3 + 2] = vein ? 1 : base * 1.05;
@@ -71,11 +72,11 @@ export class AsteroidLayer {
 
   constructor(capacityPerVariant: number, detail: number, variants = 4) {
     this.capacity = capacityPerVariant;
-    this.material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0.08, flatShading: true });
+    this.material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0.05, flatShading: true, envMapIntensity: 0.3 });
     this.material.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <emissivemap_fragment>",
-        "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += max(vColor.rgb - vec3(0.34), vec3(0.0)) * 1.8;\n#endif",
+        "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += max(vColor.rgb - vec3(0.3), vec3(0.0)) * 1.1;\n#endif",
       );
     };
     for (let v = 0; v < variants; v++) {
