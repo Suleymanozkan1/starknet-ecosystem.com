@@ -1,0 +1,3153 @@
+{
+  "generatedAt": "2026-09-28T15:55:35.736Z",
+  "total": 249,
+  "implemented": 54,
+  "partial": 88,
+  "notImplemented": 105,
+  "blocked": 2,
+  "completionPercent": 21.7,
+  "byCategory": {
+    "PROJECT STRUCTURE": {
+      "IMPLEMENTED": 5,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "DATA-DRIVEN": {
+      "IMPLEMENTED": 15,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "GALAXY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SECTORS": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ZONES": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MAPS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WORLD IMMERSION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SPACE STATIONS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PORTALS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "NAVIGATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "FACTIONS": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 2,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "FACTION WAR": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHIPS": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHIP CLASSES": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHIP STATS": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHIP UPGRADES": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHIP CUSTOMIZATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 2,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "3D SHIP RENDERING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "LOADOUT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "3D HANGAR": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "THREE.JS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 3,
+      "NOT_IMPLEMENTED": 2,
+      "BLOCKED": 0
+    },
+    "EFFECTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 4,
+      "BLOCKED": 0
+    },
+    "CAMERA": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "PHASER": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "MINIMAP / RADAR": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "AUDIO": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "INPUT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 2,
+      "BLOCKED": 0
+    },
+    "MOBILE INPUT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "MOVEMENT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "COLYSEUS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 2,
+      "BLOCKED": 0
+    },
+    "SERVER AUTHORITY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "NETWORKING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 2,
+      "BLOCKED": 0
+    },
+    "MULTIPLAYER": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 2,
+      "BLOCKED": 0
+    },
+    "MATCHMAKING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SCALING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "LARGE SCALE BATTLE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "REALTIME EVENTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WEAPONS": {
+      "IMPLEMENTED": 2,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHIELDS": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ITEM MODIFIERS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MODULES": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ABILITIES": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DRONES": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PET / COMPANION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "COMBAT TARGETING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "DAMAGE VISUALIZATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "DESTRUCTION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "NPC": {
+      "IMPLEMENTED": 2,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "NPC AI": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PVE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "WORLD BOSS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "RAID": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "GATE / WAVE CONTENT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "EVENTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "GLOBAL EVENTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MINING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "RESOURCES": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "CRAFTING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "BLUEPRINTS": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "LOOT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "QUESTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "STORY": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "CLAN": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "CLAN WAR": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "CLAN STATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SQUAD": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "FRIENDS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "CHAT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "MAILBOX": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "NOTIFICATIONS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PROFILE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "RANK": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ACHIEVEMENTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "BATTLE PASS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SEASONS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "LEADERBOARD": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "BOUNTY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "REPUTATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PVP": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "RANKED": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "INVENTORY": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SHOP": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "PREMIUM": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MARKETPLACE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "AUCTION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "CREDITS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "GEMS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "SOLANA": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WALLETS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WALLET SIGNATURE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DEPOSIT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WITHDRAWAL": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "BLOCKCHAIN SERVICE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TRANSACTION QUEUE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TREASURY SECURITY": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "NFT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SMART CONTRACT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 1
+    },
+    "DEVNET": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TOKENOMICS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "LEDGER": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 2,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DOUBLE ENTRY ACCOUNTING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "REWARD ENGINE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "REWARD LIABILITY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TREASURY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TREASURY RESERVE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "REWARD EMISSION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "REWARD BUDGET": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "REWARD ELIGIBILITY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "USER REWARD LIMIT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ECONOMY CONTROLLER": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "CIRCUIT BREAKER": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "INFLATION CONTROL": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MARKETPLACE FEES": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "AUCTION FEES": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WITHDRAWAL FEES": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ECONOMY SIMULATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "ECONOMY HEALTH REPORT": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "OWNER REVENUE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "TRANSPARENCY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "TERMINOLOGY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "ADMIN ECONOMY PARAMS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WORST CASE ECONOMY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "COMPLIANCE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "AUTHENTICATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "AUTHORIZATION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "SECURITY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "LOGGING": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "OBSERVABILITY": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MONITORING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ACCOUNT SECURITY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ANTI-CHEAT": {
+      "IMPLEMENTED": 3,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "BOT PROTECTION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MULTI-ACCOUNT PROTECTION": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ANTI-FRAUD": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DEV BOTS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "ADMIN PANEL": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 2,
+      "BLOCKED": 0
+    },
+    "ECONOMY ADMIN": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "ANALYTICS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "WEB": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 17,
+      "BLOCKED": 0
+    },
+    "HUD": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "UI QUALITY": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MOBILE UI": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "CAPACITOR": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "ANDROID": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "IOS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 1
+    },
+    "MOBILE NATIVE": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "MOBILE PERFORMANCE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DEEP LINKS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "DATABASE": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PRISMA": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    },
+    "REDIS": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DOCKER": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "ENVIRONMENT": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DEPLOYMENT": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "BACKUP": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TESTING": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "BUILD": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "DOCUMENTATION": {
+      "IMPLEMENTED": 5,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 8,
+      "BLOCKED": 0
+    },
+    "MVP VERTICAL SLICE": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 19,
+      "BLOCKED": 0
+    },
+    "CODE REVIEW": {
+      "IMPLEMENTED": 0,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 1,
+      "BLOCKED": 0
+    }
+  },
+  "rows": [
+    {
+      "id": "PS-01",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "pnpm workspace monorepo",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "PS-02",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "Required apps exist (web, mobile, game-client, game-server, api, blockchain-service, admin)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "PS-03",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "Required packages exist",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing"
+      ]
+    },
+    {
+      "id": "PS-04",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "Asset folders (ships, weapons, modules, drones, environments, effects, UI, audio)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "PS-05",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "Reference repositories under tools/reference-repos",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "PS-06",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "docs/REPOSITORIES.md integration table",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "PS-07",
+      "category": "PROJECT STRUCTURE",
+      "requirement": "Strict TypeScript, no any",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-ships",
+      "category": "DATA-DRIVEN",
+      "requirement": "ships.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-weapons",
+      "category": "DATA-DRIVEN",
+      "requirement": "weapons.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-modules",
+      "category": "DATA-DRIVEN",
+      "requirement": "modules.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-drones",
+      "category": "DATA-DRIVEN",
+      "requirement": "drones.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-npcs",
+      "category": "DATA-DRIVEN",
+      "requirement": "npcs.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-loot_tables",
+      "category": "DATA-DRIVEN",
+      "requirement": "loot_tables.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-maps",
+      "category": "DATA-DRIVEN",
+      "requirement": "maps.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-quests",
+      "category": "DATA-DRIVEN",
+      "requirement": "quests.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-events",
+      "category": "DATA-DRIVEN",
+      "requirement": "events.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-economy",
+      "category": "DATA-DRIVEN",
+      "requirement": "economy.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-items",
+      "category": "DATA-DRIVEN",
+      "requirement": "items.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-factions",
+      "category": "DATA-DRIVEN",
+      "requirement": "factions.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-seasons",
+      "category": "DATA-DRIVEN",
+      "requirement": "seasons.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-shop",
+      "category": "DATA-DRIVEN",
+      "requirement": "shop.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DATA-battlepass",
+      "category": "DATA-DRIVEN",
+      "requirement": "battlepass.json exists and is loaded",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "WORLD-01",
+      "category": "GALAXY",
+      "requirement": "Galaxy → Sector → Star System → Map → Zone hierarchy",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing"
+      ]
+    },
+    {
+      "id": "WORLD-02",
+      "category": "SECTORS",
+      "requirement": "Original named sectors (Helios, Vanta Rift, Orion Belt, Astra Graveyard, Eclipse Zone, Titan Expanse, Void Frontier, Nebula Corridor)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "WORLD-03",
+      "category": "ZONES",
+      "requirement": "Zone types (safe/neutral/pvp/high-risk/pirate/event/boss/gate) enforced server-side",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing"
+      ]
+    },
+    {
+      "id": "WORLD-04",
+      "category": "MAPS",
+      "requirement": "≥5 data-driven maps incl. 1 PvP map",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing"
+      ]
+    },
+    {
+      "id": "WORLD-05",
+      "category": "WORLD IMMERSION",
+      "requirement": "Asteroids, nebulas, wrecks, stations, gates, derelicts, distant objects rendered",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "WORLD-06",
+      "category": "SPACE STATIONS",
+      "requirement": "Stations with services",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "NAV-01",
+      "category": "PORTALS",
+      "requirement": "Portal/jump gate travel between maps",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "NAV-02",
+      "category": "NAVIGATION",
+      "requirement": "Smooth map transitions (warp effect/loading)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "FAC-01",
+      "category": "FACTIONS",
+      "requirement": "3 original factions with lore, emblem, colors, home, starter ship & loadout",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "FAC-02",
+      "category": "FACTIONS",
+      "requirement": "Player chooses faction (grants starter ship/loadout)",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "FAC-03",
+      "category": "FACTION WAR",
+      "requirement": "Global faction war scoring & seasonal leaderboard",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "FAC-04",
+      "category": "FACTIONS",
+      "requirement": "Faction reputation, missions, ranking",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SHIP-01",
+      "category": "SHIPS",
+      "requirement": "≥10 fully working ships",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SHIP-02",
+      "category": "SHIP CLASSES",
+      "requirement": "All 13 ship classes represented",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SHIP-03",
+      "category": "SHIP STATS",
+      "requirement": "Hull/Shield/Energy/Speed/Accel/Turn/Cargo + slot counts",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SHIP-04",
+      "category": "SHIP UPGRADES",
+      "requirement": "+1…+20 upgrades with credits/resources and success roll",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SHIP-05",
+      "category": "SHIP CUSTOMIZATION",
+      "requirement": "Hull skin, engine effect/color, weapon skin, shield color/effect, trail, drone skin, explosion, nameplate, badge, emblem",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SHIP-06",
+      "category": "SHIP CUSTOMIZATION",
+      "requirement": "Geometry-changing skins",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SHIP-07",
+      "category": "3D SHIP RENDERING",
+      "requirement": "Distinct procedural modular ships (silhouette, cockpit, reactor, engines, wings, armor, weapons, sensors, antennas, cargo)",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SHIP-08",
+      "category": "LOADOUT",
+      "requirement": "Multiple loadouts (PvP/PvE/Tank/Speed/Mining/Boss/Raid) with lasers, missiles, generators, modules, drones, formation, ammo, cosmetics",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "HANGAR-01",
+      "category": "3D HANGAR",
+      "requirement": "3D hangar: select, equip, customize, upgrade, compare, rotate, zoom, previews (engine/fire/shield/damage)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "3D-01",
+      "category": "THREE.JS",
+      "requirement": "Three.js renderer with WebGPU-compatible abstraction",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "3D-02",
+      "category": "THREE.JS",
+      "requirement": "PBR materials (base, normal, metallic, roughness, emission, AO)",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "3D-03",
+      "category": "THREE.JS",
+      "requirement": "GLB/GLTF + Draco + KTX2 loading path",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "3D-04",
+      "category": "THREE.JS",
+      "requirement": "LOD, frustum culling, instancing, pooling",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "3D-05",
+      "category": "THREE.JS",
+      "requirement": "Graphics tiers Ultra/High/Medium/Low + device detection",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "FX-01",
+      "category": "EFFECTS",
+      "requirement": "Engine glow & trails",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "FX-02",
+      "category": "EFFECTS",
+      "requirement": "Weapon muzzle flash, laser beams, projectiles, missile trails",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "FX-03",
+      "category": "EFFECTS",
+      "requirement": "Shield bubble + hit ripple, EMP, warp, explosions, debris, hull damage sparks/smoke",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "FX-04",
+      "category": "EFFECTS",
+      "requirement": "Nebula/particle fields, mining effects, boss attack effects",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CAM-01",
+      "category": "CAMERA",
+      "requirement": "Top-down follow camera: zoom, smooth follow, combat zoom, boss cinematic, target focus, auto framing",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "PHASER-01",
+      "category": "PHASER",
+      "requirement": "Phaser used as real 2D layer (radar/minimap/combat text)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MINIMAP-01",
+      "category": "MINIMAP / RADAR",
+      "requirement": "Radar shows players, enemies, squad, clan, resources, NPC, portals, objectives, boss, events; stealth/scan",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "AUDIO-01",
+      "category": "AUDIO",
+      "requirement": "Engine/laser/missile/explosion/shield/UI/warp/NPC alert/boss music/ambient/mining with positional audio",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "INPUT-01",
+      "category": "INPUT",
+      "requirement": "Desktop WASD + mouse aim + left click fire + right click + 1-9 abilities + shortcuts",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "INPUT-02",
+      "category": "INPUT",
+      "requirement": "Gamepad support",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "INPUT-03",
+      "category": "MOBILE INPUT",
+      "requirement": "Touch joystick + fire/ability/ultimate/EMP/shield/dash + target buttons",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MOVE-01",
+      "category": "MOVEMENT",
+      "requirement": "Acceleration, deceleration, max speed, turn rate, boost, dash",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing"
+      ]
+    },
+    {
+      "id": "MP-01",
+      "category": "COLYSEUS",
+      "requirement": "Colyseus server with real rooms",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-02",
+      "category": "COLYSEUS",
+      "requirement": "Room types Lobby/Galaxy/Sector/PvP/Raid/Boss/ClanWar/Arena/Event/Gate",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-03",
+      "category": "SERVER AUTHORITY",
+      "requirement": "Client sends inputs only; server decides HP/damage/XP/loot/position/cooldown",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "MP-04",
+      "category": "NETWORKING",
+      "requirement": "Interpolation + prediction + reconciliation",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-05",
+      "category": "NETWORKING",
+      "requirement": "State patches, interest management (AOI) for large battles",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-06",
+      "category": "MULTIPLAYER",
+      "requirement": "Join with single-use game ticket (replay protected)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-07",
+      "category": "MULTIPLAYER",
+      "requirement": "Reconnection & player/room cleanup",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-08",
+      "category": "MATCHMAKING",
+      "requirement": "Matchmaking by level, gear score, region, latency, party; MMR",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "MP-09",
+      "category": "SCALING",
+      "requirement": "Horizontal scaling via Redis presence/driver, regions",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-10",
+      "category": "LARGE SCALE BATTLE",
+      "requirement": "50v50 capable architecture",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MP-11",
+      "category": "REALTIME EVENTS",
+      "requirement": "player_join/leave/move/attack/damage/death/respawn/level_up, item_drop/pickup, quest_complete, match_start/end, boss_phase, event_started/finished",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CMB-01",
+      "category": "WEAPONS",
+      "requirement": "Weapon types incl. laser/plasma/railgun/particle/ion/missile/rocket/torpedo/EMP/beam/mine/drone/special with full stat set",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "CMB-02",
+      "category": "WEAPONS",
+      "requirement": "Rarities COMMON…PROTOTYPE",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "CMB-03",
+      "category": "SHIELDS",
+      "requirement": "Shield → armor → hull damage pipeline, regen, energy, heat, EMP, crits, elements, resistances",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "CMB-04",
+      "category": "ITEM MODIFIERS",
+      "requirement": "Random affixes with caps + PvP normalization",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CMB-05",
+      "category": "MODULES",
+      "requirement": "15+ modules with cooldown/duration/energy/effect/rarity",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CMB-06",
+      "category": "ABILITIES",
+      "requirement": "Passive/Active/Ultimate per ship; server-authoritative cooldowns",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "CMB-07",
+      "category": "DRONES",
+      "requirement": "Drone types, level, rarity, upgrade, formations",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "CMB-08",
+      "category": "PET / COMPANION",
+      "requirement": "Pet: loot collect, repair, radar, scan, resource detection, buff, levels",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CMB-09",
+      "category": "COMBAT TARGETING",
+      "requirement": "Soft/hard lock, nearest enemy/player/objective, manual aim, lead indicator",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CMB-10",
+      "category": "DAMAGE VISUALIZATION",
+      "requirement": "Shield flash, sparks, smoke, broken parts, explosion, debris",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CMB-11",
+      "category": "DESTRUCTION",
+      "requirement": "Death animation, respawn, repair cost, PvP kill record",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "NPC-01",
+      "category": "NPC",
+      "requirement": "≥10 NPCs incl. Mining Drone, Pirate Raider, Alien Scout/Fighter/Elite, Destroyer, Leviathan, World Boss",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "NPC-02",
+      "category": "NPC AI",
+      "requirement": "AI states Idle/Patrol/Search/Aggro/Attack/Flee/Assist/Retreat/Respawn",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "NPC-03",
+      "category": "NPC",
+      "requirement": "Independent NPC factions with weakness/resistance/drops",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "PVE-01",
+      "category": "PVE",
+      "requirement": "Kill NPC → XP, credits, loot (server-side)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "BOSS-01",
+      "category": "WORLD BOSS",
+      "requirement": "World boss with 4 phases, weak points, special attacks, adds, enrage, contribution rewards",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "RAID-01",
+      "category": "RAID",
+      "requirement": "Raids for 4/8/16/25 players with mechanics",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "GATE-01",
+      "category": "GATE / WAVE CONTENT",
+      "requirement": "Waves 1,2,3,Elite,Mini Boss,Final Boss with Normal/Hard/Nightmare/Mythic",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "EVT-01",
+      "category": "EVENTS",
+      "requirement": "Event engine (invasion, world boss, treasure hunt, double XP, faction war, mining festival, PvP weekend, raid, special, season) with multipliers",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing"
+      ]
+    },
+    {
+      "id": "EVT-02",
+      "category": "GLOBAL EVENTS",
+      "requirement": "Dynamic global event 'VOID RIFT OPENED' with collective damage + tiers",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "MINE-01",
+      "category": "MINING",
+      "requirement": "Mining lasers/drills/drones, risky zones",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing"
+      ]
+    },
+    {
+      "id": "RES-01",
+      "category": "RESOURCES",
+      "requirement": "7 resources from asteroids/wrecks/NPC/quest/event/raid",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CRAFT-01",
+      "category": "CRAFTING",
+      "requirement": "Craft weapons/modules/ammo/drones/parts/consumables",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CRAFT-02",
+      "category": "BLUEPRINTS",
+      "requirement": "Blueprint tiers with resources, time, level, success chance",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "LOOT-01",
+      "category": "LOOT",
+      "requirement": "Server-side loot tables with rarities; unique originRef prevents duplicates",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "QUEST-01",
+      "category": "QUESTS",
+      "requirement": "Quest types & objectives tracked server-side; claim via API",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "STORY-01",
+      "category": "STORY",
+      "requirement": "Original story chapters 1-5",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "CLAN-01",
+      "category": "CLAN",
+      "requirement": "Clan create/join/roles/bank/announcements/missions/diplomacy/ranking",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CLAN-02",
+      "category": "CLAN WAR",
+      "requirement": "Clan war phases Preparation→Declaration→Matchmaking→Battle→Scoring→Reward",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CLAN-03",
+      "category": "CLAN STATION",
+      "requirement": "Clan battle station with modules, attackable",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SQUAD-01",
+      "category": "SQUAD",
+      "requirement": "4-8 player squads with shared target/marker/rewards/chat",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "FRIEND-01",
+      "category": "FRIENDS",
+      "requirement": "Add/remove/block/online/invite",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CHAT-01",
+      "category": "CHAT",
+      "requirement": "Global/Faction/Clan/Squad/Private chat with spam/rate limit/mute/report/ban",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MAIL-01",
+      "category": "MAILBOX",
+      "requirement": "Internal mail with reward attachments",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "NOTIF-01",
+      "category": "NOTIFICATIONS",
+      "requirement": "Web + mobile notifications for key events",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "PROF-01",
+      "category": "PROFILE",
+      "requirement": "Profile: level, rank, ship, gear score, PvP/PvE stats, achievements, clan, faction, title",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "RANK-01",
+      "category": "RANK",
+      "requirement": "Level 1-50, ranks, prestige, gear score",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "ACH-01",
+      "category": "ACHIEVEMENTS",
+      "requirement": "Achievements (supports hundreds) unlocked server-side",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BP-01",
+      "category": "BATTLE PASS",
+      "requirement": "Free/premium tracks with pass XP and claims",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SEASON-01",
+      "category": "SEASONS",
+      "requirement": "Seasons 1-3 with leaderboard, missions, cosmetics, boss, rewards",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "LB-01",
+      "category": "LEADERBOARD",
+      "requirement": "Leaderboards updated from gameplay (PvP kills etc.)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "BOUNTY-01",
+      "category": "BOUNTY",
+      "requirement": "PvP bounties with amount/target/creator/expiration/status",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "REP-01",
+      "category": "REPUTATION",
+      "requirement": "Karma statuses Neutral/Friendly/Hostile/Outlaw/Bounty Target",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "PVP-01",
+      "category": "PVP",
+      "requirement": "Open-world PvP, duel, arena, TDM, KOTH, escort, capture zone, faction war, clan war, large battle",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "RANKED-01",
+      "category": "RANKED",
+      "requirement": "Ranked seasons with MMR and rank rewards",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "INV-01",
+      "category": "INVENTORY",
+      "requirement": "Inventory with filters, sort, search; equip/unequip server-validated",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "INV-02",
+      "category": "INVENTORY",
+      "requirement": "Tradeable/soulbound/premium/cosmetic/powerItem/nftEligible metadata",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SHOP-01",
+      "category": "SHOP",
+      "requirement": "Shop from DB/config, no hardcoded prices, idempotent purchase",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "PREM-01",
+      "category": "PREMIUM",
+      "requirement": "FREE/VIP/ELITE premium (cosmetic/convenience, not investment)",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "MKT-01",
+      "category": "MARKETPLACE",
+      "requirement": "Player marketplace with fee accounting, escrow lock, anti-manipulation",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "AUC-01",
+      "category": "AUCTION",
+      "requirement": "Auction house: listing fee, bid, buyout, expiration, tax, cancellation, types, anti-bid-abuse",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CUR-01",
+      "category": "CREDITS",
+      "requirement": "Credits off-chain with sinks (repair, ammo, crafting, travel, upgrade, NPC fees)",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "CUR-02",
+      "category": "GEMS",
+      "requirement": "Premium gems (off-chain) spend on cosmetics/pass/convenience",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "BC-01",
+      "category": "SOLANA",
+      "requirement": "@solana/kit real integration (RPC, tx build, confirm)",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-02",
+      "category": "WALLETS",
+      "requirement": "Wallet adapter with Phantom, Solflare, Backpack (Wallet Standard)",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-03",
+      "category": "WALLET SIGNATURE",
+      "requirement": "Nonce → signature → backend verification → session; replay + expiry protection",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-04",
+      "category": "DEPOSIT",
+      "requirement": "Deposit flow with network/mint/amount/recipient/confirmation/signature uniqueness checks",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-05",
+      "category": "WITHDRAWAL",
+      "requirement": "Withdrawal with limits, cooldown, review, statuses, signature, retry/backoff, idempotency",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "BC-06",
+      "category": "BLOCKCHAIN SERVICE",
+      "requirement": "Separate blockchain service, sole treasury key holder",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-07",
+      "category": "TRANSACTION QUEUE",
+      "requirement": "States CREATED/QUEUED/SUBMITTED/CONFIRMING/CONFIRMED/FAILED/RETRYING, durable in Postgres",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-08",
+      "category": "TREASURY SECURITY",
+      "requirement": "Private key never in frontend/repo/logs/browser",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "BC-09",
+      "category": "NFT",
+      "requirement": "Metaplex token metadata for eligible assets",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED",
+        "Feature-flagged; not minted in the vertical slice"
+      ]
+    },
+    {
+      "id": "BC-10",
+      "category": "SMART CONTRACT",
+      "requirement": "Anchor program architecture for settlement/escrow",
+      "status": "BLOCKED",
+      "why": [
+        "Rust/Anchor toolchain not available in this environment; program not compiled or deployed (MVP does not require it)"
+      ]
+    },
+    {
+      "id": "BC-11",
+      "category": "DEVNET",
+      "requirement": "Devnet-only operation",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BC-12",
+      "category": "TOKENOMICS",
+      "requirement": "Max supply, allocations, no infinite mint",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing"
+      ]
+    },
+    {
+      "id": "LED-01",
+      "category": "LEDGER",
+      "requirement": "Double-entry immutable ledger with idempotency and no negative user balances",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "LED-02",
+      "category": "DOUBLE ENTRY ACCOUNTING",
+      "requirement": "Separate system accounts (TREASURY, PLAYER_REWARD_POOL, OPERATING_REVENUE, WITHDRAWAL_RESERVE, MARKETPLACE_REVENUE, PREMIUM_REVENUE…)",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "LED-03",
+      "category": "LEDGER",
+      "requirement": "Transaction types DEPOSIT/GAME_REWARD/PURCHASE/REFUND/WITHDRAWAL/FEE/MARKETPLACE_FEE/AUCTION_FEE/ADMIN_ADJUSTMENT; compensating corrections",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-01",
+      "category": "REWARD ENGINE",
+      "requirement": "grantCryptoReward with eligibility, caps, risk review, breaker, emission",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-02",
+      "category": "REWARD LIABILITY",
+      "requirement": "Outstanding liability tracked and settled on claim",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-03",
+      "category": "TREASURY",
+      "requirement": "Separate reserves OPERATING/REWARD/WITHDRAWAL/EMERGENCY",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-04",
+      "category": "TREASURY RESERVE",
+      "requirement": "Treasury health states & multipliers",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-05",
+      "category": "REWARD EMISSION",
+      "requirement": "Dynamic emission with MAX_REWARD_RATE hard cap",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-06",
+      "category": "REWARD BUDGET",
+      "requirement": "Budget = seasonRevenue × ratio; allocation ≤100%",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-07",
+      "category": "REWARD ELIGIBILITY",
+      "requirement": "Account age, anti-cheat, gameplay time, matches, cooldown, mode",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-08",
+      "category": "USER REWARD LIMIT",
+      "requirement": "Daily/weekly/season caps shown to players",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-09",
+      "category": "ECONOMY CONTROLLER",
+      "requirement": "Monitor emission/sinks/treasury/inflation, anomalies, throttle",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-10",
+      "category": "CIRCUIT BREAKER",
+      "requirement": "REWARD_PAUSE/MARKET_PAUSE/WITHDRAWAL_REVIEW/EVENT_PAUSE",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ECO-11",
+      "category": "INFLATION CONTROL",
+      "requirement": "Issued/burned/spent/stored/withdrawn + daily/weekly/30d inflation",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-12",
+      "category": "MARKETPLACE FEES",
+      "requirement": "Marketplace fee 7.5% shown and separately accounted",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-13",
+      "category": "AUCTION FEES",
+      "requirement": "Listing/sale/cancellation fees",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-14",
+      "category": "WITHDRAWAL FEES",
+      "requirement": "Requested/service/network/final shown",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-15",
+      "category": "ECONOMY SIMULATION",
+      "requirement": "11 scenarios × user counts × horizons; ECONOMY_SIMULATION.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ECO-16",
+      "category": "ECONOMY HEALTH REPORT",
+      "requirement": "docs/ECONOMY_HEALTH_REPORT.md with required sections",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ECO-17",
+      "category": "OWNER REVENUE",
+      "requirement": "Revenue sources tracked separately; profitability dashboard",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ECO-18",
+      "category": "TRANSPARENCY",
+      "requirement": "Reward rules, pool, fees, eligibility, limits, season rules visible to players",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ECO-19",
+      "category": "TERMINOLOGY",
+      "requirement": "No APY/interest/guaranteed return/passive income in player UI",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ECO-20",
+      "category": "ADMIN ECONOMY PARAMS",
+      "requirement": "Admin config with audit (old/new/reason/admin/timestamp)",
+      "status": "PARTIAL",
+      "why": [
+        "integration evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-21",
+      "category": "WORST CASE ECONOMY",
+      "requirement": "70% claims, deposits drop, spending down, price drop, RPC cost up, bots up, withdrawals up — treasury protected",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "ECO-22",
+      "category": "COMPLIANCE",
+      "requirement": "Feature flags / region / account restrictions ready for KYC/AML/age/tax",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SEC-01",
+      "category": "AUTHENTICATION",
+      "requirement": "Email/password (argon2) + wallet login, short-lived access + refresh rotation, httpOnly secure cookies",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SEC-02",
+      "category": "AUTHORIZATION",
+      "requirement": "RBAC SUPER_ADMIN/ADMIN/MODERATOR/SUPPORT/ECONOMY_MANAGER",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SEC-03",
+      "category": "SECURITY",
+      "requirement": "CSRF, CORS, helmet headers, zod validation, rate limits (auth/wallet/withdraw/chat/purchase/market)",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SEC-04",
+      "category": "LOGGING",
+      "requirement": "Structured logging with redaction; LOGIN/LOGOUT/MATCH/KILL/…/ADMIN_ACTION events",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SEC-05",
+      "category": "OBSERVABILITY",
+      "requirement": "Request/correlation/match/tx ids",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SEC-06",
+      "category": "MONITORING",
+      "requirement": "/health, /ready, /metrics on services",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "SEC-07",
+      "category": "ACCOUNT SECURITY",
+      "requirement": "New wallet/wallet change/new device/suspicious login checks",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "AC-01",
+      "category": "ANTI-CHEAT",
+      "requirement": "Speed hack/teleport detection",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "AC-02",
+      "category": "ANTI-CHEAT",
+      "requirement": "Attack speed/cooldown bypass/damage manipulation",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "AC-03",
+      "category": "ANTI-CHEAT",
+      "requirement": "Packet replay/spam (seq + token bucket)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "AC-04",
+      "category": "ANTI-CHEAT",
+      "requirement": "Duplicate loot/reward/inventory/trade exploits prevented",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BOT-01",
+      "category": "BOT PROTECTION",
+      "requirement": "Repeated movement, impossible reaction, abnormal farming, clustering → risk levels + review queue",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BOT-02",
+      "category": "MULTI-ACCOUNT PROTECTION",
+      "requirement": "Device/IP/behavior/wallet heuristics, manual review, no auto permanent ban",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "FRAUD-01",
+      "category": "ANTI-FRAUD",
+      "requirement": "Chargeback/payment abuse/fake tx/double credit/duplicate withdrawal/market manipulation/reward farming detection",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "BOTS-01",
+      "category": "DEV BOTS",
+      "requirement": "Development bots Scout/Miner/Fighter/Tank/Support (wander/collect/attack/flee/assist)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ADM-01",
+      "category": "ADMIN PANEL",
+      "requirement": "Admin dashboard (players, rooms, revenue, purchases, deposits, withdrawals, liability, treasury, suspicious, reports, health)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ADM-02",
+      "category": "ADMIN PANEL",
+      "requirement": "Admin management (users, catalog, events, seasons, shop, market, clan, rewards, withdrawals, economy)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ADM-03",
+      "category": "ECONOMY ADMIN",
+      "requirement": "Economy dashboard with required graphs",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "ANA-01",
+      "category": "ANALYTICS",
+      "requirement": "DAU/MAU/retention/session/match time/kills/ship & weapon usage/win rate/economy sources & sinks/market & withdrawal volume",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "UI-Home",
+      "category": "WEB",
+      "requirement": "Home screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Play",
+      "category": "WEB",
+      "requirement": "Play screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Galaxy",
+      "category": "WEB",
+      "requirement": "Galaxy screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Hangar",
+      "category": "WEB",
+      "requirement": "Hangar screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Inventory",
+      "category": "WEB",
+      "requirement": "Inventory screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Ships",
+      "category": "WEB",
+      "requirement": "Ships screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Missions",
+      "category": "WEB",
+      "requirement": "Missions screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Clan",
+      "category": "WEB",
+      "requirement": "Clan screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Market",
+      "category": "WEB",
+      "requirement": "Market screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Auction",
+      "category": "WEB",
+      "requirement": "Auction screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Leaderboard",
+      "category": "WEB",
+      "requirement": "Leaderboard screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Season",
+      "category": "WEB",
+      "requirement": "Season screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-BattlePass",
+      "category": "WEB",
+      "requirement": "BattlePass screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Wallet",
+      "category": "WEB",
+      "requirement": "Wallet screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Shop",
+      "category": "WEB",
+      "requirement": "Shop screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Settings",
+      "category": "WEB",
+      "requirement": "Settings screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-Profile",
+      "category": "WEB",
+      "requirement": "Profile screen wired to real API",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-HUD",
+      "category": "HUD",
+      "requirement": "HUD: health/shield/energy/ammo/speed/target/minimap/skills/cooldowns/quest/objective/squad/notifications",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-STYLE",
+      "category": "UI QUALITY",
+      "requirement": "AAA sci-fi holographic UI, transitions, loading screens",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "UI-MOBILE",
+      "category": "MOBILE UI",
+      "requirement": "Bottom nav Home/Hangar/Galaxy/Clan/Shop/Wallet; critical-only combat HUD",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "UI-I18N",
+      "category": "WEB",
+      "requirement": "TR/EN localization",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "MOB-01",
+      "category": "CAPACITOR",
+      "requirement": "Capacitor config & native project",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MOB-02",
+      "category": "ANDROID",
+      "requirement": "Android project generated and buildable",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "MOB-03",
+      "category": "IOS",
+      "requirement": "iOS project + build",
+      "status": "BLOCKED",
+      "why": [
+        "macOS/Xcode not available in this Linux environment — iOS build cannot run"
+      ]
+    },
+    {
+      "id": "MOB-04",
+      "category": "MOBILE NATIVE",
+      "requirement": "Push, secure storage, deep links, lifecycle, haptics, clipboard, share, biometric",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "MOB-05",
+      "category": "MOBILE PERFORMANCE",
+      "requirement": "Battery/GPU/network optimization, background pause",
+      "status": "PARTIAL",
+      "why": [
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "MOB-06",
+      "category": "DEEP LINKS",
+      "requirement": "Deep/universal/app links architecture",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "INF-01",
+      "category": "DATABASE",
+      "requirement": "Prisma schema with ≥60 required models + indexes",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "INF-02",
+      "category": "PRISMA",
+      "requirement": "Migrations + seed",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "INF-03",
+      "category": "REDIS",
+      "requirement": "Redis for presence, rate limits, queues (non-critical state)",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "INF-04",
+      "category": "DOCKER",
+      "requirement": "Docker Compose (Postgres, Redis, API, Game Server, Blockchain Service)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "INF-05",
+      "category": "ENVIRONMENT",
+      "requirement": ".env.example with required vars",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "INF-06",
+      "category": "DEPLOYMENT",
+      "requirement": "Cloudflare/nginx/VPS deployment architecture",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "INF-07",
+      "category": "BACKUP",
+      "requirement": "Daily backup + PITR + DR plan",
+      "status": "PARTIAL",
+      "why": [
+        "Documented architecture only; no automated backup job in repo"
+      ]
+    },
+    {
+      "id": "INF-08",
+      "category": "TESTING",
+      "requirement": "Unit/integration/E2E/game server/economy/blockchain tests",
+      "status": "PARTIAL",
+      "why": [
+        "some implementation evidence missing",
+        "NOT_TESTED"
+      ]
+    },
+    {
+      "id": "INF-09",
+      "category": "BUILD",
+      "requirement": "pnpm lint/typecheck/test/build pass",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DOC-ARCHITECTURE",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/ARCHITECTURE.md",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DOC-GAME_DESIGN",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/GAME_DESIGN.md",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DOC-NETWORKING",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/NETWORKING.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-DATABASE",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/DATABASE.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-BLOCKCHAIN",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/BLOCKCHAIN.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-ECONOMY",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/ECONOMY.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-SECURITY",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/SECURITY.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-MOBILE",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/MOBILE.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-DEPLOYMENT",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/DEPLOYMENT.md",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DOC-REPOSITORIES",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/REPOSITORIES.md",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DOC-ECONOMY_SIMULATION",
+      "category": "DOCUMENTATION",
+      "requirement": "docs/ECONOMY_SIMULATION.md",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-README",
+      "category": "DOCUMENTATION",
+      "requirement": "README with setup/env/db/redis/game/api/web/mobile/devnet/wallet/deposit/withdraw/admin/testing/docker/deployment",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "DOC-CLAUDE",
+      "category": "DOCUMENTATION",
+      "requirement": "CLAUDE.md project rules + .coderabbit.yaml",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "SLICE-account",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "User enters website → account",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-wallet",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Connect wallet",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-faction",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Choose faction",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-ship",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Choose ship",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-enter",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Enter galaxy (join room)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-move",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Move (authoritative)",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-target",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Target NPC",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-shoot",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Shoot",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-kill",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Kill NPC",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-xp",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Gain XP / level up",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-loot",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Receive loot",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-inventory",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Open inventory",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-equip",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Equip item / change configuration",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-pvp",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Enter PvP and kill player",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-leaderboard",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Leaderboard update",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-event",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Event reward",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-crypto",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Crypto-eligible reward",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-walletpage",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Wallet page",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "SLICE-withdraw",
+      "category": "MVP VERTICAL SLICE",
+      "requirement": "Devnet withdrawal → tx hash",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    },
+    {
+      "id": "CR-01",
+      "category": "CODE REVIEW",
+      "requirement": "CodeRabbit continuous review with fixes",
+      "status": "NOT_IMPLEMENTED",
+      "why": [
+        "no implementation evidence found"
+      ]
+    }
+  ]
+}

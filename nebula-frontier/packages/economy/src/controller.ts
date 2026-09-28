@@ -72,11 +72,12 @@ export async function storedSupply(db: DbOrTx, asset: string): Promise<bigint> {
 }
 
 /** Net inflation of player-held supply over a window: (issued - burned - spent) / stored at window start. */
-export function inflationRate(flows: FlowTotals, storedNow: bigint): number {
+export function inflationRate(flows: FlowTotals, storedNow: bigint, minBase = 1n): number {
   const net = flows.issued - flows.burned - flows.spent;
   const delta = flows.issued + flows.deposited - flows.burned - flows.spent - flows.withdrawn;
   const start = storedNow - delta;
-  if (start <= 0n) return net > 0n ? 1 : 0;
+  // Below a meaningful base (e.g. launch week) a ratio is noise, not inflation.
+  if (start < minBase || start <= 0n) return 0;
   return Number((net * 1_000_000n) / start) / 1_000_000;
 }
 
@@ -151,10 +152,12 @@ export function detectAnomalies(m: EconomyMetrics, cfg: EconomyConfig): Anomaly[
   if (m.rewardUsers24h >= 20 && m.riskyRewardUsers24h / m.rewardUsers24h > cb.botRiskShareMax) {
     out.push({ kind: "BOT_SPIKE", severity: "CRITICAL", message: `${m.riskyRewardUsers24h}/${m.rewardUsers24h} rewarded users are high risk`, breakers: [CircuitBreakerMode.REWARD_PAUSE], throttle: true });
   }
-  if (m.inflation.credits.daily > cb.inflationSpike || m.inflation.nebx.daily > cb.inflationSpike) {
-    out.push({ kind: "INFLATION_SPIKE", severity: "CRITICAL", message: `Daily inflation credits ${(m.inflation.credits.daily * 100).toFixed(2)}% / NEBX ${(m.inflation.nebx.daily * 100).toFixed(2)}%`, breakers: [CircuitBreakerMode.EVENT_PAUSE], throttle: true });
+  // Inflation is measured on minted soft currency (credits). NEBX has a fixed supply and is only
+  // distributed from the funded reward pool, so its flows are covered by ABNORMAL_OUTFLOW instead.
+  if (m.inflation.credits.daily > cb.inflationSpike) {
+    out.push({ kind: "INFLATION_SPIKE", severity: "CRITICAL", message: `Daily credit inflation ${(m.inflation.credits.daily * 100).toFixed(2)}%`, breakers: [CircuitBreakerMode.EVENT_PAUSE], throttle: true });
   } else if (m.inflation.credits.daily > cfg.inflation.dailyThreshold || m.inflation.credits.weekly > cfg.inflation.weeklyThreshold) {
-    out.push({ kind: "INFLATION_SPIKE", severity: "WARN", message: "Inflation above target", breakers: [], throttle: true });
+    out.push({ kind: "INFLATION_SPIKE", severity: "WARN", message: "Credit inflation above target", breakers: [], throttle: true });
   }
   const mFloor = BigInt(cfg.sinks.npcServiceFee) * 100n;
   if (spike(m.marketVolume24h, m.marketVolumeAvg7d, cb.abnormalOutflowMultiplier, mFloor) && m.marketTopSellerShare > 0.5) {
@@ -207,6 +210,9 @@ export class EconomyController {
       return { a, b, e };
     };
     const [cf, nf] = await Promise.all([win(Currency.CREDITS), win(Currency.NEBX)]);
+    // Minimum supply before inflation ratios are meaningful (derived from config, not hardcoded).
+    const creditBase = BigInt(c.sinks.npcServiceFee) * 10_000n;
+    const nebxBase = BigInt(c.caps.season);
     const nebxPrior = await ledgerFlows(db, Currency.NEBX, d8, d1);
     const sumW = async (from: Date, to: Date) =>
       (await db.withdrawal.aggregate({ where: { createdAt: { gte: from, lt: to }, status: { notIn: ["CANCELLED"] } }, _sum: { requested: true } }))._sum.requested ?? 0n;
@@ -242,8 +248,8 @@ export class EconomyController {
       treasury,
       rewardRate: emission.rate,
       inflation: {
-        credits: { daily: inflationRate(cf.a, cStored), weekly: inflationRate(cf.b, cStored), d30: inflationRate(cf.e, cStored) },
-        nebx: { daily: inflationRate(nf.a, nStored), weekly: inflationRate(nf.b, nStored), d30: inflationRate(nf.e, nStored) }
+        credits: { daily: inflationRate(cf.a, cStored, creditBase), weekly: inflationRate(cf.b, cStored, creditBase), d30: inflationRate(cf.e, cStored, creditBase) },
+        nebx: { daily: inflationRate(nf.a, nStored, nebxBase), weekly: inflationRate(nf.b, nStored, nebxBase), d30: inflationRate(nf.e, nStored, nebxBase) }
       },
       withdrawals24h: w24,
       withdrawalsAvg7d: wPrior / 7n,
