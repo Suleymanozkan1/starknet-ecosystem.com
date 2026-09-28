@@ -1,0 +1,321 @@
+[
+  {
+    "id": "ach_first_kill",
+    "name": "First Kill",
+    "description": "Destroy your first hostile.",
+    "category": "COMBAT",
+    "metric": "npc_kills",
+    "threshold": 1,
+    "rewards": {
+      "xp": 200,
+      "credits": 1000
+    }
+  },
+  {
+    "id": "ach_100_kills",
+    "name": "Centurion",
+    "description": "Destroy 100 hostiles.",
+    "category": "COMBAT",
+    "metric": "npc_kills",
+    "threshold": 100,
+    "rewards": {
+      "xp": 5000,
+      "credits": 10000
+    }
+  },
+  {
+    "id": "ach_1000_kills",
+    "name": "Scourge of the Void",
+    "description": "Destroy 1,000 hostiles.",
+    "category": "COMBAT",
+    "metric": "npc_kills",
+    "threshold": 1000,
+    "rewards": {
+      "xp": 50000,
+      "gems": 50
+    }
+  },
+  {
+    "id": "ach_10000_kills",
+    "name": "Exterminator",
+    "description": "Destroy 10,000 hostiles.",
+    "category": "COMBAT",
+    "metric": "npc_kills",
+    "threshold": 10000,
+    "rewards": {
+      "gems": 200,
+      "items": [
+        {
+          "itemId": "cos_explosion_supernova",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "ach_first_pvp",
+    "name": "Blooded",
+    "description": "Defeat another pilot.",
+    "category": "PVP",
+    "metric": "player_kills",
+    "threshold": 1,
+    "rewards": {
+      "honor": 50
+    }
+  },
+  {
+    "id": "ach_pvp_100",
+    "name": "Ace of the Eclipse",
+    "description": "Defeat 100 pilots.",
+    "category": "PVP",
+    "metric": "player_kills",
+    "threshold": 100,
+    "rewards": {
+      "honor": 1000,
+      "gems": 30
+    }
+  },
+  {
+    "id": "ach_pvp_wins_50",
+    "name": "Arena Veteran",
+    "description": "Win 50 PvP matches.",
+    "category": "PVP",
+    "metric": "pvp_wins",
+    "threshold": 50,
+    "rewards": {
+      "honor": 1500,
+      "gems": 40,
+      "cryptoEligible": {
+        "source": "ACHIEVEMENT",
+        "weight": 1
+      }
+    }
+  },
+  {
+    "id": "ach_world_boss",
+    "name": "World Boss Hunter",
+    "description": "Participate in a world boss kill.",
+    "category": "PVE",
+    "metric": "boss_kills",
+    "threshold": 1,
+    "rewards": {
+      "xp": 20000,
+      "gems": 20
+    }
+  },
+  {
+    "id": "ach_world_boss_25",
+    "name": "Colossus Slayer",
+    "description": "Participate in 25 world boss kills.",
+    "category": "PVE",
+    "metric": "boss_kills",
+    "threshold": 25,
+    "rewards": {
+      "gems": 100,
+      "items": [
+        {
+          "itemId": "cos_title_colossus_slayer",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "ach_gate_1",
+    "name": "Gate Crasher",
+    "description": "Complete a gate.",
+    "category": "PVE",
+    "metric": "gates_completed",
+    "threshold": 1,
+    "rewards": {
+      "xp": 10000
+    }
+  },
+  {
+    "id": "ach_gate_master",
+    "name": "Gate Master",
+    "description": "Complete 50 gates.",
+    "category": "PVE",
+    "metric": "gates_completed",
+    "threshold": 50,
+    "rewards": {
+      "gems": 80,
+      "items": [
+        {
+          "itemId": "cos_title_gatekeeper",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "ach_miner_1k",
+    "name": "Miner",
+    "description": "Mine 1,000 resources.",
+    "category": "MINING",
+    "metric": "resources_mined",
+    "threshold": 1000,
+    "rewards": {
+      "credits": 20000
+    }
+  },
+  {
+    "id": "ach_miner_50k",
+    "name": "Deep Core Magnate",
+    "description": "Mine 50,000 resources.",
+    "category": "MINING",
+    "metric": "resources_mined",
+    "threshold": 50000,
+    "rewards": {
+      "gems": 60,
+      "items": [
+        {
+          "itemId": "item_mining_booster_1h",
+          "quantity": 5
+        }
+      ]
+    }
+  },
+  {
+    "id": "ach_explorer",
+    "name": "Explorer",
+    "description": "Visit 5 different maps.",
+    "category": "EXPLORATION",
+    "metric": "maps_visited",
+    "threshold": 5,
+    "rewards": {
+      "xp": 5000
+    }
+  },
+  {
+    "id": "ach_cartographer",
+    "name": "Cartographer",
+    "description": "Visit every map in the frontier.",
+    "category": "EXPLORATION",
+    "metric": "maps_visited",
+    "threshold": 11,
+    "rewards": {
+      "gems": 40,
+      "items": [
+        {
+          "itemId": "cos_trail_stardust",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "ach_level_10",
+    "name": "Wings Earned",
+    "description": "Reach level 10.",
+    "category": "COMBAT",
+    "metric": "level",
+    "threshold": 10,
+    "rewards": {
+      "credits": 10000
+    }
+  },
+  {
+    "id": "ach_level_25",
+    "name": "Seasoned Pilot",
+    "description": "Reach level 25.",
+    "category": "COMBAT",
+    "metric": "level",
+    "threshold": 25,
+    "rewards": {
+      "gems": 25
+    }
+  },
+  {
+    "id": "ach_legendary_pilot",
+    "name": "Legendary Pilot",
+    "description": "Reach level 50.",
+    "category": "COMBAT",
+    "metric": "level",
+    "threshold": 50,
+    "rewards": {
+      "gems": 150,
+      "cryptoEligible": {
+        "source": "ACHIEVEMENT",
+        "weight": 2
+      }
+    }
+  },
+  {
+    "id": "ach_crafter_10",
+    "name": "Tinkerer",
+    "description": "Craft 10 items.",
+    "category": "CRAFTING",
+    "metric": "items_crafted",
+    "threshold": 10,
+    "rewards": {
+      "credits": 10000
+    }
+  },
+  {
+    "id": "ach_crafter_500",
+    "name": "Master Artificer",
+    "description": "Craft 500 items.",
+    "category": "CRAFTING",
+    "metric": "items_crafted",
+    "threshold": 500,
+    "rewards": {
+      "gems": 60
+    }
+  },
+  {
+    "id": "ach_clan_commander",
+    "name": "Clan Commander",
+    "description": "Found a clan.",
+    "category": "SOCIAL",
+    "metric": "clan_created",
+    "threshold": 1,
+    "rewards": {
+      "items": [
+        {
+          "itemId": "cos_emblem_starwing",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "ach_trader",
+    "name": "Market Maker",
+    "description": "Complete 25 marketplace sales.",
+    "category": "ECONOMY",
+    "metric": "market_sales",
+    "threshold": 25,
+    "rewards": {
+      "credits": 25000
+    }
+  },
+  {
+    "id": "ach_season_pass_50",
+    "name": "Season Finisher",
+    "description": "Reach battle pass tier 50.",
+    "category": "SEASON",
+    "metric": "battlepass_tier",
+    "threshold": 50,
+    "rewards": {
+      "gems": 50
+    }
+  },
+  {
+    "id": "ach_secret_rift",
+    "name": "Stared Into the Rift",
+    "description": "Survive a Void Rift event from start to finish.",
+    "category": "PVE",
+    "metric": "rift_events_survived",
+    "threshold": 1,
+    "rewards": {
+      "items": [
+        {
+          "itemId": "cos_title_void_walker",
+          "quantity": 1
+        }
+      ]
+    },
+    "hidden": true
+  }
+]
