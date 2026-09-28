@@ -362,7 +362,7 @@ Final run on the current branch head:
 | Android | PASS: `./gradlew assembleDebug`, app-debug.apk about 11 MB |
 | iOS | **BLOCKED**: needs macOS and Xcode |
 | Anchor | `cargo check` and `cargo test` PASS. BPF `anchor build` NOT RUN: no Anchor/Solana CLI here. |
-| Vercel preview | `vercel.json` plus a root `package.json` (Node 22.x pin) build the web SPA from the monorepo. The same commands pass in a clean clone; the Vercel run on `c37d220` is pending |
+| Vercel preview | `vercel.json` plus a root `package.json` (Node 22.x pin) build the web SPA from the monorepo. The same commands pass in a clean clone; Vercel deployment on `207cbc5` **succeeded** |
 
 ## 23. Runtime Results
 

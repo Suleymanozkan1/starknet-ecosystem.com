@@ -19,7 +19,7 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 | PR | Slice | Files | Status |
 |---|---|---|---|
 | [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 queued |
-| [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Re-review scheduled (rate limit) |
+| [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Round 2 re-review requested at 21:54 UTC on the refreshed branch (86 files) |
 | [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API, auth, validation, shared, Prisma | 93 | Review requested |
 | [#5](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/5) | web app | 91 | Queued (rate limit) |
 | [#6](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/6) | game client, renderer, networking | 72 | Queued (rate limit) |
