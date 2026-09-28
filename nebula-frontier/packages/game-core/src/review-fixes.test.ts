@@ -1,7 +1,8 @@
 /** Regression tests for CodeRabbit PR #2 round 1 findings (game-core). */
 import { describe, expect, it } from "vitest";
 import { DRONES_BY_ID, MAPS_BY_ID, MODULES_BY_ID, PROGRESSION, SHIPS_BY_ID, WEAPONS_BY_ID } from "@nebula/config";
-import type { MapDef } from "@nebula/shared";
+import { mulberry32, type LootTableDef, type MapDef } from "@nebula/shared";
+import { rollLoot } from "./loot.js";
 import { tryFire, type HeatState, type WeaponRuntime } from "./combat.js";
 import { formMatches, type QueueTicket } from "./matchmaking.js";
 import { computeStats, gearScore, type EffectiveWeapon, type LoadoutInput } from "./stats.js";
@@ -70,6 +71,11 @@ describe("#20 tuning overrides are validated", () => {
     expect(parseTuningOverride({ nope: true }).ok).toBe(false);
     expect(parseTuningOverride({ minHitChance: 0.9, maxHitChance: 0.5 }).ok).toBe(false);
     expect(mergeTuning({ armorK: Number.NaN })).toEqual(DEFAULT_TUNING);
+    // Partial overrides are checked against the merged range (default minHitChance 0.05).
+    expect(parseTuningOverride({ maxHitChance: 0 }).ok).toBe(false);
+    expect(parseTuningOverride({ minHitChance: 1.0 }).ok).toBe(true); // default max 1.0
+    expect(mergeTuning({ maxHitChance: 0 })).toEqual(DEFAULT_TUNING);
+    expect(mergeTuning({ maxHitChance: 0.8 }).maxHitChance).toBe(0.8);
   });
 });
 
@@ -81,5 +87,27 @@ describe("#21 PIRATE zones do not enable PvP on non-PvP maps", () => {
     const helios = MAPS_BY_ID.get("map_helios_frontier")!;
     const pirate = helios.zones.find((z) => z.type === "PIRATE")!;
     expect(isPvpAllowedAt(helios, pirate.x, pirate.y)).toBe(false);
+  });
+});
+
+describe("#12 raid loot follows the raid reward scale", () => {
+  // Guaranteed table (emptyWeight 0): a drop-weight multiplier alone could not reduce it.
+  const table: LootTableDef = { id: "t_test_boss", rolls: 4, emptyWeight: 0, entries: [{ kind: "CREDITS", ref: "CREDITS", weight: 1, min: 1, max: 1 }] };
+  const total = (scale: number | undefined, seed: number) =>
+    rollLoot(table, mulberry32(seed), scale === undefined ? {} : { scale }).reduce((a, d) => a + d.quantity, 0);
+
+  it("full scale is unchanged; zero or invalid scale drops nothing", () => {
+    expect(total(undefined, 1)).toBe(4);
+    expect(total(1, 1)).toBe(4);
+    expect(total(0, 1)).toBe(0);
+    expect(total(Number.NaN, 1)).toBe(0);
+  });
+
+  it("a qualifying raid below raidSize gets proportionally less loot on average", () => {
+    let sum = 0;
+    for (let i = 0; i < 2000; i++) sum += total(0.5, i + 1);
+    expect(sum / 2000).toBeGreaterThan(1.9);
+    expect(sum / 2000).toBeLessThan(2.1);
+    for (let i = 0; i < 50; i++) expect(total(0.625, i + 1)).toBeLessThanOrEqual(3); // 4 × 0.625 = 2.5 → 2 or 3 rolls
   });
 });

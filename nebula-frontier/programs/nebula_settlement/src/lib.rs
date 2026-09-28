@@ -10,6 +10,11 @@
 //!   with a capped house fee; refundable if cancelled.
 //!
 //! Every state change emits an event for indexers.
+//!
+//! Admin: `initialize` can only be called by the program's upgrade authority (bound through the
+//! `ProgramData` account) so nobody can front-run the singleton config. `update_config` rotates the
+//! reward signer and caps, authority moves in two steps (`propose_authority` → `accept_authority`),
+//! and `verify_reward` enforces a hard per-epoch emission cap in addition to the per-claim cap.
 
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
@@ -28,17 +33,69 @@ pub const MAX_WINNERS: usize = 16;
 pub mod nebula_settlement {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, reward_signer: Pubkey, fee_bps: u16, max_reward_per_claim: u64) -> Result<()> {
-        require!(fee_bps <= MAX_FEE_BPS, SettlementError::FeeTooHigh);
+    /// One-time setup. Only the program's upgrade authority may call it (see `Initialize`).
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        reward_signer: Pubkey,
+        fee_bps: u16,
+        max_reward_per_claim: u64,
+        max_emission_per_epoch: u64,
+        epoch_duration_secs: i64,
+    ) -> Result<()> {
+        validate_config_params(fee_bps, max_reward_per_claim, max_emission_per_epoch, epoch_duration_secs)?;
         let cfg = &mut ctx.accounts.config;
         cfg.authority = ctx.accounts.authority.key();
+        cfg.pending_authority = Pubkey::default();
         cfg.reward_signer = reward_signer;
         cfg.fee_bps = fee_bps;
         cfg.max_reward_per_claim = max_reward_per_claim;
+        cfg.max_emission_per_epoch = max_emission_per_epoch;
+        cfg.epoch_duration_secs = epoch_duration_secs;
+        cfg.epoch_start = Clock::get()?.unix_timestamp;
+        cfg.epoch_emitted = 0;
         cfg.paused = false;
         cfg.bump = ctx.bumps.config;
         cfg.vault_bump = ctx.bumps.vault;
         emit!(ConfigUpdated { authority: cfg.authority, reward_signer, fee_bps, paused: false });
+        Ok(())
+    }
+
+    /// Rotates the reward signer (e.g. after a key leak) and updates caps. Authority only.
+    pub fn update_config(
+        ctx: Context<AdminOnly>,
+        reward_signer: Pubkey,
+        fee_bps: u16,
+        max_reward_per_claim: u64,
+        max_emission_per_epoch: u64,
+        epoch_duration_secs: i64,
+    ) -> Result<()> {
+        validate_config_params(fee_bps, max_reward_per_claim, max_emission_per_epoch, epoch_duration_secs)?;
+        let cfg = &mut ctx.accounts.config;
+        cfg.reward_signer = reward_signer;
+        cfg.fee_bps = fee_bps;
+        cfg.max_reward_per_claim = max_reward_per_claim;
+        cfg.max_emission_per_epoch = max_emission_per_epoch;
+        cfg.epoch_duration_secs = epoch_duration_secs;
+        emit!(ConfigUpdated { authority: cfg.authority, reward_signer, fee_bps, paused: cfg.paused });
+        Ok(())
+    }
+
+    /// Step 1 of an authority transfer: the current authority nominates a successor.
+    /// Passing `Pubkey::default()` cancels a pending proposal.
+    pub fn propose_authority(ctx: Context<AdminOnly>, new_authority: Pubkey) -> Result<()> {
+        let cfg = &mut ctx.accounts.config;
+        cfg.pending_authority = new_authority;
+        emit!(AuthorityProposed { authority: cfg.authority, pending_authority: new_authority });
+        Ok(())
+    }
+
+    /// Step 2 of an authority transfer: the nominated key signs to take over.
+    pub fn accept_authority(ctx: Context<AcceptAuthority>) -> Result<()> {
+        let cfg = &mut ctx.accounts.config;
+        let previous = cfg.authority;
+        cfg.authority = ctx.accounts.new_authority.key();
+        cfg.pending_authority = Pubkey::default();
+        emit!(AuthorityTransferred { previous, authority: cfg.authority });
         Ok(())
     }
 
@@ -66,10 +123,22 @@ pub mod nebula_settlement {
     /// Reward verification + payout. The reward signer (game server key) must co-sign; the reward
     /// receipt PDA (seeded by reward_id) can only be created once → no duplicate claims.
     pub fn verify_reward(ctx: Context<VerifyReward>, reward_id: [u8; 32], amount: u64) -> Result<()> {
-        let cfg = &ctx.accounts.config;
+        let now = Clock::get()?.unix_timestamp;
+        let cfg = &mut ctx.accounts.config;
         require!(!cfg.paused, SettlementError::Paused);
         require!(amount > 0, SettlementError::InvalidAmount);
         require!(amount <= cfg.max_reward_per_claim, SettlementError::RewardAboveCap);
+        let (epoch_start, epoch_emitted) = charge_emission(
+            cfg.epoch_start,
+            cfg.epoch_emitted,
+            now,
+            cfg.epoch_duration_secs,
+            cfg.max_emission_per_epoch,
+            amount,
+        )?;
+        cfg.epoch_start = epoch_start;
+        cfg.epoch_emitted = epoch_emitted;
+        let vault_bump = cfg.vault_bump;
         let vault = &ctx.accounts.vault;
         let rent_floor = Rent::get()?.minimum_balance(0);
         require!(vault.get_lamports().saturating_sub(rent_floor) >= amount, SettlementError::VaultInsufficient);
@@ -78,10 +147,10 @@ pub mod nebula_settlement {
         receipt.reward_id = reward_id;
         receipt.player = ctx.accounts.player.key();
         receipt.amount = amount;
-        receipt.claimed_at = Clock::get()?.unix_timestamp;
+        receipt.claimed_at = now;
         receipt.bump = ctx.bumps.receipt;
 
-        let seeds: &[&[u8]] = &[VAULT_SEED, &[cfg.vault_bump]];
+        let seeds: &[&[u8]] = &[VAULT_SEED, &[vault_bump]];
         system_program::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.system_program.key(),
@@ -96,6 +165,7 @@ pub mod nebula_settlement {
 
     // ------------------------------------------------------------------ escrow (SOL)
     pub fn open_escrow(ctx: Context<OpenEscrow>, escrow_id: u64, amount: u64, expires_at: i64) -> Result<()> {
+        require!(!ctx.accounts.config.paused, SettlementError::Paused);
         require!(amount > 0, SettlementError::InvalidAmount);
         require!(expires_at > Clock::get()?.unix_timestamp, SettlementError::InvalidExpiry);
         let maker = ctx.accounts.maker.key();
@@ -157,6 +227,7 @@ pub mod nebula_settlement {
     }
 
     pub fn join_tournament(ctx: Context<JoinTournament>) -> Result<()> {
+        require!(!ctx.accounts.config.paused, SettlementError::Paused);
         let t = &mut ctx.accounts.tournament;
         require!(t.state == TournamentState::Open as u8, SettlementError::TournamentClosed);
         require!(t.players < t.max_players, SettlementError::TournamentFull);
@@ -192,7 +263,7 @@ pub mod nebula_settlement {
         let total: u64 = payouts.iter().try_fold(0u64, |acc, p| acc.checked_add(*p)).ok_or(SettlementError::Overflow)?;
         require!(total <= t.pot, SettlementError::PayoutExceedsPot);
         let fee = t.pot - total;
-        let max_fee = (t.pot as u128 * cfg.fee_bps as u128 / 10_000u128) as u64;
+        let max_fee = max_house_fee(t.pot, cfg.fee_bps);
         require!(fee <= max_fee, SettlementError::FeeTooHigh);
         for (acc, amount) in winners.iter().zip(payouts.iter()) {
             require!(acc.is_writable, SettlementError::InvalidWinners);
@@ -220,10 +291,11 @@ pub mod nebula_settlement {
         Ok(())
     }
 
+    /// Closes the caller's entry (rent back to the player). A cancelled tournament also refunds the
+    /// entry fee; a settled one only returns the entry account's rent.
     pub fn refund_entry(ctx: Context<RefundEntry>) -> Result<()> {
         let t = &mut ctx.accounts.tournament;
-        require!(t.state == TournamentState::Cancelled as u8, SettlementError::TournamentClosed);
-        let fee = t.entry_fee;
+        let fee = entry_refund_amount(t.state, t.entry_fee)?;
         if fee > 0 {
             t.sub_lamports(fee)?;
             ctx.accounts.player.add_lamports(fee)?;
@@ -240,9 +312,16 @@ pub mod nebula_settlement {
 #[derive(InitSpace)]
 pub struct Config {
     pub authority: Pubkey,
+    /// Nominated successor (two-step transfer); `Pubkey::default()` when none.
+    pub pending_authority: Pubkey,
     pub reward_signer: Pubkey,
     pub fee_bps: u16,
     pub max_reward_per_claim: u64,
+    /// Hard cap on lamports paid out by `verify_reward` per epoch.
+    pub max_emission_per_epoch: u64,
+    pub epoch_duration_secs: i64,
+    pub epoch_start: i64,
+    pub epoch_emitted: u64,
     pub paused: bool,
     pub bump: u8,
     pub vault_bump: u8,
@@ -302,6 +381,12 @@ pub enum TournamentState {
 pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
+    /// This program; its ProgramData account must be the one passed below.
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ SettlementError::Unauthorized)]
+    pub program: Program<'info, crate::program::NebulaSettlement>,
+    /// Only the upgrade authority may initialize, so the singleton config cannot be front-run.
+    #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()) @ SettlementError::Unauthorized)]
+    pub program_data: Account<'info, ProgramData>,
     #[account(init, payer = authority, space = 8 + Config::INIT_SPACE, seeds = [CONFIG_SEED], bump)]
     pub config: Account<'info, Config>,
     /// CHECK: system-owned PDA holding reward lamports; only moved with program signer seeds.
@@ -314,6 +399,15 @@ pub struct Initialize<'info> {
 pub struct AdminOnly<'info> {
     pub authority: Signer<'info>,
     #[account(mut, seeds = [CONFIG_SEED], bump = config.bump, has_one = authority @ SettlementError::Unauthorized)]
+    pub config: Account<'info, Config>,
+}
+
+#[derive(Accounts)]
+pub struct AcceptAuthority<'info> {
+    pub new_authority: Signer<'info>,
+    #[account(mut, seeds = [CONFIG_SEED], bump = config.bump,
+        constraint = config.pending_authority != Pubkey::default()
+            && config.pending_authority == new_authority.key() @ SettlementError::Unauthorized)]
     pub config: Account<'info, Config>,
 }
 
@@ -337,7 +431,7 @@ pub struct VerifyReward<'info> {
     /// The game server's reward signing key (must match config.reward_signer).
     #[account(address = config.reward_signer @ SettlementError::Unauthorized)]
     pub reward_signer: Signer<'info>,
-    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    #[account(mut, seeds = [CONFIG_SEED], bump = config.bump)]
     pub config: Account<'info, Config>,
     /// CHECK: vault PDA validated by seeds.
     #[account(mut, seeds = [VAULT_SEED], bump = config.vault_bump)]
@@ -357,6 +451,8 @@ pub struct OpenEscrow<'info> {
     pub maker: Signer<'info>,
     /// CHECK: counterparty wallet recorded in the escrow.
     pub taker: UncheckedAccount<'info>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Account<'info, Config>,
     #[account(init, payer = maker, space = 8 + Escrow::INIT_SPACE, seeds = [ESCROW_SEED, maker.key().as_ref(), &escrow_id.to_le_bytes()], bump)]
     pub escrow: Account<'info, Escrow>,
     pub system_program: Program<'info, System>,
@@ -408,6 +504,8 @@ pub struct CreateTournament<'info> {
 pub struct JoinTournament<'info> {
     #[account(mut)]
     pub player: Signer<'info>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Account<'info, Config>,
     #[account(mut, seeds = [TOURNAMENT_SEED, &tournament.tournament_id.to_le_bytes()], bump = tournament.bump)]
     pub tournament: Account<'info, Tournament>,
     #[account(init, payer = player, space = 8 + TournamentEntry::INIT_SPACE, seeds = [TOURNAMENT_SEED, tournament.key().as_ref(), player.key().as_ref()], bump)]
@@ -453,6 +551,10 @@ pub struct RefundEntry<'info> {
 
 #[event]
 pub struct ConfigUpdated { pub authority: Pubkey, pub reward_signer: Pubkey, pub fee_bps: u16, pub paused: bool }
+#[event]
+pub struct AuthorityProposed { pub authority: Pubkey, pub pending_authority: Pubkey }
+#[event]
+pub struct AuthorityTransferred { pub previous: Pubkey, pub authority: Pubkey }
 #[event]
 pub struct VaultFunded { pub funder: Pubkey, pub amount: u64 }
 #[event]
@@ -500,4 +602,105 @@ pub enum SettlementError {
     PayoutExceedsPot,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("Epoch emission cap reached")]
+    EmissionCapReached,
+    #[msg("Invalid configuration")]
+    InvalidConfig,
+}
+
+// ============================================================ pure helpers (unit tested)
+
+/// Validates admin-supplied caps: fee within the hard cap, non-zero caps, per-claim ≤ per-epoch.
+pub fn validate_config_params(fee_bps: u16, max_reward_per_claim: u64, max_emission_per_epoch: u64, epoch_duration_secs: i64) -> Result<()> {
+    require!(fee_bps <= MAX_FEE_BPS, SettlementError::FeeTooHigh);
+    require!(max_reward_per_claim > 0 && max_emission_per_epoch > 0, SettlementError::InvalidConfig);
+    require!(max_reward_per_claim <= max_emission_per_epoch, SettlementError::InvalidConfig);
+    require!(epoch_duration_secs > 0, SettlementError::InvalidConfig);
+    Ok(())
+}
+
+/// Rolls the emission epoch forward if it elapsed and charges `amount` against the cap.
+/// Returns the new `(epoch_start, epoch_emitted)`; errors if the cap would be exceeded.
+pub fn charge_emission(epoch_start: i64, epoch_emitted: u64, now: i64, epoch_duration_secs: i64, cap: u64, amount: u64) -> Result<(i64, u64)> {
+    require!(epoch_duration_secs > 0, SettlementError::InvalidConfig);
+    let epoch_end = epoch_start.checked_add(epoch_duration_secs).ok_or(SettlementError::Overflow)?;
+    let (start, emitted) = if now >= epoch_end { (now, 0u64) } else { (epoch_start, epoch_emitted) };
+    let next = emitted.checked_add(amount).ok_or(SettlementError::Overflow)?;
+    require!(next <= cap, SettlementError::EmissionCapReached);
+    Ok((start, next))
+}
+
+/// Largest house fee allowed on `pot` at `fee_bps`.
+pub fn max_house_fee(pot: u64, fee_bps: u16) -> u64 {
+    // pot * fee_bps / 10_000 ≤ pot, so the narrowing cast cannot truncate.
+    (pot as u128 * fee_bps as u128 / 10_000u128) as u64
+}
+
+/// Entry-fee refund when closing a `TournamentEntry`: full fee if cancelled, zero if settled
+/// (only the entry's rent is returned), error while the tournament is still open.
+pub fn entry_refund_amount(state: u8, entry_fee: u64) -> Result<u64> {
+    if state == TournamentState::Cancelled as u8 {
+        Ok(entry_fee)
+    } else if state == TournamentState::Settled as u8 {
+        Ok(0)
+    } else {
+        err!(SettlementError::TournamentClosed)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn is_err(r: Result<impl core::fmt::Debug>, e: SettlementError) -> bool {
+        match r {
+            Err(anchor_lang::error::Error::AnchorError(a)) => a.error_code_number == u32::from(e),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn config_params_are_validated() {
+        assert!(validate_config_params(MAX_FEE_BPS, 10, 100, 86_400).is_ok());
+        assert!(is_err(validate_config_params(MAX_FEE_BPS + 1, 10, 100, 86_400), SettlementError::FeeTooHigh));
+        assert!(is_err(validate_config_params(0, 0, 100, 86_400), SettlementError::InvalidConfig));
+        assert!(is_err(validate_config_params(0, 10, 0, 86_400), SettlementError::InvalidConfig));
+        assert!(is_err(validate_config_params(0, 101, 100, 86_400), SettlementError::InvalidConfig));
+        assert!(is_err(validate_config_params(0, 10, 100, 0), SettlementError::InvalidConfig));
+    }
+
+    #[test]
+    fn emission_cap_is_enforced_within_an_epoch() {
+        let (s, e) = charge_emission(1_000, 0, 1_010, 100, 50, 30).unwrap();
+        assert_eq!((s, e), (1_000, 30));
+        let (s, e) = charge_emission(s, e, 1_050, 100, 50, 20).unwrap();
+        assert_eq!((s, e), (1_000, 50));
+        assert!(is_err(charge_emission(s, e, 1_099, 100, 50, 1), SettlementError::EmissionCapReached));
+    }
+
+    #[test]
+    fn emission_epoch_rolls_over() {
+        let (s, e) = charge_emission(1_000, 50, 1_100, 100, 50, 40).unwrap();
+        assert_eq!((s, e), (1_100, 40));
+    }
+
+    #[test]
+    fn emission_arithmetic_is_checked() {
+        assert!(is_err(charge_emission(i64::MAX, 0, 0, 1, u64::MAX, 1), SettlementError::Overflow));
+        assert!(is_err(charge_emission(0, u64::MAX, 0, 100, u64::MAX, 1), SettlementError::Overflow));
+    }
+
+    #[test]
+    fn house_fee_is_capped() {
+        assert_eq!(max_house_fee(10_000, 500), 500);
+        assert_eq!(max_house_fee(0, MAX_FEE_BPS), 0);
+        assert_eq!(max_house_fee(u64::MAX, MAX_FEE_BPS), u64::MAX / 10);
+    }
+
+    #[test]
+    fn entry_refund_depends_on_state() {
+        assert_eq!(entry_refund_amount(TournamentState::Cancelled as u8, 7).unwrap(), 7);
+        assert_eq!(entry_refund_amount(TournamentState::Settled as u8, 7).unwrap(), 0);
+        assert!(is_err(entry_refund_amount(TournamentState::Open as u8, 7), SettlementError::TournamentClosed));
+    }
 }

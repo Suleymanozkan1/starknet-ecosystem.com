@@ -80,7 +80,8 @@ function evaluate(req: Requirement, runtime: Record<string, RuntimeResult>): Row
     if (impl.some((x) => !x)) { status = "PARTIAL"; why.push("some implementation evidence missing"); }
     if (integ.some((x) => !x)) { status = "PARTIAL"; why.push("integration evidence missing"); }
     if (!req.testExempt && (test.length === 0 || test.some((x) => !x))) { status = "PARTIAL"; why.push("NOT_TESTED"); }
-    if (rt && rt.status === "FAIL") { status = "PARTIAL"; why.push("runtime verification failed"); }
+    // A declared runtime check only counts once it has actually PASSed (NOT_RUN/BLOCKED/FAIL → PARTIAL).
+    if (rt && rt.status !== "PASS") { status = "PARTIAL"; why.push(`runtime ${rt.status}`); }
     if (req.partial) { status = "PARTIAL"; why.push(req.partial); }
   }
   return { req, status, impl, integ, test, runtime: rt, why };

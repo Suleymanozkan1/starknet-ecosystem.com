@@ -16,6 +16,8 @@ export interface LootDrop {
 export interface LootRollOptions {
   /** Event / booster drop multiplier (>1 makes empty rolls rarer). */
   dropMultiplier?: number;
+  /** Reward scale in [0,1] (e.g. an under-manned raid): the number of rolls is scaled so expected loot is `scale` × full. */
+  scale?: number;
   /** Extra rolls (e.g. difficulty or contribution tiers). */
   extraRolls?: number;
 }
@@ -43,7 +45,11 @@ export function randInt(min: number, max: number, rng: Rng): number {
 /** Roll a loot table. Drops of the same kind+ref are merged. */
 export function rollLoot(table: LootTableDef, rng: Rng, opts: LootRollOptions = {}): LootDrop[] {
   const mult = Math.max(0.01, opts.dropMultiplier ?? 1);
-  const rolls = Math.max(0, table.rolls + (opts.extraRolls ?? 0));
+  const scale = opts.scale === undefined ? 1 : Number.isFinite(opts.scale) ? Math.max(0, Math.min(1, opts.scale)) : 0;
+  const fullRolls = Math.max(0, table.rolls + (opts.extraRolls ?? 0));
+  // Scale the roll count, not only the empty weight (which is 0 on guaranteed boss tables); the fractional part is rolled.
+  const wanted = fullRolls * scale;
+  const rolls = scale >= 1 ? fullRolls : Math.floor(wanted) + (rng() < wanted - Math.floor(wanted) ? 1 : 0);
   const weights = [table.emptyWeight / mult, ...table.entries.map((e) => e.weight)];
   const merged = new Map<string, LootDrop>();
   for (let i = 0; i < rolls; i++) {

@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-28T18:08:26.930Z",
+  "generatedAt": "2026-09-28T20:37:21.469Z",
   "total": 249,
-  "implemented": 161,
-  "partial": 85,
+  "implemented": 159,
+  "partial": 87,
   "notImplemented": 1,
   "blocked": 2,
-  "completionPercent": 64.7,
+  "completionPercent": 63.9,
   "byCategory": {
     "PROJECT STRUCTURE": {
       "IMPLEMENTED": 7,
@@ -50,8 +50,8 @@
       "BLOCKED": 0
     },
     "SPACE STATIONS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -74,8 +74,8 @@
       "BLOCKED": 0
     },
     "FACTION WAR": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -530,8 +530,8 @@
       "BLOCKED": 0
     },
     "SOLANA": {
-      "IMPLEMENTED": 1,
-      "PARTIAL": 0,
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -548,14 +548,14 @@
       "BLOCKED": 0
     },
     "DEPOSIT": {
-      "IMPLEMENTED": 1,
-      "PARTIAL": 0,
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "WITHDRAWAL": {
-      "IMPLEMENTED": 1,
-      "PARTIAL": 0,
+      "IMPLEMENTED": 0,
+      "PARTIAL": 1,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -956,8 +956,8 @@
       "BLOCKED": 0
     },
     "MVP VERTICAL SLICE": {
-      "IMPLEMENTED": 19,
-      "PARTIAL": 0,
+      "IMPLEMENTED": 18,
+      "PARTIAL": 1,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -1164,10 +1164,8 @@
       "id": "WORLD-06",
       "category": "SPACE STATIONS",
       "requirement": "Stations with services",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "NAV-01",
@@ -1203,10 +1201,8 @@
       "id": "FAC-03",
       "category": "FACTION WAR",
       "requirement": "Global faction war scoring & seasonal leaderboard",
-      "status": "PARTIAL",
-      "why": [
-        "some implementation evidence missing"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "FAC-04",
@@ -1571,7 +1567,6 @@
       "requirement": "Pet: loot collect, repair, radar, scan, resource detection, buff, levels",
       "status": "PARTIAL",
       "why": [
-        "some implementation evidence missing",
         "NOT_TESTED"
       ]
     },
@@ -1853,7 +1848,6 @@
       "requirement": "Karma statuses Neutral/Friendly/Hostile/Outlaw/Bounty Target",
       "status": "PARTIAL",
       "why": [
-        "some implementation evidence missing",
         "NOT_TESTED"
       ]
     },
@@ -1933,8 +1927,10 @@
       "id": "BC-01",
       "category": "SOLANA",
       "requirement": "@solana/kit real integration (RPC, tx build, confirm)",
-      "status": "IMPLEMENTED",
-      "why": []
+      "status": "PARTIAL",
+      "why": [
+        "runtime BLOCKED"
+      ]
     },
     {
       "id": "BC-02",
@@ -1956,15 +1952,19 @@
       "id": "BC-04",
       "category": "DEPOSIT",
       "requirement": "Deposit flow with network/mint/amount/recipient/confirmation/signature uniqueness checks",
-      "status": "IMPLEMENTED",
-      "why": []
+      "status": "PARTIAL",
+      "why": [
+        "runtime BLOCKED"
+      ]
     },
     {
       "id": "BC-05",
       "category": "WITHDRAWAL",
       "requirement": "Withdrawal with limits, cooldown, review, statuses, signature, retry/backoff, idempotency",
-      "status": "IMPLEMENTED",
-      "why": []
+      "status": "PARTIAL",
+      "why": [
+        "runtime BLOCKED"
+      ]
     },
     {
       "id": "BC-06",
@@ -2014,7 +2014,8 @@
       "requirement": "Devnet-only operation",
       "status": "PARTIAL",
       "why": [
-        "NOT_TESTED"
+        "NOT_TESTED",
+        "runtime BLOCKED"
       ]
     },
     {
@@ -2881,8 +2882,10 @@
       "id": "SLICE-withdraw",
       "category": "MVP VERTICAL SLICE",
       "requirement": "Devnet withdrawal → tx hash",
-      "status": "IMPLEMENTED",
-      "why": []
+      "status": "PARTIAL",
+      "why": [
+        "runtime BLOCKED"
+      ]
     },
     {
       "id": "CR-01",
