@@ -333,7 +333,7 @@ Final run on the current branch head:
 
 | Suite | Result |
 |---|---|
-| **vitest total** | **60 files, 463 tests, 463 passed, 0 failed, 0 skipped** |
+| **vitest total** | **60 files, 464 tests, 464 passed, 0 failed, 0 skipped** |
 | Unit | game-core (combat, movement, anti-cheat, progression, social, world, review fixes); game-network (prediction, interpolation, clock); game-renderer (ship factory, materials, FX, camera, tiers, pool); game-client (input, radar, audio, relations); web (HTTP/CSRF, i18n, deep links); authentication; config data; telemetry: **PASS** |
 | Game server | `game-server.test.ts` (auth, AOI, combat, PvP, portals, events, bounties, raids, gates, clan wars, reputation, pets, faction war, docking), `reconnection.test.ts`, `review-fixes`, `tickets` (incl. concurrent redemption, memory and Redis), `clan-missions`, `retry-queue`: **PASS** |
 | Database | ledger (idempotency, concurrency, reversal, drift detection), client pool parsing: **PASS** |

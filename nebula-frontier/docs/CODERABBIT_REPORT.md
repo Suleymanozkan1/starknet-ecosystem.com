@@ -170,13 +170,13 @@ Verification after the fixes:
 | Missing internal token sends `Bearer ` | Minor | `internalServiceToken()` fails fast (at least 32 characters); test |
 | Admin treasury view wrong in SPL mode | Minor | Mode-aware reconciliation plus reward-token delta (shared `getTokenBalance`) |
 | READ COMMITTED replay reports `INSUFFICIENT_BALANCE` | Minor | Re-reads the idempotency key and returns `duplicate` |
-| Spoof signals repeated and blamed on the victim | Minor | Attributed only to the player's own linked fee payer; deduplicated per signature; tests |
+| Spoof signals repeated and blamed on the victim | Minor | Attributed only to the player's own linked fee payer; deduplicated per signature under an advisory lock (`3f49a2c`, after a CodeRabbit follow-up); concurrency test |
 | Fractional gem grants | Minor | Safe positive integers only |
 | `DEPOSIT_SPIKE` uses a NEBX floor for SOL deposits | Minor | `circuitBreaker.depositSpikeFloorLamports` |
 | Bootstrap audit records only lamports | Minor | Records the mode, backing balance and lamports |
 | Audit header out of date | Trivial | Updated |
 
-Verification: lint clean, typecheck and build pass on every workspace, and the full vitest suite passes (60 files, 463 tests).
+Verification: lint clean, typecheck and build pass on every workspace, and the full vitest suite passes (60 files, 464 tests).
 
 ## Remaining / follow-up
 
