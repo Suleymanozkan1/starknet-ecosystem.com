@@ -312,6 +312,8 @@ export class ShipModel {
   readonly sockets: Sockets;
   readonly radius: number;
   readonly length: number;
+  /** Local-space bounds of the high LOD. Shared — do not mutate. */
+  readonly bounds: Box3;
   private readonly factory: ShipFactory;
   private readonly set: ShipGeometrySet;
   private readonly flames: Mesh[] = [];
@@ -329,6 +331,7 @@ export class ShipModel {
     this.materials = mats;
     this.sockets = set.sockets;
     this.radius = set.radius;
+    this.bounds = set.bounds;
     this.length = look.visual.length;
     const { lod, greebles } = factory.buildLod(set, mats);
     this.lod = lod;

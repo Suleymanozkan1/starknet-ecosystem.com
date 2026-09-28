@@ -68,12 +68,15 @@ export class BossVisual {
     // armour plates ring
     const plateGeo = prepare(chamferBox(L * 0.12, L * 0.05, L * 0.16, L * 0.02));
     this.geos.push(plateGeo);
-    const hw = Math.max(L * 0.18, this.model.radius * 0.45);
+    const b = this.model.bounds;
+    const top = b.max.y;
+    const hw = Math.max(L * 0.18, (b.max.x - b.min.x) * 0.5);
+    const hd = Math.max(L * 0.2, (b.max.z - b.min.z) * 0.5);
     const nPlates = 10;
     for (let i = 0; i < nPlates; i++) {
       const a = (i / nPlates) * Math.PI * 2;
       const m = new Mesh(plateGeo, plateMat);
-      const off = new Vector3(Math.cos(a) * hw, L * 0.06, Math.sin(a) * hw * 1.4);
+      const off = new Vector3(Math.cos(a) * hw * 1.02, top * 0.45, Math.sin(a) * hd * 0.85);
       m.position.copy(off);
       m.rotation.set(0, -a + Math.PI / 2, rng.range(-0.2, 0.2));
       m.castShadow = true;
@@ -89,9 +92,9 @@ export class BossVisual {
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
       const p = new Mesh(pylonGeo, this.model.materials.trim);
-      p.position.set(Math.cos(a) * hw * 1.25, L * 0.1, Math.sin(a) * hw * 1.25);
+      p.position.set(Math.cos(a) * hw * 0.8, top + L * 0.09, Math.sin(a) * hd * 0.8);
       const orb = new Mesh(orbGeo, this.pylonMat);
-      orb.position.set(p.position.x, L * 0.21, p.position.z);
+      orb.position.set(p.position.x, top + L * 0.2, p.position.z);
       this.extras.add(p, orb);
       this.pylonOrbs.push(orb);
     }
@@ -104,7 +107,7 @@ export class BossVisual {
     const nWeak = 4;
     for (let i = 0; i < nWeak; i++) {
       const a = (i / nWeak) * Math.PI * 2;
-      const pos = new Vector3(Math.cos(a) * hw * 0.6, L * 0.09, Math.sin(a) * hw * 0.8);
+      const pos = new Vector3(Math.cos(a) * hw * 0.55, top + L * 0.01, Math.sin(a) * hd * 0.55);
       const m = new Mesh(weakGeo, this.weakMat);
       m.position.copy(pos);
       const r = new Mesh(ringGeo, this.weakMat);
@@ -119,13 +122,13 @@ export class BossVisual {
     const coreGeo = prepare(sphere(L * 0.07, 24, 16));
     this.geos.push(coreGeo);
     this.core = new Mesh(coreGeo, this.coreMat);
-    this.core.position.set(0, L * 0.08, -L * 0.05);
+    this.core.position.set(0, top - L * 0.02, -L * 0.05);
     this.extras.add(this.core);
     const hatchGeo = prepare(chamferBox(L * 0.09, L * 0.02, L * 0.18, L * 0.01));
     this.geos.push(hatchGeo);
     for (const s of [1, -1]) {
       const h = new Mesh(hatchGeo, plateMat);
-      h.position.set(s * L * 0.045, L * 0.14, -L * 0.05);
+      h.position.set(s * L * 0.045, top + L * 0.045, -L * 0.05);
       h.userData.side = s;
       this.extras.add(h);
       this.hatch.push(h);
@@ -157,11 +160,13 @@ export class BossVisual {
   /** Per-frame animation. */
   update(time: number, dt: number): void {
     const L = this.length;
+    const top = this.model.bounds.max.y;
     const open = this.layer === "REACTOR" || this.layer === "ENRAGE" ? 1 : 0;
     this.hatchOpen += (open - this.hatchOpen) * Math.min(1, dt * 1.5);
     for (const h of this.hatch) {
       const s = (h.userData.side as number) ?? 1;
       h.position.x = s * L * (0.045 + this.hatchOpen * 0.08);
+      h.position.y = top + L * 0.045 - this.hatchOpen * L * 0.02;
       h.rotation.z = s * this.hatchOpen * 0.9;
     }
     const en = this.layer === "ENRAGE" ? 1 : 0;
