@@ -4,11 +4,10 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { randomBytes } from "node:crypto";
 import {
-  ACCESS_TOKEN_TTL_SEC, COOKIE_CSRF, REFRESH_TOKEN_TTL_SEC, createRefreshToken, randomToken, sha256Hex, signAccessToken,
+  ACCESS_TOKEN_TTL_SEC, REFRESH_TOKEN_TTL_SEC, createRefreshToken, randomToken, sha256Hex, signAccessToken,
 } from "@nebula/authentication";
 import type { Db, Tx } from "@nebula/database";
 import type { AuthResponse } from "@nebula/shared";
-import { CheatType } from "@nebula/shared";
 import type { Env } from "../env.js";
 import { forbidden } from "../errors.js";
 import { setAuthCookies } from "./cookies.js";
@@ -111,7 +110,8 @@ export async function issueSession(
     env.JWT_SECRET,
     ACCESS_TOKEN_TTL_SEC,
   );
-  const csrfToken = setAuthCookies(reply, env, access, refresh.token, req.cookies?.[COOKIE_CSRF]);
+  // Always mint a fresh CSRF token at login (never trust a pre-login cookie: cookie tossing).
+  const csrfToken = setAuthCookies(reply, env, access, refresh.token);
   return {
     sessionId,
     response: {
@@ -127,5 +127,3 @@ export async function revokeAllSessions(db: Db | Tx, userId: string): Promise<nu
   const r = await db.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
   return r.count;
 }
-
-export const TOKEN_REUSE_SIGNAL = CheatType.PACKET_REPLAY;
