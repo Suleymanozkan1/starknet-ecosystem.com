@@ -1,13 +1,12 @@
 /**
- * Achievements (evaluated server-side from authoritative PlayerStat metrics) and battle pass
- * (tier claims are single-use via an atomic array_append guarded by NOT ANY()).
+ * Achievements, evaluated server-side from authoritative PlayerStat metrics; rewards claimed once.
  */
 import type { FastifyInstance } from "fastify";
-import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID, BATTLE_PASSES, SHOP_BY_SKU } from "@nebula/config";
+import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID } from "@nebula/config";
 import { newlyUnlockedAchievements } from "@nebula/game-core";
-import { battlePassClaimSchema, defIdSchema } from "@nebula/validation";
-import { badRequest, conflict, forbidden, notFound } from "../errors.js";
-import { activeSeasonId, grantBundle, settleCrypto } from "../lib/grants.js";
+import { defIdSchema } from "@nebula/validation";
+import { conflict, forbidden, notFound } from "../errors.js";
+import { grantBundle, settleCrypto } from "../lib/grants.js";
 
 export default async function progressRoutes(app: FastifyInstance): Promise<void> {
   const { db } = app;
@@ -75,48 +74,5 @@ export default async function progressRoutes(app: FastifyInstance): Promise<void
     return { ok: true, items: grant.items };
   });
 
-  // ------------------------------------------------------------------ battle pass
-  app.get("/api/battlepass", auth, async (req) => {
-    const seasonId = await activeSeasonId(db);
-    const pass = seasonId ? BATTLE_PASSES.find((p) => p.seasonId === seasonId) : undefined;
-    if (!seasonId || !pass) return { active: false, pass: null };
-    const row = await db.battlePass.findUnique({ where: { userId_seasonId: { userId: req.user.id, seasonId } } });
-    const product = SHOP_BY_SKU.get(pass.premiumProductSku);
-    return {
-      active: true,
-      seasonId,
-      pass: { id: pass.id, name: pass.name, tiers: pass.tiers },
-      premiumProductId: product?.id ?? null,
-      state: {
-        xp: row?.xp ?? 0,
-        tier: row?.tier ?? 0,
-        premium: row?.premium ?? false,
-        claimedFree: row?.claimedFree ?? [],
-        claimedPremium: row?.claimedPremium ?? [],
-      },
-    };
-  });
 
-  app.post("/api/battlepass/claim", auth, async (req) => {
-    const body = app.parse(battlePassClaimSchema, req.body);
-    const userId = req.user.id;
-    const seasonId = await activeSeasonId(db);
-    const pass = seasonId ? BATTLE_PASSES.find((p) => p.seasonId === seasonId) : undefined;
-    if (!seasonId || !pass) throw badRequest("NO_ACTIVE_PASS", "No active battle pass");
-    const tierDef = pass.tiers.find((t) => t.tier === body.tier);
-    if (!tierDef) throw notFound("Tier");
-    const bundle = body.track === "free" ? tierDef.free : tierDef.premium;
-    if (!bundle) throw badRequest("NO_REWARD", "This tier has no reward on that track");
-    const res = await db.$transaction(async (tx) => {
-      const bp = await tx.battlePass.findUnique({ where: { userId_seasonId: { userId, seasonId } } });
-      if (!bp || bp.tier < body.tier) throw forbidden("Tier not reached yet", "TIER_LOCKED");
-      if (body.track === "premium" && !bp.premium) throw forbidden("Premium pass required", "PREMIUM_REQUIRED");
-      const n = body.track === "free"
-        ? await tx.$executeRaw`UPDATE "BattlePass" SET "claimedFree" = array_append("claimedFree", ${body.tier}), "updatedAt" = now() WHERE id = ${bp.id} AND NOT (${body.tier} = ANY("claimedFree"))`
-        : await tx.$executeRaw`UPDATE "BattlePass" SET "claimedPremium" = array_append("claimedPremium", ${body.tier}), "updatedAt" = now() WHERE id = ${bp.id} AND NOT (${body.tier} = ANY("claimedPremium"))`;
-      if (n !== 1) throw conflict("ALREADY_CLAIMED", "Tier reward already claimed");
-      return grantBundle(tx, userId, bundle, `bp:${seasonId}:${body.track}:${body.tier}:${userId}`, `battlepass:${pass.id}:${body.tier}`);
-    });
-    return { ok: true, items: res.items };
-  });
 }

@@ -67,7 +67,7 @@ export abstract class MatchRoom extends BaseGameRoom {
     return { x, y };
   }
 
-  protected override async beforePlayerJoin(p: PlayerActor): Promise<void> {
+  protected override async beforePlayerJoin(_p: PlayerActor): Promise<void> {
     if (this.phase === "ENDED") throw new ServerError(4403, "MATCH_ENDED");
   }
 

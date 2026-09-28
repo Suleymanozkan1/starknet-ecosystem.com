@@ -90,8 +90,8 @@ export class MaterialLibrary {
     if (set) return set;
     const wreck = variant === "wreck";
     const burnt = (hex: string): string => (wreck ? `#${new Color(hex).multiplyScalar(0.35).getHexString()}` : hex);
-    const primary = this.hull(burnt(p.primary), wreck ? 0.9 : 1, wreck ? 0.4 : 1, p.accent, wreck ? 0 : 1.6);
-    const secondary = this.hull(burnt(p.secondary), wreck ? 0.9 : 0.85, wreck ? 0.3 : 0.9, p.accent, wreck ? 0 : 0.8);
+    const primary = this.hull(burnt(p.primary), wreck ? 0.9 : 1, wreck ? 0.4 : 1, p.accent, wreck ? 0 : 0.9);
+    const secondary = this.hull(burnt(p.secondary), wreck ? 0.9 : 0.85, wreck ? 0.3 : 0.9, p.accent, wreck ? 0 : 0.5);
     const trim = new MeshStandardMaterial({
       color: new Color(wreck ? "#15161a" : "#2a2e36"),
       roughness: 0.55,
@@ -102,7 +102,7 @@ export class MaterialLibrary {
     const accent = new MeshStandardMaterial({
       color: new Color(p.accent),
       emissive: new Color(p.accent),
-      emissiveIntensity: wreck ? 0.05 : variant === "boss" ? 2.4 : 1.25,
+      emissiveIntensity: wreck ? 0.05 : variant === "boss" ? 1.8 : 0.9,
       roughness: 0.35,
       metalness: 0.2,
     });
@@ -114,11 +114,11 @@ export class MaterialLibrary {
       envMapIntensity: 2.2,
     });
     const glow = new MeshBasicMaterial({
-      color: new Color(p.accent).multiplyScalar(wreck ? 0.08 : 2.2),
+      color: new Color(p.accent).multiplyScalar(wreck ? 0.08 : 1.6),
       toneMapped: false,
     });
     const engine = new MeshBasicMaterial({
-      color: new Color(p.engine).multiplyScalar(wreck ? 0.05 : 3.0),
+      color: new Color(p.engine).multiplyScalar(wreck ? 0.05 : 2.0),
       toneMapped: false,
       transparent: true,
       opacity: wreck ? 0.3 : 0.95,

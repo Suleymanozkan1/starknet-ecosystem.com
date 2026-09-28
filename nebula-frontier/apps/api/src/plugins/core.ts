@@ -3,6 +3,9 @@
  * rate limiters and zod parsing. Registered on the root instance so every route module sees them.
  */
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import cookie from "@fastify/cookie";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import type { Redis } from "ioredis";
 import type { z } from "zod";
@@ -56,6 +59,41 @@ interface FlagRules {
   maxRiskLevel?: string;
 }
 const KYC_ORDER: Record<string, number> = { NONE: 0, BASIC: 1, FULL: 2 };
+
+/**
+ * Transport security: helmet (strict CSP for a JSON API, HSTS in production), CORS allowlist with
+ * credentials (CORS_ORIGINS), cookie parsing.
+ */
+export async function registerSecurity(app: FastifyInstance, env: Env): Promise<void> {
+  await app.register(helmet, {
+    // Pure JSON API: nothing may be framed, scripted or embedded.
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'none'"],
+      },
+    },
+    crossOriginResourcePolicy: { policy: "same-site" },
+    hsts: env.isProd ? { maxAge: 31_536_000, includeSubDomains: true, preload: true } : false,
+    referrerPolicy: { policy: "no-referrer" },
+  });
+  await app.register(cors, {
+    origin: (origin, cb) => {
+      // Non-browser clients (no Origin) are allowed; browsers only from the allowlist.
+      if (!origin) return cb(null, true);
+      cb(null, env.CORS_ORIGINS.includes(origin));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["content-type", "authorization", "x-nf-csrf", "x-request-id", "x-correlation-id", "idempotency-key"],
+    exposedHeaders: ["x-request-id", "x-correlation-id", "retry-after", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset"],
+    maxAge: 600,
+  });
+  await app.register(cookie, { hook: "onRequest" });
+}
 
 export async function registerCore(app: FastifyInstance, opts: CoreOptions): Promise<void> {
   const { db, redis, env } = opts;

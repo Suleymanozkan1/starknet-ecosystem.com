@@ -3,6 +3,7 @@
  * written to AuditLog with actor, old/new values, reason, IP, request id. Bans are always manual.
  */
 import type { FastifyInstance } from "fastify";
+import { ADMIN_PERMISSIONS } from "@nebula/authentication";
 import { AdminRole } from "@nebula/shared";
 import {
   adminAuditQuerySchema, adminBanSchema, adminCatalogSchema, adminEventSchema, adminFeatureFlagSchema, adminMuteSchema,
@@ -18,7 +19,8 @@ import { notify } from "../lib/notify.js";
 import { API_RULE_DEFAULTS, invalidateRules, loadRules } from "../lib/rules.js";
 import { revokeAllSessions } from "../lib/sessions.js";
 
-const { SUPER_ADMIN, ADMIN, MODERATOR, SUPPORT, ECONOMY_MANAGER } = AdminRole;
+const { SUPER_ADMIN } = AdminRole;
+const P = ADMIN_PERMISSIONS;
 const catalogKinds = z.enum(["ship", "weapon", "module", "drone", "item"]);
 const mailSchema = z.object({
   toUserId: idSchema,
@@ -36,7 +38,7 @@ const rulesSchema = z.object({ rules: z.record(z.string(), z.unknown()), reason:
 
 export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   const { db, redis } = app;
-  const guard = (...roles: AdminRole[]) => ({ preHandler: [app.authenticate, app.requireRole(...roles)], config: { rateLimit: app.rateLimits.admin } });
+  const guard = (roles: readonly AdminRole[]) => ({ preHandler: [app.authenticate, app.requireRole(...roles)], config: { rateLimit: app.rateLimits.admin } });
 
   async function countOnline(): Promise<number> {
     let cursor = "0";
@@ -50,7 +52,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return n;
   }
 
-  app.get("/api/admin/overview", guard(ADMIN, MODERATOR, SUPPORT, ECONOMY_MANAGER), async () => {
+  app.get("/api/admin/overview", guard(P.overview), async () => {
     const since24 = new Date(Date.now() - 86_400_000);
     const since7d = new Date(Date.now() - 7 * 86_400_000);
     const t0 = performance.now();
@@ -73,11 +75,15 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
       db.user.count(),
       db.user.count({ where: { createdAt: { gte: since24 } } }),
     ]);
+    const [dauRow, mauRow] = await Promise.all([
+      db.$queryRaw<{ n: bigint }[]>`SELECT COUNT(DISTINCT "userId")::bigint AS n FROM "Session" WHERE "lastUsedAt" >= ${since24} OR "createdAt" >= ${since24}`,
+      db.$queryRaw<{ n: bigint }[]>`SELECT COUNT(DISTINCT "userId")::bigint AS n FROM "Session" WHERE "lastUsedAt" >= ${new Date(Date.now() - 30 * 86_400_000)}`,
+    ]);
     const sum = (rows: { currency: string; _sum: { totalPrice: bigint | null }; _count: { _all: number } }[]) =>
       Object.fromEntries(rows.map((r) => [r.currency, { amount: (r._sum.totalPrice ?? 0n).toString(), count: r._count._all }]));
     const mem = process.memoryUsage();
     return {
-      players: { online, total: users, new24h: newUsers },
+      players: { online, total: users, new24h: newUsers, dau: Number(dauRow[0]?.n ?? 0n), mau: Number(mauRow[0]?.n ?? 0n) },
       rooms: { active: rooms.length, clients: rooms.reduce((s, r) => s + r.clients, 0), list: rooms },
       revenue: { purchases24h: sum(purch24), purchases7d: sum(purch7) },
       deposits7d: Object.fromEntries(deps.map((d) => [d.status, { amount: (d._sum.amount ?? 0n).toString(), count: d._count._all }])),
@@ -90,7 +96,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ users
-  app.get("/api/admin/users", guard(ADMIN, MODERATOR, SUPPORT), async (req) => {
+  app.get("/api/admin/users", guard(P.usersRead), async (req) => {
     const q = app.parse(adminUserSearchSchema, req.query);
     const wallet = q.q && q.q.length >= 32 ? await db.wallet.findUnique({ where: { address: q.q }, select: { userId: true } }) : null;
     const rows = await db.user.findMany({
@@ -106,7 +112,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { users: rows };
   });
 
-  app.get<{ Params: { id: string } }>("/api/admin/users/:id", guard(ADMIN, MODERATOR, SUPPORT), async (req) => {
+  app.get<{ Params: { id: string } }>("/api/admin/users/:id", guard(P.usersRead), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const u = await db.user.findUnique({
       where: { id },
@@ -122,7 +128,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { user: safe, balances: await balancesDto(db, id) };
   });
 
-  app.post<{ Params: { id: string } }>("/api/admin/users/:id/ban", guard(ADMIN, MODERATOR), async (req) => {
+  app.post<{ Params: { id: string } }>("/api/admin/users/:id/ban", guard(P.usersBan), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const { reason } = app.parse(adminBanSchema, req.body);
     if (id === req.user.id) throw badRequest("SELF_BAN", "You cannot ban yourself");
@@ -137,7 +143,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post<{ Params: { id: string } }>("/api/admin/users/:id/unban", guard(ADMIN, MODERATOR), async (req) => {
+  app.post<{ Params: { id: string } }>("/api/admin/users/:id/unban", guard(P.usersBan), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const { reason } = app.parse(adminBanSchema, req.body);
     await db.$transaction(async (tx) => {
@@ -147,7 +153,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.post<{ Params: { id: string } }>("/api/admin/users/:id/mute", guard(ADMIN, MODERATOR), async (req) => {
+  app.post<{ Params: { id: string } }>("/api/admin/users/:id/mute", guard(P.usersMute), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const body = app.parse(adminMuteSchema, req.body);
     const until = new Date(Date.now() + body.minutes * 60_000);
@@ -160,7 +166,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, mutedUntil: until.toISOString() };
   });
 
-  app.post<{ Params: { id: string } }>("/api/admin/users/:id/unmute", guard(ADMIN, MODERATOR), async (req) => {
+  app.post<{ Params: { id: string } }>("/api/admin/users/:id/unmute", guard(P.usersMute), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const { reason } = app.parse(adminBanSchema, req.body);
     await db.$transaction(async (tx) => {
@@ -171,7 +177,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.put<{ Params: { id: string } }>("/api/admin/users/:id/roles", guard(SUPER_ADMIN), async (req) => {
+  app.put<{ Params: { id: string } }>("/api/admin/users/:id/roles", guard(P.rolesManage), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const body = app.parse(adminRolesSchema, req.body);
     await db.$transaction(async (tx) => {
@@ -185,7 +191,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ risk review
-  app.get("/api/admin/risk", guard(ADMIN, MODERATOR, ECONOMY_MANAGER), async () => {
+  app.get("/api/admin/risk", guard(P.riskRead), async () => {
     const [signals, users] = await Promise.all([
       db.riskSignal.findMany({ where: { reviewed: false }, orderBy: [{ score: "desc" }, { createdAt: "desc" }], take: 200, include: { user: { select: { username: true, riskLevel: true } } } }),
       db.user.findMany({ where: { riskLevel: { in: ["HIGH", "CRITICAL"] } }, orderBy: { riskScore: "desc" }, take: 100, select: { id: true, username: true, riskLevel: true, riskScore: true, bannedAt: true } }),
@@ -193,7 +199,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { signals, users };
   });
 
-  app.post<{ Params: { id: string } }>("/api/admin/risk/:id/review", guard(ADMIN, MODERATOR), async (req) => {
+  app.post<{ Params: { id: string } }>("/api/admin/risk/:id/review", guard(P.riskReview), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const body = app.parse(adminRiskReviewSchema, req.body);
     await db.$transaction(async (tx) => {
@@ -211,13 +217,13 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ reports
-  app.get("/api/admin/reports", guard(ADMIN, MODERATOR), async () => {
+  app.get("/api/admin/reports", guard(P.reports), async () => {
     const reports = await db.chatReport.findMany({ where: { status: "OPEN" }, orderBy: { createdAt: "asc" }, take: 200 });
     const msgs = await db.chatMessage.findMany({ where: { id: { in: reports.map((r) => r.messageId) } }, include: { sender: { select: { username: true } } } });
     return { reports: reports.map((r) => ({ ...r, message: msgs.find((m) => m.id === r.messageId) ?? null })) };
   });
 
-  app.post<{ Params: { id: string } }>("/api/admin/reports/:id/resolve", guard(ADMIN, MODERATOR), async (req) => {
+  app.post<{ Params: { id: string } }>("/api/admin/reports/:id/resolve", guard(P.reports), async (req) => {
     const id = app.parse(idSchema, req.params.id);
     const body = app.parse(adminReportResolveSchema, req.body);
     await db.$transaction(async (tx) => {
@@ -229,9 +235,9 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ shop products
-  app.get("/api/admin/shop/products", guard(ADMIN, ECONOMY_MANAGER), async () => ({ products: await db.shopProduct.findMany({ orderBy: { id: "asc" } }) }));
+  app.get("/api/admin/shop/products", guard(P.shopManage), async () => ({ products: await db.shopProduct.findMany({ orderBy: { id: "asc" } }) }));
 
-  app.post("/api/admin/shop/products", guard(ADMIN, ECONOMY_MANAGER), async (req, reply) => {
+  app.post("/api/admin/shop/products", guard(P.shopManage), async (req, reply) => {
     const { reason, ...p } = app.parse(adminShopProductSchema, req.body);
     const created = await db.$transaction(async (tx) => {
       if (await tx.shopProduct.findFirst({ where: { OR: [{ id: p.id }, { sku: p.sku }] } })) throw conflict("PRODUCT_EXISTS", "Product id or sku already exists");
@@ -242,7 +248,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(201).send({ product: created });
   });
 
-  app.patch<{ Params: { id: string } }>("/api/admin/shop/products/:id", guard(ADMIN, ECONOMY_MANAGER), async (req) => {
+  app.patch<{ Params: { id: string } }>("/api/admin/shop/products/:id", guard(P.shopManage), async (req) => {
     const id = app.parse(defIdSchema, req.params.id);
     const { reason, id: _ignoreId, grants, ...patch } = app.parse(adminShopProductPatchSchema, req.body);
     const updated = await db.$transaction(async (tx) => {
@@ -255,7 +261,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { product: updated };
   });
 
-  app.delete<{ Params: { id: string } }>("/api/admin/shop/products/:id", guard(ADMIN, ECONOMY_MANAGER), async (req) => {
+  app.delete<{ Params: { id: string } }>("/api/admin/shop/products/:id", guard(P.shopManage), async (req) => {
     const id = app.parse(defIdSchema, req.params.id);
     const { reason } = app.parse(adminBanSchema, req.body ?? {});
     // Products are never hard-deleted (purchases reference them): deactivate instead.
@@ -267,9 +273,9 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ events
-  app.get("/api/admin/events", guard(ADMIN, ECONOMY_MANAGER, MODERATOR), async () => ({ events: await db.event.findMany({ orderBy: { startAt: "desc" } }) }));
+  app.get("/api/admin/events", guard(P.eventsRead), async () => ({ events: await db.event.findMany({ orderBy: { startAt: "desc" } }) }));
 
-  app.put("/api/admin/events", guard(ADMIN), async (req) => {
+  app.put("/api/admin/events", guard(P.eventsManage), async (req) => {
     const { reason, ...e } = app.parse(adminEventSchema, req.body);
     const row = await db.$transaction(async (tx) => {
       const before = await tx.event.findUnique({ where: { id: e.id } });
@@ -281,7 +287,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
     return { event: row };
   });
 
-  app.delete<{ Params: { id: string } }>("/api/admin/events/:id", guard(ADMIN), async (req) => {
+  app.delete<{ Params: { id: string } }>("/api/admin/events/:id", guard(P.eventsManage), async (req) => {
     const id = app.parse(defIdSchema, req.params.id);
     const { reason } = app.parse(adminBanSchema, req.body ?? {});
     await db.$transaction(async (tx) => {
@@ -292,7 +298,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ catalog overrides
-  app.put<{ Params: { kind: string; id: string } }>("/api/admin/catalog/:kind/:id", guard(ADMIN), async (req) => {
+  app.put<{ Params: { kind: string; id: string } }>("/api/admin/catalog/:kind/:id", guard(P.catalogManage), async (req) => {
     const kind = app.parse(catalogKinds, req.params.kind);
     const id = app.parse(defIdSchema, req.params.id);
     const body = app.parse(adminCatalogSchema, req.body);
@@ -321,9 +327,9 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ feature flags
-  app.get("/api/admin/feature-flags", guard(ADMIN), async () => ({ flags: await db.featureFlag.findMany({ orderBy: { key: "asc" } }) }));
+  app.get("/api/admin/feature-flags", guard(P.featureFlags), async () => ({ flags: await db.featureFlag.findMany({ orderBy: { key: "asc" } }) }));
 
-  app.put<{ Params: { key: string } }>("/api/admin/feature-flags/:key", guard(ADMIN), async (req) => {
+  app.put<{ Params: { key: string } }>("/api/admin/feature-flags/:key", guard(P.featureFlags), async (req) => {
     const key = app.parse(z.string().min(2).max(64).regex(/^[a-z0-9_]+$/), req.params.key);
     const body = app.parse(adminFeatureFlagSchema, req.body);
     const row = await db.$transaction(async (tx) => {
@@ -336,9 +342,9 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ API rules
-  app.get("/api/admin/rules", guard(ADMIN, ECONOMY_MANAGER), async () => ({ rules: await loadRules(db), defaults: API_RULE_DEFAULTS }));
+  app.get("/api/admin/rules", guard(P.rulesManage), async () => ({ rules: await loadRules(db), defaults: API_RULE_DEFAULTS }));
 
-  app.put("/api/admin/rules", guard(ADMIN, ECONOMY_MANAGER), async (req) => {
+  app.put("/api/admin/rules", guard(P.rulesManage), async (req) => {
     const body = app.parse(rulesSchema, req.body);
     const clean: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body.rules)) {
@@ -359,7 +365,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ system mail (compensation)
-  app.post("/api/admin/mail", guard(ADMIN), async (req, reply) => {
+  app.post("/api/admin/mail", guard(P.mailGrant), async (req, reply) => {
     const body = app.parse(mailSchema, req.body);
     const mail = await db.$transaction(async (tx) => {
       if (!(await tx.user.findUnique({ where: { id: body.toUserId }, select: { id: true } }))) throw notFound("User");
@@ -373,7 +379,7 @@ export default async function adminRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ------------------------------------------------------------------ audit log
-  app.get("/api/admin/audit", guard(ADMIN), async (req) => {
+  app.get("/api/admin/audit", guard(P.auditRead), async (req) => {
     const q = app.parse(adminAuditQuerySchema, req.query);
     const rows = await db.auditLog.findMany({
       where: {

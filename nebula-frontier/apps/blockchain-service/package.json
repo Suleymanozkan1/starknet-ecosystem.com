@@ -4,10 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
-    "start": "node --enable-source-maps dist/index.js",
+    "dev": "SERVICE_ROLE=blockchain tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "start": "SERVICE_ROLE=blockchain node --enable-source-maps dist/index.js",
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "devnet:setup": "tsx --env-file-if-exists=../../.env scripts/devnet-setup.ts",
+    "economy:bootstrap": "tsx --env-file-if-exists=../../.env scripts/economy-bootstrap.ts",
+    "devnet:e2e": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts",
+    "devnet:e2e:mock": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts --mock",
+    "nft:mint": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/mint-devnet-nft.ts"
   },
   "dependencies": {
     "@nebula/shared": "workspace:*",

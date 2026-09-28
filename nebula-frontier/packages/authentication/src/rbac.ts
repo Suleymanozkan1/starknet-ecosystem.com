@@ -3,6 +3,39 @@
  */
 import { AdminRole, ClanRole } from "@nebula/shared";
 
+const { SUPER_ADMIN, ADMIN, MODERATOR, SUPPORT, ECONOMY_MANAGER } = AdminRole;
+
+/**
+ * RBAC matrix: capability -> roles allowed (SUPER_ADMIN is implicitly allowed everything).
+ * Used by apps/api admin routes and documented in docs/SECURITY.md.
+ */
+export const ADMIN_PERMISSIONS = {
+  overview: [ADMIN, MODERATOR, SUPPORT, ECONOMY_MANAGER],
+  usersRead: [ADMIN, MODERATOR, SUPPORT],
+  usersBan: [ADMIN, MODERATOR],
+  usersMute: [ADMIN, MODERATOR],
+  rolesManage: [SUPER_ADMIN],
+  riskRead: [ADMIN, MODERATOR, ECONOMY_MANAGER],
+  riskReview: [ADMIN, MODERATOR],
+  reports: [ADMIN, MODERATOR],
+  shopManage: [ADMIN, ECONOMY_MANAGER],
+  eventsRead: [ADMIN, ECONOMY_MANAGER, MODERATOR],
+  eventsManage: [ADMIN],
+  catalogManage: [ADMIN],
+  featureFlags: [ADMIN],
+  rulesManage: [ADMIN, ECONOMY_MANAGER],
+  mailGrant: [ADMIN],
+  auditRead: [ADMIN],
+  economyRead: [ADMIN, ECONOMY_MANAGER],
+  economyManage: [ECONOMY_MANAGER],
+  withdrawalReview: [ADMIN, ECONOMY_MANAGER],
+} as const satisfies Record<string, readonly AdminRole[]>;
+export type AdminPermission = keyof typeof ADMIN_PERMISSIONS;
+
+export function can(userRoles: readonly string[], permission: AdminPermission): boolean {
+  return hasAnyRole(userRoles, ADMIN_PERMISSIONS[permission]);
+}
+
 /** SUPER_ADMIN implicitly holds every admin role. */
 export function hasAnyRole(userRoles: readonly string[], required: readonly AdminRole[]): boolean {
   if (userRoles.includes(AdminRole.SUPER_ADMIN)) return true;

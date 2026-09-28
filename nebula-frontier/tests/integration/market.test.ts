@@ -4,6 +4,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { settleAuction } from "../../apps/api/src/lib/auction.js";
+import { verifyLedgerIntegrity } from "../../packages/database/src/index.js";
 import { credits, fund, giveItem, key, registerUser, setup, teardown, type TestCtx } from "./helpers.js";
 
 let ctx: TestCtx;
@@ -275,5 +276,12 @@ describe("auctions", () => {
     const gained = (await credits(ctx.db, seller.userId)) - sellerBefore;
     expect(gained).toBeGreaterThan(0n);
     expect(gained).toBeLessThan(3000n);
+  });
+});
+
+describe("ledger integrity", () => {
+  it("every asset sums to zero across all accounts after the scenarios above", async () => {
+    const rows = await verifyLedgerIntegrity(ctx.db);
+    for (const r of rows) expect(r.ok, `${r.asset} sum ${r.sum}`).toBe(true);
   });
 });

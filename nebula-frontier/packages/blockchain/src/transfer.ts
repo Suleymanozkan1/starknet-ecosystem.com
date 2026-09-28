@@ -27,6 +27,7 @@ import {
   TOKEN_PROGRAM_ADDRESS
 } from "@solana-program/token";
 import type { SolanaRpcClient, SolanaRpcSubscriptionsClient } from "./rpc.js";
+import { SPL_MEMO_PROGRAM_ID } from "./deposit.js";
 
 export interface PayoutInput {
   rpc: SolanaRpcClient;
@@ -79,7 +80,9 @@ export async function buildPayoutInstructions(input: Pick<PayoutInput, "signer" 
       })
     );
   }
-  ixs.push(getAddMemoInstruction({ memo: input.memo, signers: [input.signer] }));
+  // Classic SPL Memo program: its memos are indexed by RPC (getSignaturesForAddress.memo), which the
+  // payout idempotency lookup relies on.
+  ixs.push(getAddMemoInstruction({ memo: input.memo, signers: [input.signer] }, { programAddress: toAddress(SPL_MEMO_PROGRAM_ID) }));
   return ixs;
 }
 
@@ -141,8 +144,9 @@ export async function waitForConfirmation(
   for (;;) {
     const res = await checkSignature(rpc, sig, lastValidBlockHeight, opts.commitment ?? "confirmed");
     if (res.status !== "PENDING") return res;
-    if (Date.now() > deadline) return res;
-    await new Promise((r) => setTimeout(r, opts.pollMs ?? 1500));
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return res;
+    await new Promise((r) => setTimeout(r, Math.min(opts.pollMs ?? 1500, remaining)));
   }
 }
 

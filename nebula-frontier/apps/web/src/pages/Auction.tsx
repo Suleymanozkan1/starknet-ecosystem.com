@@ -5,9 +5,9 @@ import { mulRatio } from "@nebula/shared";
 import type { InventoryItemDto } from "@nebula/shared";
 import { api } from "../lib/api.js";
 import type { AuctionDto } from "../lib/dto.js";
-import { idempotencyKey } from "../lib/http.js";
 import { qk, useApiMutation, useAuctions, useEconomyStatus, useInventory } from "../lib/queries.js";
 import { humanize } from "../lib/gameMeta.js";
+import { ITEMS_BY_ID } from "@nebula/config";
 import { PageHeader } from "../components/PageHeader.js";
 import { EmptyState, QueryState } from "../components/QueryState.js";
 import { ItemIcon, ItemTile } from "../components/ItemTile.js";
@@ -18,11 +18,11 @@ import { haptic } from "../native/haptics.js";
 type AType = "HOURLY" | "DAILY" | "WEEKLY";
 
 function BidModal({ a, saleFee, onClose }: { a: AuctionDto; saleFee: number; onClose: () => void }) {
-  const min = BigInt(a.minNextBid ?? (a.currentBid ? (BigInt(a.currentBid) + 1n).toString() : a.startPrice));
+  const min = BigInt(a.minNextBid);
   const [amount, setAmount] = useState(min.toString());
   const valid = /^\d+$/.test(amount) && BigInt(amount) >= min;
-  const bid = useApiMutation(() => api.auctions.bid(a.id, amount, idempotencyKey("bid")), { invalidate: [["auctions"], qk.me], success: "Bid placed", onSuccess: () => { haptic("success"); onClose(); } });
-  const buyout = useApiMutation(() => api.auctions.buyout(a.id, idempotencyKey("buyout")), { invalidate: [["auctions"], qk.me, qk.inventory], success: `You won ${a.name}`, onSuccess: () => { haptic("success"); onClose(); } });
+  const bid = useApiMutation(() => api.auctions.bid(a.id, amount), { invalidate: [["auctions"], qk.me], success: "Bid placed", onSuccess: () => { haptic("success"); onClose(); } });
+  const buyout = useApiMutation(() => api.auctions.buyout(a.id), { invalidate: [["auctions"], qk.me, qk.inventory], success: `You won ${a.name}`, onSuccess: () => { haptic("success"); onClose(); } });
   const busy = bid.isPending || buyout.isPending;
   return (
     <Modal open onClose={onClose} locked={busy} title={`Bid · ${a.name}`}
@@ -59,7 +59,7 @@ function CreateAuction({ fees }: { fees: { listing: number; sale: number; cancel
   const [buyout, setBuyout] = useState("");
   const tradeable = (inv.data?.items ?? []).filter((i) => i.tradeable && !i.equippedOn);
   const startN = /^\d+$/.test(start) ? BigInt(start) : 0n;
-  const create = useApiMutation(() => api.auctions.create({ inventoryItemId: sel!.id, quantity: 1, type, currency, startPrice: start, buyoutPrice: buyout || null, idempotencyKey: idempotencyKey("auction") }), {
+  const create = useApiMutation(() => api.auctions.create({ inventoryItemId: sel!.id, quantity: 1, type, currency, startPrice: start, ...(buyout ? { buyoutPrice: buyout } : {}) }), {
     invalidate: [["auctions"], qk.inventory, qk.me], success: "Auction started", onSuccess: () => { setSel(null); setStart(""); setBuyout(""); },
   });
   return (
@@ -96,10 +96,11 @@ function CreateAuction({ fees }: { fees: { listing: number; sale: number; cancel
 export default function AuctionPage() {
   const me = useSession();
   const [tab, setTab] = useState<AType | "CREATE" | "MINE">("DAILY");
-  const live = useAuctions(tab === "HOURLY" || tab === "DAILY" || tab === "WEEKLY" ? { type: tab } : { mine: true });
+  const live = useAuctions(tab === "HOURLY" || tab === "DAILY" || tab === "WEEKLY" ? { type: tab } : {});
   const eco = useEconomyStatus();
   const [bidding, setBidding] = useState<AuctionDto | null>(null);
   const cancel = useApiMutation((id: string) => api.auctions.cancel(id), { invalidate: [["auctions"], qk.inventory], success: "Auction cancelled" });
+  const shown = (live.data?.auctions ?? []).filter((a) => tab !== "MINE" || a.sellerId === me.id || a.currentBidderId === me.id);
   const fees = live.data?.fees ?? { listing: eco.data?.fees.auctionListingFee ?? 0, sale: eco.data?.fees.auctionSaleFee ?? 0, cancellation: eco.data?.fees.auctionCancellationFee ?? 0 };
 
   return (
@@ -107,15 +108,15 @@ export default function AuctionPage() {
       <PageHeader eyebrow="Auction house" title="Auctions" subtitle="Timed auctions with optional buyout. Anti-sniping extends auctions that receive late bids." />
       <Tabs className="mb-4" value={tab} onChange={setTab} items={[{ key: "HOURLY", label: "Hourly" }, { key: "DAILY", label: "Daily" }, { key: "WEEKLY", label: "Weekly" }, { key: "CREATE", label: "Create" }, { key: "MINE", label: "Mine" }]} />
       {tab === "CREATE" ? <CreateAuction fees={fees} /> : (
-        <QueryState q={live} isEmpty={(d) => d.auctions.length === 0} empty={<EmptyState title="No auctions" icon="auction" />}>
-          {(d) => (
+        <QueryState q={live} isEmpty={() => shown.length === 0} empty={<EmptyState title="No auctions" icon="auction" />}>
+          {() => (
             <div className="nf-grid-cards" style={{ "--card-min": "260px" } as CSSProperties}>
-              {d.auctions.map((a) => (
-                <article key={a.id} className="nf-panel nf-rarity-frame grid gap-3 p-4" style={rarityStyle(a.rarity)}>
+              {shown.map((a) => (
+                <article key={a.id} className="nf-panel nf-rarity-frame grid gap-3 p-4" style={rarityStyle(a.rarity ?? "COMMON")}>
                   <div className="flex items-start gap-3">
-                    <ItemIcon item={{ category: "WEAPON", itemId: a.itemId, rarity: a.rarity }} size={30} />
-                    <div className="min-w-0 flex-1"><div className="nf-ui truncate text-[16px] font-bold">{a.name}</div><div className="nf-label">{a.sellerName ?? "—"} · {humanize(a.type)}</div></div>
-                    <RarityBadge rarity={a.rarity} />
+                    <ItemIcon item={{ category: (ITEMS_BY_ID.get(a.itemId)?.category ?? "CONSUMABLE"), itemId: a.itemId, rarity: a.rarity ?? "COMMON" }} size={30} />
+                    <div className="min-w-0 flex-1"><div className="nf-ui truncate text-[16px] font-bold">{a.name}</div><div className="nf-label">{a.quantity > 1 ? `${a.quantity}× · ` : ""}{humanize(a.type)}</div></div>
+                    {a.rarity && <RarityBadge rarity={a.rarity} />}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div><div className="nf-label">{a.currentBid ? "Current bid" : "Starting bid"}</div><CurrencyAmount amount={a.currentBid ?? a.startPrice} currency={a.currency} size={16} /></div>
@@ -123,8 +124,8 @@ export default function AuctionPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <Countdown to={a.endsAt} urgentBelowMs={300_000} className="text-[15px]" />
-                    {a.leading && <span className="nf-chip" style={{ color: "var(--nf-good)" }}>Leading</span>}
-                    <span className="nf-label">{a.bidCount ?? 0} bids</span>
+                    {a.currentBidderId === me.id && <span className="nf-chip" style={{ color: "var(--nf-good)" }}>You lead</span>}
+                    <span className="nf-label">Min <CurrencyAmount amount={a.minNextBid} currency={a.currency} size={12} showIcon={false} /></span>
                   </div>
                   {a.sellerId === me.id ? (
                     <NeonButton size="sm" variant="danger" loading={cancel.isPending && cancel.variables === a.id} disabled={Boolean(a.currentBid)} onClick={() => cancel.mutate(a.id)}>{a.currentBid ? "Has bids" : "Cancel"}</NeonButton>

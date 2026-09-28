@@ -42,11 +42,11 @@ export class FollowCamera {
   frozen = false;
 
   constructor(aspect: number, opts: FollowCameraOptions = {}) {
-    this.camera = new PerspectiveCamera(opts.fov ?? 42, aspect, 0.5, 3000);
-    this.pitch = opts.pitch ?? 0.98;
-    this.minDistance = opts.minDistance ?? 22;
-    this.maxDistance = opts.maxDistance ?? 150;
-    this.distance = opts.distance ?? 58;
+    this.camera = new PerspectiveCamera(opts.fov ?? 30, aspect, 0.5, 4000);
+    this.pitch = opts.pitch ?? 1.08;
+    this.minDistance = opts.minDistance ?? 30;
+    this.maxDistance = opts.maxDistance ?? 220;
+    this.distance = opts.distance ?? 85;
     this.curDistance = this.distance;
   }
 

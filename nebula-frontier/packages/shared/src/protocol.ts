@@ -206,10 +206,25 @@ export interface JumpEvent { mapId: string; portalId: string; roomName: RoomName
 export interface EffectEvent { kind: "EMP" | "WARP" | "SHIELD_BURST" | "HEAL" | "CLOAK" | "BARRAGE" | "DASH" | "MINING" | "ENRAGE"; x: number; y: number; radius: number; sourceId: string }
 export interface WaveEvent { wave: number; total: number; name: string }
 export interface MatchEndEvent { matchId: string; winnerTeam?: number; scores: { entityId: string; name: string; kills: number; deaths: number; score: number }[] }
+/**
+ * Parameters the owning client needs to run `@nebula/game-core` stepShip
+ * prediction with exactly the server's numbers (sent only to the joining client).
+ */
+export interface SelfJoinInfo {
+  userId: string;
+  mapId: string;
+  tickRate: number;
+  aoiRadius: number;
+  motion: { speed: number; acceleration: number; turnRate: number; maxEnergy: number };
+  weapons: { key: string; defId: string; group: "PRIMARY" | "SECONDARY"; range: number; fireRate: number }[];
+  skills: { slot: number; id: string; name: string; cooldownMs: number; energyCost: number }[];
+  modules: { slot: number; id: string; name: string; cooldownMs: number; energyCost: number }[];
+}
 export interface KillFeedEvent { killer: string; victim: string; weapon: string; pvp: boolean }
 
 export interface ServerEvents {
-  player_join: { entityId: string; name: string };
+  /** Sent to everyone nearby; the joining client additionally receives `self` (its own prediction parameters). */
+  player_join: { entityId: string; name: string; self?: SelfJoinInfo };
   player_leave: { entityId: string };
   player_attack: AttackEvent;
   player_damage: DamageEvent;

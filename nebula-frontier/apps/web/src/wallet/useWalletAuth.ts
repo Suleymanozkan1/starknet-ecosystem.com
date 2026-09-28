@@ -14,7 +14,7 @@ type Phase = "idle" | "connecting" | "nonce" | "signing" | "verifying" | "done" 
  *   POST /api/auth/nonce {address} → { nonce, message }
  *   wallet.signMessage(utf8(message))                       (ed25519 over the exact server message)
  *   POST /api/auth/verify {address, nonce, signature: bs58} → httpOnly session cookies
- * For LINK_WALLET the signature goes to POST /api/wallet/connect instead.
+ * For LINK_WALLET the signature goes to POST /api/wallet/connect instead (links it to the signed-in account).
  * If no wallet is connected yet the wallet modal opens and signing resumes once connected.
  */
 export function useWalletAuth(onDone: (user: MeResponse | null) => void) {
@@ -46,7 +46,7 @@ export function useWalletAuth(onDone: (user: MeResponse | null) => void) {
         setPhase("done");
         onDoneRef.current(res.user);
       } else {
-        await api.wallet.link({ address, nonce, signature });
+        await api.wallet.connect({ address, nonce, signature });
         setPhase("done");
         onDoneRef.current(null);
       }

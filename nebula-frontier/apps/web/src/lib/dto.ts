@@ -7,7 +7,7 @@ import type {
   WithdrawQuoteDto, WithdrawalLimitsDto, BalancesDto, DepositDto,
 } from "@nebula/shared";
 
-export type RewardBundleView = RewardBundle & { items?: { itemId: string; quantity: number; name?: string }[] };
+export type RewardBundleView = Omit<RewardBundle, "items"> & { items?: { itemId: string; quantity: number; name?: string }[] };
 
 /** GET /api/factions */
 export interface FactionDto {

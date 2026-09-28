@@ -53,7 +53,7 @@ function ProfileChip({ me, compact }: { me: MeResponse; compact?: boolean }) {
 function Bell() {
   const [open, setOpen] = useState(false);
   const notifs = useNotifications();
-  const unread = (notifs.data ?? []).filter((n) => !n.readAt).length;
+  const unread = notifs.data?.unread ?? 0;
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -69,7 +69,7 @@ function Bell() {
         <Icon name="bell" size={19} />
         {unread > 0 && <span className="nf-badge-dot">{unread > 9 ? "9+" : unread}</span>}
       </button>
-      {open && <NotificationDropdown items={notifs.data ?? []} loading={notifs.isLoading} onClose={() => setOpen(false)} />}
+      {open && <NotificationDropdown items={notifs.data?.notifications ?? []} loading={notifs.isLoading} onClose={() => setOpen(false)} />}
     </div>
   );
 }

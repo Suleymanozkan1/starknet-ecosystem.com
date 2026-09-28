@@ -6,9 +6,6 @@
  * every route module. `index.ts` only adds `listen()` and background jobs.
  */
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
-import cookie from "@fastify/cookie";
-import cors from "@fastify/cors";
-import helmet from "@fastify/helmet";
 import sensible from "@fastify/sensible";
 import { randomUUID } from "node:crypto";
 import { Redis } from "ioredis";
@@ -18,7 +15,7 @@ import { sendError } from "./errors.js";
 import { createLogger } from "@nebula/telemetry";
 import { REDACT_PATHS } from "./lib/logger.js";
 import { createMetrics } from "./lib/metrics.js";
-import { registerCore } from "./plugins/core.js";
+import { registerCore, registerSecurity } from "./plugins/core.js";
 import "./types.js";
 
 import healthRoutes from "./routes/health.js";
@@ -35,9 +32,9 @@ import marketRoutes from "./routes/market.js";
 import auctionRoutes from "./routes/auctions.js";
 import clanRoutes from "./routes/clans.js";
 import socialRoutes from "./routes/social.js";
-import mailRoutes from "./routes/mail.js";
 import progressRoutes from "./routes/progress.js";
-import worldRoutes from "./routes/world.js";
+import galaxyRoutes from "./routes/galaxy.js";
+import seasonRoutes from "./routes/season.js";
 import adminRoutes from "./routes/admin.js";
 // Economy engineer's route modules (wallet / deposits / withdrawals / rewards / economy admin).
 import walletRoutes from "./routes/wallet.js";
@@ -87,38 +84,13 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   });
 
   app.setErrorHandler((err, req, reply) => sendError(req, reply, err, env.isProd));
+  // Money/ids are BigInt in Prisma: serialize them as decimal strings (the wire format of shared/api.ts).
+  app.setReplySerializer((payload) => JSON.stringify(payload, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v)));
   app.setNotFoundHandler((req, reply) =>
     reply.status(404).send({ error: { code: "NOT_FOUND", message: `Route ${req.method} ${req.url.split("?")[0]} not found`, requestId: req.id } }),
   );
 
-  await app.register(helmet, {
-    // Pure JSON API: nothing may be framed, scripted or embedded.
-    contentSecurityPolicy: {
-      useDefaults: false,
-      directives: {
-        defaultSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-        baseUri: ["'none'"],
-        formAction: ["'none'"],
-      },
-    },
-    crossOriginResourcePolicy: { policy: "same-site" },
-    hsts: env.isProd ? { maxAge: 31_536_000, includeSubDomains: true, preload: true } : false,
-    referrerPolicy: { policy: "no-referrer" },
-  });
-  await app.register(cors, {
-    origin: (origin, cb) => {
-      // Non-browser clients (no Origin) are allowed; browsers only from the allowlist.
-      if (!origin) return cb(null, true);
-      cb(null, env.CORS_ORIGINS.includes(origin));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["content-type", "authorization", "x-nf-csrf", "x-request-id", "x-correlation-id", "idempotency-key"],
-    exposedHeaders: ["x-request-id", "x-correlation-id", "retry-after", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset"],
-    maxAge: 600,
-  });
-  await app.register(cookie, { hook: "onRequest" });
+  await registerSecurity(app, env);
   await app.register(sensible);
 
   await registerCore(app, {
@@ -155,9 +127,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(auctionRoutes);
   await app.register(clanRoutes);
   await app.register(socialRoutes);
-  await app.register(mailRoutes);
   await app.register(progressRoutes);
-  await app.register(worldRoutes);
+  await app.register(galaxyRoutes);
+  await app.register(seasonRoutes);
   await app.register(adminRoutes);
   await app.register(walletRoutes);
   await app.register(economyRoutes);

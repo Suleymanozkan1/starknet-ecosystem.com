@@ -1,5 +1,5 @@
 import {
-  ACESFilmicToneMapping, type Camera, PCFSoftShadowMap, PMREMGenerator, type Scene, SRGBColorSpace, type Texture,
+  ACESFilmicToneMapping, type Camera, PCFShadowMap, PMREMGenerator, type Scene, SRGBColorSpace, type Texture,
   Vector2, WebGLRenderer,
 } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
@@ -112,7 +112,8 @@ function makeWebGlBackend(opts: BackendOptions): RenderBackend {
   r.toneMapping = ACESFilmicToneMapping;
   r.toneMappingExposure = 1.05;
   r.outputColorSpace = SRGBColorSpace;
-  r.shadowMap.type = PCFSoftShadowMap;
+  r.shadowMap.type = PCFShadowMap;
+  r.info.autoReset = false;
   const pmrem = new PMREMGenerator(r);
   const room = new RoomEnvironment();
   const envRT = pmrem.fromScene(room, 0.04);
@@ -130,7 +131,7 @@ function makeWebGlBackend(opts: BackendOptions): RenderBackend {
     if (!composer) {
       composer = new EffectComposer(r);
       renderPass = new RenderPass(scene, camera);
-      bloom = new UnrealBloomPass(new Vector2(width, height), tier.bloomStrength, 0.55, 0.82);
+      bloom = new UnrealBloomPass(new Vector2(width, height), tier.bloomStrength, 0.4, 0.92);
       composer.addPass(renderPass);
       composer.addPass(bloom);
       composer.addPass(new OutputPass());
@@ -178,6 +179,7 @@ function makeWebGlBackend(opts: BackendOptions): RenderBackend {
     },
     get pixelRatio() { return ratio; },
     render(scene, camera) {
+      r.info.reset();
       const c = ensureComposer(scene, camera);
       if (c) c.render();
       else r.render(scene, camera);

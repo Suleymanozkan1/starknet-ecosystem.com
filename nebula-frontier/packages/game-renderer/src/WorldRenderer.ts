@@ -177,11 +177,11 @@ export class WorldRenderer {
     this.scene.background = new Color("#02030a");
     if (backend.environment) {
       this.scene.environment = backend.environment;
-      this.scene.environmentIntensity = 0.55;
+      this.scene.environmentIntensity = 0.4;
     }
     this.hemi = new HemisphereLight("#9fc5ff", "#0a0c14", 0.6);
     this.ambient = new AmbientLight("#1a2030", 0.4);
-    this.key = new DirectionalLight("#fff4e0", 2.6);
+    this.key = new DirectionalLight("#fff4e0", 2.1);
     this.key.position.set(-60, 120, -40);
     this.key.castShadow = tier.shadows;
     this.key.shadow.mapSize.set(tier.shadowMapSize, tier.shadowMapSize);
@@ -333,8 +333,9 @@ export class WorldRenderer {
   syncEntity(e: EntityRenderInput, dt: number): void {
     let entry = this.entries.get(e.id);
     if (!entry) {
-      entry = this.createEntry(e);
-      if (!entry) return;
+      const created = this.createEntry(e);
+      if (!created) return;
+      entry = created;
       this.entries.set(e.id, entry);
     }
     if (entry.type === "ship") this.updateShip(entry, e, dt);

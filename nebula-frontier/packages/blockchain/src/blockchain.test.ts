@@ -82,13 +82,15 @@ describe("verifyDepositTransaction (mock RPC)", () => {
     const { rpc } = await setup();
     const elsewhere = await generateKeyPairSigner();
     const a = await sendSolWithMemo({ rpc, signer: player, destination: elsewhere.address, amount: 50_000_000n, memo: "nebula:dep:abc" });
-    expect((await verifyDepositTransaction(rpc, { ...base(), signature: a.signature })).ok === false && (await verifyDepositTransaction(rpc, { ...base(), signature: a.signature }))).toMatchObject({ reason: "WRONG_RECIPIENT" });
+    expect(await verifyDepositTransaction(rpc, { ...base(), signature: a.signature })).toMatchObject({ ok: false, reason: "WRONG_RECIPIENT" });
     const b = await sendSolWithMemo({ rpc, signer: player, destination: treasury.address, amount: 49_000_000n, memo: "nebula:dep:abc" });
     expect(await verifyDepositTransaction(rpc, { ...base(), signature: b.signature })).toMatchObject({ ok: false, reason: "AMOUNT_MISMATCH" });
     const c = await sendSolWithMemo({ rpc, signer: player, destination: treasury.address, amount: 50_000_000n, memo: "nebula:dep:other" });
     expect(await verifyDepositTransaction(rpc, { ...base(), signature: c.signature })).toMatchObject({ ok: false, reason: "MEMO_MISMATCH" });
+    // A valid transfer, but claimed by an account whose verified wallet did not sign it.
     const stranger = await generateKeyPairSigner();
-    expect(await verifyDepositTransaction(rpc, { ...base(), expectedSender: stranger.address, signature: c.signature.length ? (await sendSolWithMemo({ rpc, signer: player, destination: treasury.address, amount: 50_000_000n, memo: "nebula:dep:abc" })).signature : "" })).toMatchObject({ ok: false, reason: "WRONG_SENDER" });
+    const d = await sendSolWithMemo({ rpc, signer: player, destination: treasury.address, amount: 50_000_000n, memo: "nebula:dep:abc" });
+    expect(await verifyDepositTransaction(rpc, { ...base(), expectedSender: stranger.address, signature: d.signature })).toMatchObject({ ok: false, reason: "WRONG_SENDER" });
   });
 
   it("rejects failed transactions, unknown / unconfirmed signatures and the wrong cluster", async () => {

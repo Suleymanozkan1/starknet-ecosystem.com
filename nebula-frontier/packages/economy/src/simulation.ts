@@ -296,7 +296,9 @@ export function runEconomySimulation(scenario: string, params: SimulationParams,
     if (rewardPool < -1e-9 || reserve < -1e-9) everNegative = true;
 
     const treasuryTokens = rewardPool + reserve;
-    const inflation = playerHeld > 0 ? (claims - withdrawn) / Math.max(playerHeld - claims + withdrawn, 1e-9) : 0;
+    // Same rule as production: below a meaningful base (season cap) the ratio is noise.
+    const heldStart = playerHeld - claims + withdrawn;
+    const inflation = heldStart >= cfg.caps.season / 1e9 ? (claims - withdrawn) / heldStart : 0;
 
     // Controller: same anomaly detection as production
     const metrics: EconomyMetrics = {
@@ -332,8 +334,6 @@ export function runEconomySimulation(scenario: string, params: SimulationParams,
       dau: Math.round(dau),
       dauAvg7d: Math.round(dau)
     };
-    // NEBX inflation below a meaningful base is ignored (as in production).
-    if (playerHeld < cfg.caps.season / 1e9) metrics.inflation.nebx.daily = 0;
     const anomalies = detectAnomalies(metrics, cfg);
     breakersActive.clear();
     for (const a of anomalies) for (const b of a.breakers) breakersActive.add(b);

@@ -50,7 +50,7 @@ export function buildShipGeometry(v: ShipVisualDef, withGreebles: boolean): Ship
   const key = shipGeometryKey(v);
   const levels: Map<MaterialSlot, BufferGeometry>[] = [];
   let sockets: Sockets | null = null;
-  let greebles = new Float32Array(0);
+  let greebles: Float32Array = new Float32Array(0);
   for (const d of DETAIL_FOR_LEVEL) {
     const rng = createRng(key);
     const pc = new PartCollector(1.4 / Math.max(1, v.length / 3));

@@ -1,10 +1,13 @@
-import { isSignature, signature as toSignature, type Commitment } from "@solana/kit";
+import { getBase58Encoder, getUtf8Decoder, isSignature, signature as toSignature, type Commitment } from "@solana/kit";
 import { GENESIS_HASHES, getSolanaNetwork, type SolanaNetwork, type SolanaRpcClient } from "./rpc.js";
 
 export const SYSTEM_PROGRAM_ID = "11111111111111111111111111111111";
 export const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 export const TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EHFLbAv5A5fQ9mXC8b4W";
-export const MEMO_PROGRAM_IDS = ["MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr", "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"];
+/** SPL Memo v2 (classic, indexed by RPC `memo` fields) — used for all our payouts. */
+export const SPL_MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+/** Accepted memo programs: SPL Memo v2, v1 and the newer p-memo used by @solana-program/memo >= 0.15. */
+export const MEMO_PROGRAM_IDS = [SPL_MEMO_PROGRAM_ID, "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo", "Memo4c2pN8afCj432Lb7RMVKi9PbQnnW7ewFFaV3oAH"];
 
 export interface VerifyDepositInput {
   signature: string;
@@ -92,6 +95,14 @@ export function extractMemos(tx: ParsedTx): string[] {
   for (const ix of all) {
     if (MEMO_PROGRAM_IDS.includes(ix.programId) || ix.program === "spl-memo") {
       if (typeof ix.parsed === "string") out.push(ix.parsed);
+      else if (typeof ix.data === "string") {
+        // Not parsed by the RPC (e.g. newer memo program): raw base58 instruction data = UTF-8 memo.
+        try {
+          out.push(getUtf8Decoder().decode(getBase58Encoder().encode(ix.data)));
+        } catch {
+          /* ignore undecodable data */
+        }
+      }
     }
   }
   return out;

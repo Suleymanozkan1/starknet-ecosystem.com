@@ -70,7 +70,7 @@ export async function airdropWithRetry(rpc: SolanaRpcClient, addr: Address, targ
   return { balance, signatures, errors };
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const network = getSolanaNetwork();
   if (network !== "devnet" && network !== "localnet") throw new Error("devnet-setup only runs on devnet/localnet");
   const rpc = createRpcFromEnv();

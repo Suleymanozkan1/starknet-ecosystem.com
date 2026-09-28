@@ -4,6 +4,7 @@ import { NPCS_BY_ID } from "@nebula/config";
 import { Countdown, HoloPanel, Icon, NeonButton } from "@nebula/game-ui";
 import type { GameEventDto } from "../lib/dto.js";
 import { useEvents } from "../lib/queries.js";
+import { eventTimes } from "../lib/api.js";
 import { humanize, mapName } from "../lib/gameMeta.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { EmptyState, QueryState } from "../components/QueryState.js";
@@ -17,6 +18,7 @@ const TYPE_COLOR: Record<string, string> = {
 function EventCard({ e, live, focused }: { e: GameEventDto; live: boolean; focused: boolean }) {
   const navigate = useNavigate();
   const color = TYPE_COLOR[e.type] ?? "var(--nf-accent)";
+  const t = eventTimes(e);
   return (
     <HoloPanel accent={color} glow={live || focused} id={`event-${e.id}`}>
       <div className="grid gap-3">
@@ -27,20 +29,20 @@ function EventCard({ e, live, focused }: { e: GameEventDto; live: boolean; focus
           </div>
           <div className="text-right">
             <div className="nf-label">{live ? "Ends in" : "Starts in"}</div>
-            <Countdown to={live ? e.endAt : e.startAt} className="text-[17px]" />
+            <Countdown to={live ? t.end : t.start} className="text-[17px]" />
           </div>
         </div>
         <p className="m-0 text-[13.5px] text-dim">{e.description}</p>
         <div className="flex flex-wrap gap-1.5">
           {e.maps.map((m) => <span key={m} className="nf-chip"><Icon name="map" size={11} />{mapName(m)}</span>)}
           {e.boss && <span className="nf-chip" style={{ color: "var(--nf-bad)" }}><Icon name="crown" size={11} />{NPCS_BY_ID.get(e.boss)?.name ?? e.boss}</span>}
-          {e.xpMultiplier && e.xpMultiplier !== 1 ? <span className="nf-chip" style={{ color: "#a78bfa" }}>×{e.xpMultiplier} XP</span> : null}
-          {e.dropMultiplier && e.dropMultiplier !== 1 ? <span className="nf-chip" style={{ color: "#fbbf24" }}>×{e.dropMultiplier} drops</span> : null}
+          {e.xpMultiplier !== 1 ? <span className="nf-chip" style={{ color: "#a78bfa" }}>×{e.xpMultiplier} XP</span> : null}
+          {e.dropMultiplier !== 1 ? <span className="nf-chip" style={{ color: "#fbbf24" }}>×{e.dropMultiplier} drops</span> : null}
         </div>
-        {(e.rewards ?? []).length > 0 && (
+        {e.rewards.length > 0 && (
           <div className="grid gap-1.5 border-t border-line pt-3">
             <div className="nf-label">Contribution rewards</div>
-            {(e.rewards ?? []).map((r) => (
+            {e.rewards.map((r) => (
               <div key={r.tier} className="flex flex-wrap items-center gap-3 text-[13px]"><span className="nf-ui w-24 font-bold">{humanize(r.tier)}</span><span className="text-mute">{r.minContribution}+ pts</span><RewardChips bundle={r.bundle} size={12} /></div>
             ))}
           </div>
@@ -72,7 +74,7 @@ export default function EventsPage() {
                       <div className="nf-display text-[clamp(22px,3vw,34px)] font-black tracking-[0.08em]">{rift.name}</div>
                       <div className="text-[13.5px] text-dim">{rift.description}</div>
                     </div>
-                    <div className="text-right"><div className="nf-label">Collapses in</div><Countdown to={rift.endAt} className="text-[26px]" /></div>
+                    <div className="text-right"><div className="nf-label">Collapses in</div><Countdown to={eventTimes(rift).end} className="text-[26px]" /></div>
                   </div>
                 </div>
               )}

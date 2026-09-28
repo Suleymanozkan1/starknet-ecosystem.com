@@ -8,17 +8,18 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@nebula/shared": "workspace:*",
-    "@nebula/config": "workspace:*",
-    "@nebula/validation": "workspace:*",
-    "@nebula/game-core": "workspace:*",
-    "@nebula/economy": "workspace:*",
     "@nebula/authentication": "workspace:*",
+    "@nebula/blockchain": "workspace:*",
+    "@nebula/config": "workspace:*",
     "@nebula/database": "workspace:*",
-    "@nebula/blockchain": "workspace:*"
+    "@nebula/economy": "workspace:*",
+    "@nebula/game-core": "workspace:*",
+    "@nebula/shared": "workspace:*",
+    "@nebula/validation": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
-    "@solana/kit": "^8.4.0"
+    "@solana/kit": "^8.4.0",
+    "fastify": "^5.12.5"
   }
 }

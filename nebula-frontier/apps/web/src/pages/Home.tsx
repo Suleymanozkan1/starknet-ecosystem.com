@@ -4,6 +4,7 @@ import { SHIPS_BY_ID } from "@nebula/config";
 import { Countdown, CurrencyAmount, FactionEmblem, HoloPanel, Icon, RarityBadge, StatBar, STAT_COLORS } from "@nebula/game-ui";
 import { useT } from "../lib/i18n.js";
 import { useEvents, useQuests, useRewards, useShips } from "../lib/queries.js";
+import { eventTimes } from "../lib/api.js";
 import { faction, humanize, mapName, shortAddr } from "../lib/gameMeta.js";
 import { useSession } from "../hooks/useSession.js";
 import { useIsMobileUI } from "../hooks/useMediaQuery.js";
@@ -115,7 +116,7 @@ function EventBanner() {
         </div>
         <div className="text-right">
           <div className="nf-label">{live ? "Ends in" : "Starts in"}</div>
-          <Countdown to={live ? e.endAt : e.startAt} className="text-[18px] text-ink" />
+          <Countdown to={live ? eventTimes(e).end : eventTimes(e).start} className="text-[18px] text-ink" />
         </div>
       </div>
     </Link>

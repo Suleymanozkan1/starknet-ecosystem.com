@@ -16,7 +16,7 @@ export async function buildMe(db: DbOrTx, userId: string): Promise<MeResponse> {
   });
   if (!u) throw notFound("User");
   const p = progressFor(u.xp);
-  const premiumActive = u.premiumUntil && u.premiumUntil.getTime() > Date.now();
+  const premiumUntil = u.premiumUntil && u.premiumUntil.getTime() > Date.now() ? u.premiumUntil : null;
   return {
     id: u.id,
     username: u.username,
@@ -33,8 +33,8 @@ export async function buildMe(db: DbOrTx, userId: string): Promise<MeResponse> {
       ? { id: u.clanMember.clan.id, name: u.clanMember.clan.name, tag: u.clanMember.clan.tag, role: u.clanMember.role as ClanRole }
       : null,
     activeShipInstanceId: u.activeShipId,
-    premiumTier: (premiumActive ? u.premiumTier : "FREE") as PremiumTier,
-    premiumUntil: premiumActive ? u.premiumUntil!.toISOString() : null,
+    premiumTier: (premiumUntil ? u.premiumTier : "FREE") as PremiumTier,
+    premiumUntil: premiumUntil ? premiumUntil.toISOString() : null,
     wallets: u.wallets.map((w) => ({ address: w.address, primary: w.primary, verifiedAt: w.verifiedAt.toISOString() })),
     balances: await balancesDto(db, u.id),
     roles: (u.adminUser?.roles ?? []) as AdminRole[],

@@ -101,6 +101,8 @@ export interface PlayerActor extends ShipActor {
   damageDealt: number;
   connected: boolean;
   left: boolean;
+  /** Set after a successful portal jump: persisted position is the arrival portal. */
+  jumpedTo: { mapId: string; x: number; y: number } | null;
 }
 
 export interface NpcActor extends ShipActor {

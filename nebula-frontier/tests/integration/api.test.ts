@@ -4,6 +4,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { verifyGameTicket } from "../../packages/authentication/src/index.js";
+import { WEAPONS_BY_ID } from "../../packages/config/src/index.js";
 import { credits, fund, giveItem, key, registerUser, setup, teardown, type TestCtx } from "./helpers.js";
 
 let ctx: TestCtx;
@@ -27,6 +28,13 @@ describe("world & public data", () => {
       const r = await ctx.app.inject({ method: "GET", url: `/api/leaderboard?board=${board}` });
       expect(r.statusCode, board).toBe(200);
     }
+    const s = await registerUser(ctx.app);
+    const own = await s.req("GET", "/api/profile");
+    expect(own.statusCode).toBe(200);
+    const pub = await ctx.app.inject({ method: "GET", url: `/api/profile/${s.userId}` });
+    expect((pub.json() as { id: string; username: string }).id).toBe(s.userId);
+    expect(JSON.stringify(pub.json())).not.toContain("@test.local");
+    expect((await ctx.app.inject({ method: "GET", url: "/api/profile" })).statusCode).toBe(404);
     const seasons = (await ctx.app.inject({ method: "GET", url: "/api/seasons" })).json() as { seasons: { id: string; active: boolean }[] };
     expect(seasons.seasons.find((s) => s.id === "season_1")).toBeDefined();
   });
@@ -105,6 +113,17 @@ describe("pilot progression", () => {
     expect((replay.json() as { toLevel: number }).toLevel).toBe(1);
     expect((await ctx.db.shipInstance.findUniqueOrThrow({ where: { id: ship.id } })).upgradeLevel).toBe(1);
     expect(await credits(ctx.db, s.userId)).toBe(1_000_000n - BigInt(body.cost.credits));
+
+    // Unequip + re-equip a starter laser (server validates slot family / index / ownership).
+    const laser = (await ctx.db.shipLoadout.findUniqueOrThrow({ where: { id: ship.activeLoadoutId ?? "" } })).config as { weapons: string[] };
+    const un = await s.req("POST", "/api/inventory/unequip", { shipInstanceId: ship.id, loadoutId: ship.activeLoadoutId, slotType: "weapons", slotIndex: 0 });
+    expect(un.statusCode).toBe(200);
+    const wrongSlot = await s.req("POST", "/api/inventory/equip", { shipInstanceId: ship.id, loadoutId: ship.activeLoadoutId, inventoryItemId: laser.weapons[0], slotType: "drones", slotIndex: 0 });
+    expect(code(wrongSlot)).toBe("INCOMPATIBLE_SLOT");
+    const outOfRange = await s.req("POST", "/api/inventory/equip", { shipInstanceId: ship.id, loadoutId: ship.activeLoadoutId, inventoryItemId: laser.weapons[0], slotType: "weapons", slotIndex: 9 });
+    expect(code(outOfRange)).toBe("INVALID_SLOT");
+    const re = await s.req("POST", "/api/inventory/equip", { shipInstanceId: ship.id, loadoutId: ship.activeLoadoutId, inventoryItemId: laser.weapons[0], slotType: "weapons", slotIndex: 0 });
+    expect(re.statusCode).toBe(200);
 
     const lo = await s.req("POST", `/api/ships/${ship.id}/loadouts`, { name: "PvP", preset: "PVP", copyFromLoadoutId: ship.activeLoadoutId });
     expect(lo.statusCode).toBe(200);
@@ -229,7 +248,8 @@ describe("claims", () => {
     expect(bp.active).toBe(true);
     const buy = await s.req("POST", "/api/shop/purchase", { productId: bp.premiumProductId, quantity: 1, idempotencyKey: key() });
     expect(buy.statusCode).toBe(200);
-    expect((await s.req("POST", "/api/shop/purchase", { productId: bp.premiumProductId, quantity: 1, idempotencyKey: key() })).statusCode).toBe(409);
+    const second = await s.req("POST", "/api/shop/purchase", { productId: bp.premiumProductId, quantity: 1, idempotencyKey: key() });
+    expect(["PURCHASE_LIMIT", "ALREADY_OWNED"]).toContain(code(second));
     const tier2 = bp.pass.tiers[1]!;
     const locked = await s.req("POST", "/api/battlepass/claim", { tier: 2, track: "free" });
     expect(code(locked)).toBe("TIER_LOCKED");
@@ -259,7 +279,7 @@ describe("feature flags & admin", () => {
       id, sku: `sku_test_${Date.now()}`, name: "Test pack", category: "AMMO", description: "t", currency: "CREDITS", price: "100",
       grants: { items: [{ itemId: "item_ammo_hornet", quantity: 10 }] }, reason: "integration test",
     });
-    expect(create.statusCode).toBe(201);
+    expect(create.statusCode, create.body).toBe(201);
     const patch = await mgr.req("PATCH", `/api/admin/shop/products/${id}`, { price: "150", reason: "price tune" });
     expect(patch.statusCode).toBe(200);
     expect((await ctx.db.shopProduct.findUniqueOrThrow({ where: { id } })).price).toBe(150n);
@@ -268,5 +288,35 @@ describe("feature flags & admin", () => {
     expect((await mgr.req("POST", `/api/admin/users/${mgr.userId}/ban`, { reason: "nope" })).statusCode).toBe(403);
     expect((await mgr.req("PUT", "/api/admin/feature-flags/wallet", { enabled: false, reason: "nope" })).statusCode).toBe(403);
     await ctx.db.shopProduct.update({ where: { id }, data: { active: false } });
+  });
+
+  it("super admin endpoints respond and every mutation is audited", async () => {
+    const root = await registerUser(ctx.app);
+    await ctx.db.adminUser.create({ data: { userId: root.userId, roles: ["SUPER_ADMIN"] } });
+    const target = await registerUser(ctx.app);
+    const gets = ["/api/admin/users?q=t_", `/api/admin/users/${target.userId}`, "/api/admin/risk", "/api/admin/reports", "/api/admin/audit?limit=5",
+      "/api/admin/events", "/api/admin/feature-flags", "/api/admin/rules", "/api/admin/shop/products"];
+    for (const url of gets) expect((await root.req("GET", url)).statusCode, url).toBe(200);
+    const detail = (await root.req("GET", `/api/admin/users/${target.userId}`)).json() as { user: Record<string, unknown> };
+    expect(detail.user.passwordHash).toBeUndefined();
+    const muts: [string, string, unknown][] = [
+      ["PUT", "/api/admin/events", { id: `evt_test_${Date.now()}`, name: "Test", type: "SPECIAL_EVENT", startAt: new Date().toISOString(), endAt: new Date(Date.now() + 3600_000).toISOString(), reason: "qa window" }],
+      ["PUT", "/api/admin/catalog/weapon/wpn_laser_mk2", { data: { damage: 999 }, reason: "balance test" }],
+      ["PUT", "/api/admin/feature-flags/nft_mint", { enabled: false, rules: { denyCountries: ["KP"] }, reason: "compliance" }],
+      ["PUT", "/api/admin/rules", { rules: { bountyMin: 10000 }, reason: "same value" }],
+      ["POST", "/api/admin/mail", { toUserId: target.userId, subject: "Hi", body: "Gift", attachments: { credits: 10 }, reason: "support ticket 42" }],
+      ["PUT", `/api/admin/users/${target.userId}/roles`, { roles: ["SUPPORT"], reason: "hired" }],
+    ];
+    for (const [m, url, body] of muts) {
+      const r = await root.req(m as "PUT" | "POST", url, body);
+      expect(r.statusCode, `${m} ${url} ${r.body}`).toBeLessThan(300);
+    }
+    // Restore the catalog override.
+    const wpn = await ctx.db.weapon.findUniqueOrThrow({ where: { id: "wpn_laser_mk2" } });
+    await ctx.db.weapon.update({ where: { id: wpn.id }, data: { data: JSON.parse(JSON.stringify(WEAPONS_BY_ID.get("wpn_laser_mk2"))) } });
+    const audits = await ctx.db.auditLog.count({ where: { actorId: root.userId } });
+    expect(audits).toBeGreaterThanOrEqual(muts.length);
+    const bad = await root.req("PUT", "/api/admin/rules", { rules: { notARule: 1 }, reason: "invalid" });
+    expect(bad.statusCode).toBe(400);
   });
 });

@@ -228,7 +228,7 @@ export default function HangarPage() {
       <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
         <div className="grid content-start gap-4">
           <HoloPanel padded={false} corners glow className="relative h-[clamp(320px,52vh,600px)]">
-            <ShipViewer def={def} cosmetics={ship.cosmetics} preview={preview} autoRotate={autoRotate} />
+            <ShipViewer def={def} cosmetics={ship.cosmetics} preview={preview} autoRotate={autoRotate} compare={compareDef ?? null} />
             <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
               {PREVIEWS.map((p) => (
                 <button key={p.key} type="button" className="nf-chip cursor-pointer" style={p.key === preview ? { color: "var(--nf-accent)", borderColor: "var(--nf-accent)" } : undefined} onClick={() => setPreview(p.key)}>{p.label}</button>

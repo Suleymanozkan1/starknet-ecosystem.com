@@ -19,6 +19,7 @@ import { DuplicateLootError } from "./persistence/writer.js";
 import { createGameServer } from "./server.js";
 import { createPlayerUser, shieldTestIpcFromPm2, ticketFor } from "./test-utils.js";
 import type { GameServices } from "./services/context.js";
+import type { GameRules } from "./services/rules.js";
 import type { LootActor, NpcActor, PlayerActor } from "./rooms/actors.js";
 
 const envPath = resolve(import.meta.dirname, "../../../.env");
@@ -32,6 +33,8 @@ interface Internals {
   dropLoot(x: number, y: number, drops: LootDrop[], owner: string | null): LootActor;
   flushAll(final: boolean): Promise<void>;
   getPlayerByUser(id: string): PlayerActor | undefined;
+  rules: GameRules;
+  kill(target: NpcActor | PlayerActor, killer: PlayerActor | null): void;
 }
 const I = (room: unknown) => room as Internals;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -296,5 +299,80 @@ describe("portals", () => {
     expect(ev.mapId).toBe(portal.targetMap);
     expect(ev.reservation?.roomId).toBeTruthy();
     await client.leave();
+  });
+});
+
+describe("arena match lifecycle", () => {
+  it("runs WAITING → RUNNING → ENDED, persists GameMatch rows and rating deltas", async () => {
+    const instanceKey = `test-${Date.now()}`;
+    const mapId = "map_eclipse_arena";
+    const ua = await createPlayerUser(db, { faction: "aurora", level: 12 });
+    const ub = await createPlayerUser(db, { faction: "vortex", level: 12 });
+    const ca = await colyseus.sdk.joinOrCreate(RoomName.ARENA, { ticket: await ticketFor(secret, ua, mapId), mapId, instanceKey });
+    const room = matchMaker.getLocalRoomById(ca.roomId);
+    I(room).rules = { ...I(room).rules, arenaCountdownMs: 100, arenaScoreToWin: 1 };
+    const started = new Promise<{ matchId: string }>((r) => ca.onMessage("match_start", r));
+    const ended = new Promise<{ matchId: string; winnerTeam?: number }>((r) => ca.onMessage("match_end", r));
+    const cb = await colyseus.sdk.joinOrCreate(RoomName.ARENA, { ticket: await ticketFor(secret, ub, mapId), mapId, instanceKey });
+    expect(cb.roomId).toBe(ca.roomId);
+    const { matchId } = await started;
+    const a = I(room).getPlayerByUser(ua.id)!;
+    const b = I(room).getPlayerByUser(ub.id)!;
+    expect(a.team).not.toBe(b.team);
+    Object.assign(a, { x: 250, y: 200, invulnerableUntil: 0 });
+    Object.assign(b, { x: 262, y: 200, invulnerableUntil: 0, shield: 0, hull: 1 });
+    await until(() => a.visible.has(b.id));
+    ca.send("target", { mode: "ENTITY", entityId: b.id });
+    await until(() => a.targetId === b.id);
+    ca.send("fire", { firing: true, group: "PRIMARY" });
+    const end = await ended;
+    expect(end.matchId).toBe(matchId);
+    expect(end.winnerTeam).toBe(a.team);
+    await until(async () => (await db.gameMatch.findUnique({ where: { id: matchId } }))?.status === "FINISHED");
+    const players = await db.gameMatchPlayer.findMany({ where: { matchId } });
+    expect(players).toHaveLength(2);
+    const pa = players.find((x) => x.userId === ua.id)!;
+    expect(pa.kills).toBe(1);
+    expect(pa.ratingDelta).toBeGreaterThan(0);
+    const userA = await db.user.findUniqueOrThrow({ where: { id: ua.id } });
+    expect(userA.pvpRating).toBe(1200 + pa.ratingDelta);
+    const stA = await db.playerStat.findUniqueOrThrow({ where: { userId: ua.id } });
+    expect(stA.pvpWins).toBe(1);
+    await ca.leave().catch(() => undefined);
+    await cb.leave().catch(() => undefined);
+  });
+});
+
+describe("gate run", () => {
+  it("charges entry cost, runs all waves and pays completion rewards", async () => {
+    const mapId = "map_gate_alpha";
+    const u = await createPlayerUser(db, { faction: "nova", level: 20, credits: 50_000 });
+    await db.playerResource.create({ data: { userId: u.id, resourceId: "QUANTUM_SHARD", amount: 5n } });
+    const instanceKey = `test-${Date.now()}`;
+    const c = await colyseus.sdk.joinOrCreate(RoomName.GATE, { ticket: await ticketFor(secret, u, mapId), mapId, instanceKey, difficulty: "HARD" });
+    const room = matchMaker.getLocalRoomById(c.roomId);
+    I(room).rules = { ...I(room).rules, gateWaveDelayMs: 50 };
+    expect(await getBalance(db, userWallet(u.id, "CREDITS"))).toBe(30_000n);
+    expect(Number((await db.playerResource.findUniqueOrThrow({ where: { userId_resourceId: { userId: u.id, resourceId: "QUANTUM_SHARD" } } })).amount)).toBe(0);
+    const waves: number[] = [];
+    c.onMessage("wave", (w: { wave: number }) => waves.push(w.wave));
+    const ended = new Promise<unknown>((r) => c.onMessage("match_end", r));
+    const me = I(room).getPlayerByUser(u.id)!;
+    me.invulnerableUntil = Number.MAX_SAFE_INTEGER;
+    const deadline = Date.now() + 20_000;
+    let done = false;
+    void ended.then(() => { done = true; });
+    while (!done && Date.now() < deadline) {
+      for (const n of I(room).npcs.values()) if (!n.dead && n.tag.startsWith("wave:")) I(room).kill(n, me);
+      await sleep(60);
+    }
+    expect(done).toBe(true);
+    expect(waves).toEqual([1, 2, 3, 4, 5, 6]);
+    await I(room).flushAll(false);
+    const st = await db.playerStat.findUniqueOrThrow({ where: { userId: u.id } });
+    expect(st.gatesCompleted).toBe(1);
+    // Completion credits (× HARD reward multiplier) arrive through the ledger exactly once.
+    await until(async () => (await getBalance(db, userWallet(u.id, "CREDITS"))) > 30_000n);
+    await c.leave().catch(() => undefined);
   });
 });

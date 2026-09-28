@@ -3,7 +3,7 @@ import { FACTIONS_BY_ID, GALAXY, MAPS, MAPS_BY_ID } from "@nebula/config";
 import { FactionEmblem, HoloPanel, Icon, NeonButton } from "@nebula/game-ui";
 import type { MapDef } from "@nebula/shared";
 import { useNavigate } from "react-router-dom";
-import { useGalaxy } from "../lib/queries.js";
+import { useMapLive } from "../lib/queries.js";
 import { ROOM_META, ZONE_META, humanize } from "../lib/gameMeta.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { useSession } from "../hooks/useSession.js";
@@ -44,13 +44,13 @@ function layout(): { nodes: Node[]; sectors: { id: string; name: string; x: numb
 export default function GalaxyPage() {
   const me = useSession();
   const navigate = useNavigate();
-  const live = useGalaxy();
   const { nodes, sectors } = useMemo(layout, []);
   const byId = useMemo(() => new Map(nodes.map((n) => [n.map.id, n])), [nodes]);
   const home = me.faction ? FACTIONS_BY_ID.get(me.faction)?.homeMap : undefined;
   const [sel, setSel] = useState<string>(home ?? MAPS[0]?.id ?? "");
   const selected = byId.get(sel);
-  const liveNode = live.data?.maps?.find((m) => m.id === sel);
+  const live = useMapLive(sel);
+  const pilots = live.data?.rooms.reduce((a, r) => a + r.clients, 0);
 
   const edges = useMemo(() => {
     const seen = new Set<string>();
@@ -134,12 +134,10 @@ export default function GalaxyPage() {
                 <div className="nf-label">Zones</div>
                 <div className="flex flex-wrap gap-1.5">{zones.map((z) => <span key={z} className="nf-chip" style={{ color: ZONE_META[z]?.color }}>{ZONE_META[z]?.label ?? z}</span>)}</div>
               </div>
-              {liveNode && (liveNode.population !== undefined || liveNode.controlledBy) && (
-                <div className="grid grid-cols-2 gap-2 text-[13px]">
-                  {liveNode.population !== undefined && <div><div className="nf-label">Pilots online</div><div className="nf-display text-[18px] font-bold">{liveNode.population}</div></div>}
-                  {liveNode.controlledBy && <div><div className="nf-label">Controlled by</div><div className="nf-ui text-[15px] font-bold">{liveNode.controlledBy.clanTag ? `[${liveNode.controlledBy.clanTag}]` : humanize(liveNode.controlledBy.faction ?? "")}</div></div>}
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-2 text-[13px]">
+                <div><div className="nf-label">Pilots in sector</div><div className="nf-display text-[18px] font-bold">{pilots ?? "—"}</div></div>
+                <div><div className="nf-label">Instances</div><div className="nf-display text-[18px] font-bold">{live.data?.rooms.length ?? "—"}</div></div>
+              </div>
               <div className="grid gap-1.5">
                 <div className="nf-label">Stations</div>
                 {m.stations.length === 0 ? <div className="text-[13px] text-mute">No stations — no safe docking.</div> : m.stations.map((s) => (

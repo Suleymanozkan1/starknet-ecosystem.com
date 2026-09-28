@@ -19,14 +19,14 @@ import {
   CooldownViolationTracker, FireRateAuditor, IDLE_INPUT, MovementBudget, PacketRateLimiter, ReactionTimeDetector,
   RepeatedMovementDetector, SeqValidator, SpatialGrid, TokenBucket, activateAbility, applyDash, applyEmp, bossTick, breakCloak,
   buffModifiers, checkDisplacement, computeStats, coolHeat, createAbilityState, createBrain, deathRepairCost, grantXp,
-  isDamageImpossible, isPvpAllowedAt, isSafeAt, isWeakPointHit, levelForXp, maxShotDamage, mineStep, nearestPortal, npcStats,
+  isDamageImpossible, isPvpAllowedAt, isSafeAt, isWeakPointHit, maxShotDamage, mineStep, nearestPortal, npcStats,
   pickAsteroidResource, pruneBuffs, regenerate, resetBoss, resolveAreaDamage, resolveHit, resourceHardness, rollAffixes, rollLoot,
   spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable, contributionTier,
   type AbilitySlotDef, type EffectiveWeapon, type GameplayEvent, type HitResult, type LootDrop, type Rng, type SimTuning,
 } from "@nebula/game-core";
 import {
   EntityFlag, RARITY_ORDER, RoomName, ServerEvent, mulberry32, type AbilityEffect, type ChatEvent, type DamageElement, type EntityKind,
-  type EventDef, type MapDef, type NpcDef, type Rarity, type ResourceId, type RewardBundle, type RewardSource, type ServerEvents, type CheatType,
+  type EventDef, type MapDef, type NpcDef, type Rarity, type ResourceId, type RewardBundle, type RewardSource, type SelfJoinInfo, type ServerEvents, type CheatType,
 } from "@nebula/shared";
 import { activePlayers, activeRooms, errorsTotal, packetsDropped, packetsReceived, tickDuration, type Logger } from "@nebula/telemetry";
 import { JoinOptionsSchema, Schemas, sanitizeChat, type ParsedJoinOptions, type ParsedMessages } from "../protocol/messages.js";
@@ -139,6 +139,22 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   protected respawnPointFor(p: PlayerActor): { x: number; y: number } {
     return spawnPoint(this.map, p.profile.factionId);
   }
+  /**
+   * Where the player is persisted when leaving. Open-world rooms keep the
+   * current position; instanced rooms (gates, raids, matches, events) send the
+   * player back through the map's exit portal so the next login lands in a sector.
+   */
+  protected exitPosition(p: PlayerActor): { mapId: string; x: number; y: number } {
+    const open = this.roomKind === RoomName.SECTOR || this.roomKind === RoomName.BOSS;
+    if (!open) {
+      const exit = this.map.portals[0];
+      const target = exit ? MAPS_BY_ID.get(exit.targetMap) : undefined;
+      const tp = target?.portals.find((x) => x.id === exit?.targetPortal);
+      if (target && tp) return { mapId: target.id, x: tp.x, y: tp.y };
+    }
+    const pos = p.dead ? this.respawnPointFor(p) : { x: p.x, y: p.y };
+    return { mapId: this.map.id, x: pos.x, y: pos.y };
+  }
   /** Extra join validation (level requirement, entry costs). Throw JoinError to reject. */
   protected async beforePlayerJoin(_p: PlayerActor): Promise<void> {
     // default: none
@@ -204,7 +220,11 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     await this.subscribeChat();
 
     this.setFixedTimestep((ctx) => this.fixedTick(ctx.dtMs), this.svc.config.tickRate);
-    this.clock.setInterval(() => void this.flushAll(false), this.svc.config.flushIntervalMs);
+    this.clock.setInterval(() => {
+      void this.flushAll(false);
+      void this.heartbeat(false);
+    }, this.svc.config.flushIntervalMs);
+    void this.heartbeat(false);
     activeRooms.inc({ room: this.roomKind });
     this.log.info({ mapId, maxClients: this.maxClients }, "room created");
   }
@@ -264,7 +284,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     p.pending.mapsVisited.add(this.map.id);
     this.questEvent(p, { type: "TRAVEL", mapId: this.map.id });
     this.questEvent(p, { type: "LEVEL", level: p.level });
-    this.emitTo(client, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name });
+    this.emitTo(client, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name, self: this.selfInfo(p) });
     this.sendNear(p.x, p.y, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name }, p);
     for (const ae of this.svc.events.activeFor(this.map.id)) this.emitTo(client, ServerEvent.EVENT_STARTED, EventEngine.notice(ae));
     this.state.online = this.players.size;
@@ -312,6 +332,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       this.svc.events.off("finished", this.eventListeners.finished);
     }
     for (const s of this.presenceSubs) this.presence.unsubscribe(s.topic, s.cb);
+    await this.heartbeat(true);
     activeRooms.dec({ room: this.roomKind });
     activePlayers.set({ room: this.roomKind, map: this.map?.id ?? "" }, 0);
     this.log.info("room disposed");
@@ -327,6 +348,19 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   override onUncaughtException(err: Error, methodName: string): void {
     errorsTotal.inc({ component: "room", code: methodName });
     this.log.error({ err, methodName }, "uncaught room exception");
+  }
+
+  /** Room registry row (GameRoom) for admin/ops dashboards; never used for game state. */
+  private async heartbeat(disposed: boolean): Promise<void> {
+    try {
+      const data = {
+        roomName: this.roomKind, mapId: this.map.id, region: this.svc.config.region, processId: String(process.pid),
+        clients: this.players.size, maxClients: this.maxClients, heartbeatAt: new Date(), disposedAt: disposed ? new Date() : null,
+      };
+      await this.svc.db.gameRoom.upsert({ where: { id: this.roomId }, create: { id: this.roomId, ...data }, update: data });
+    } catch (e) {
+      this.log.debug({ err: e }, "room heartbeat failed");
+    }
   }
 
   // ------------------------------------------------------------------------
@@ -353,7 +387,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       reaction: new ReactionTimeDetector(), spamStrikes: 0, firing: { PRIMARY: false, SECONDARY: false }, docked: null, miningTarget: null,
       cargoUsed: 0, visible: new Set(), firstSeen: new Map(), pending: new PendingDelta(), flushing: false, flushRequested: false,
       deathCount: 0, respawnAt: 0, lastRepairCost: 0, joinedAt: now, lastPlaytimeAt: now, lastSurviveAt: now, formation: profile.formation,
-      cosmetics: profile.cosmetics, kills: 0, deaths: 0, score: 0, damageDealt: 0, connected: true, left: false,
+      cosmetics: profile.cosmetics, kills: 0, deaths: 0, score: 0, damageDealt: 0, connected: true, left: false, jumpedTo: null,
     };
     entity.id = p.id;
     entity.kind = "PLAYER";
@@ -367,8 +401,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     if (p.left) return;
     p.left = true;
     this.players.delete(p.sessionId);
-    const pos = p.dead ? this.respawnPointFor(p) : { x: p.x, y: p.y };
-    p.pending.position = { mapId: this.map.id, x: pos.x, y: pos.y };
+    p.pending.position = p.jumpedTo ?? this.exitPosition(p);
     this.accruePlaytime(p);
     this.state.entities.delete(p.id);
     for (const o of this.players.values()) o.visible.delete(p.id);
@@ -379,6 +412,20 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     activePlayers.set({ room: this.roomKind, map: this.map.id }, this.players.size);
     await this.flushPlayer(p, true);
     this.log.info({ userId: p.userId }, "player left");
+  }
+
+  /** Prediction parameters for the owning client (same numbers the server simulates with). */
+  protected selfInfo(p: PlayerActor): SelfJoinInfo {
+    return {
+      userId: p.userId,
+      mapId: this.map.id,
+      tickRate: this.svc.config.tickRate,
+      aoiRadius: this.svc.config.aoiRadius,
+      motion: { speed: p.stats.speed, acceleration: p.stats.acceleration, turnRate: p.stats.turnRate, maxEnergy: p.maxEnergy },
+      weapons: p.stats.weapons.map((w) => ({ key: w.key, defId: w.defId, group: w.group, range: w.range, fireRate: w.fireRate })),
+      skills: p.stats.skills.map((a, slot) => ({ slot, id: a.id, name: a.name, cooldownMs: a.cooldownMs, energyCost: a.energyCost })),
+      modules: p.stats.moduleActives.map((a, slot) => ({ slot, id: a.id, name: a.name, cooldownMs: a.cooldownMs, energyCost: a.energyCost })),
+    };
   }
 
   private accruePlaytime(p: PlayerActor): void {
@@ -1121,10 +1168,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
 
   private async onPickup(p: PlayerActor, lootId: string): Promise<void> {
     const l = this.loot.get(lootId);
-    if (!l || l.claimed || this.processedLoot.has(lootId)) {
-      if (this.processedLoot.has(lootId)) this.flag(p, "DUPLICATE_LOOT", 5, { lootId, reason: "already_claimed" });
-      return this.error(p, "LOOT_GONE", "Loot no longer available");
-    }
+    // Double clicks / races are normal: an already-claimed loot id is simply gone.
+    // Only a database-level duplicate (see below) is treated as a cheat signal.
+    if (!l || l.claimed || this.processedLoot.has(lootId)) return this.error(p, "LOOT_GONE", "Loot no longer available");
     if (p.dead) return;
     if (Math.hypot(l.x - p.x, l.y - p.y) > this.rules.pickupRange) return this.error(p, "TOO_FAR", "Move closer to pick up");
     if (l.ownerUserId && l.ownerUserId !== p.userId && this.now < l.ownerUntil) return this.error(p, "NOT_OWNER", "Loot reserved for another pilot");
@@ -1542,7 +1588,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       const instanceKey = target.roomType === "gate" || target.roomType === "raid" ? `solo:${p.userId}` : undefined;
       const reservation = await matchMaker.joinOrCreate(roomName, { ticket, mapId: target.id, portalId: portal.targetPortal, instanceKey });
       const tp = target.portals.find((x) => x.id === portal.targetPortal);
-      p.pending.position = { mapId: target.id, x: tp?.x ?? target.width / 2, y: tp?.y ?? target.height / 2 };
+      p.jumpedTo = { mapId: target.id, x: tp?.x ?? target.width / 2, y: tp?.y ?? target.height / 2 };
+      p.pending.position = p.jumpedTo;
       this.emitTo(p.client, ServerEvent.JUMP, { mapId: target.id, portalId: portal.targetPortal, roomName, reservation });
       this.sendNear(p.x, p.y, ServerEvent.EFFECT, { kind: "WARP", x: p.x, y: p.y, radius: 10, sourceId: p.id });
       this.requestFlush(p);
@@ -1705,7 +1752,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
 
   protected async flushPlayer(p: PlayerActor, final: boolean): Promise<void> {
     this.accruePlaytime(p);
-    if (final && !p.pending.position) p.pending.position = { mapId: this.map.id, x: p.x, y: p.y };
+    if (final && !p.pending.position) p.pending.position = p.jumpedTo ?? this.exitPosition(p);
     const hasQuestChanges = [...p.profile.quests.values()].some((q) => q.dirty);
     if (p.pending.isEmpty() && !hasQuestChanges && !final) return;
     if (p.flushing) {

@@ -1,108 +1,124 @@
 import { useEffect, useRef, useState } from "react";
 import type { ShipDef } from "@nebula/shared";
-import { onAppActiveChange } from "../native/lifecycle.js";
+import type { HangarViewer } from "@nebula/game-renderer";
 import { useGraphicsTier } from "../hooks/useGraphicsTier.js";
 import { ShipBlueprint } from "./ShipBlueprint.js";
 
 export type PreviewMode = "idle" | "engine" | "fire" | "shield" | "damage";
 
-/** The subset of the game-renderer hangar handle used by the web UI. */
-interface HangarHandle {
-  dispose(): void;
-  setShip?(def: ShipDef, cosmetics?: Record<string, string>): void | Promise<void>;
-  setCosmetics?(cosmetics: Record<string, string>): void;
-  setPreview?(mode: PreviewMode): void;
-  setAutoRotate?(on: boolean): void;
-  setPaused?(paused: boolean): void;
-  pause?(): void;
-  resume?(): void;
-  resize?(): void;
-}
-type CreateHangarViewer = (canvas: HTMLCanvasElement, opts: { shipDef: ShipDef; cosmetics: Record<string, string>; tier: string }) => HangarHandle | Promise<HangarHandle>;
-
 export interface ShipViewerProps {
   def: ShipDef;
+  /** Ship cosmetics map (slot → item id) as returned by the API. */
   cosmetics?: Record<string, string>;
   preview?: PreviewMode;
   autoRotate?: boolean;
+  /** Second ship shown side by side for comparison. */
+  compare?: ShipDef | null;
   className?: string;
 }
 
-/**
- * Interactive 3D hangar preview (Three.js via @nebula/game-renderer `createHangarViewer`).
- * Rotation/zoom are handled by the renderer's orbit controls. Falls back to a 2D blueprint
- * when WebGL is unavailable. Rendering pauses while the app is in the background.
- */
-export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate = true, className }: ShipViewerProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const handleRef = useRef<HangarHandle | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "fallback">("loading");
-  const tier = useGraphicsTier();
-  const cosmeticsKey = JSON.stringify(cosmetics);
-  // Cosmetics are applied live (below); only ship/tier changes recreate the scene.
-  const cosmeticsRef = useRef(cosmetics);
-  cosmeticsRef.current = cosmetics;
+function hasWebGL(): boolean {
+  try {
+    const c = document.createElement("canvas");
+    return Boolean(c.getContext("webgl2") ?? c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
 
-  // (Re)create the viewer when the ship or tier changes.
+/**
+ * Interactive 3D hangar preview via @nebula/game-renderer `createHangarViewer` (loaded lazily so three.js
+ * stays out of the main bundle). Orbit controls handle rotate / zoom / pinch. Falls back to a 2D blueprint
+ * when WebGL is unavailable. Rendering uses requestAnimationFrame, which the browser / Capacitor webview
+ * suspends while the app is backgrounded.
+ */
+export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate = true, compare = null, className }: ShipViewerProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [viewer, setViewer] = useState<HangarViewer | null>(null);
+  const [failed, setFailed] = useState(false);
+  const tier = useGraphicsTier();
+  const initial = useRef({ def, cosmetics, autoRotate });
+  initial.current = { def, cosmetics, autoRotate };
+
+  // Create once per canvas + graphics tier.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
-    let disposed = false;
-    setState("loading");
-    const probe = document.createElement("canvas");
-    if (!probe.getContext("webgl2") && !probe.getContext("webgl")) {
-      setState("fallback");
+    if (!hasWebGL()) {
+      setFailed(true);
       return undefined;
     }
+    let disposed = false;
+    let instance: HangarViewer | null = null;
+    setFailed(false);
     void import("@nebula/game-renderer")
-      .then(async (mod) => {
-        const create = (mod as unknown as { createHangarViewer?: CreateHangarViewer }).createHangarViewer;
-        if (typeof create !== "function") throw new Error("hangar viewer unavailable");
-        const h = await create(canvas, { shipDef: def, cosmetics: cosmeticsRef.current, tier });
+      .then(({ createHangarViewer }) =>
+        createHangarViewer(canvas, {
+          shipDef: initial.current.def,
+          cosmetics: Object.values(initial.current.cosmetics),
+          tier,
+          autoRotate: initial.current.autoRotate,
+          transparent: true,
+        }),
+      )
+      .then((v) => {
         if (disposed) {
-          h.dispose();
+          v.dispose();
           return;
         }
-        handleRef.current = h;
-        setState("ready");
+        instance = v;
+        setViewer(v);
       })
       .catch((e: unknown) => {
         console.warn("3D hangar unavailable, using blueprint view", e);
-        if (!disposed) setState("fallback");
+        if (!disposed) setFailed(true);
       });
+    const ro = new ResizeObserver(() => instance?.resize());
+    ro.observe(canvas);
     return () => {
       disposed = true;
-      handleRef.current?.dispose();
-      handleRef.current = null;
+      ro.disconnect();
+      instance?.dispose();
+      setViewer(null);
     };
-  }, [def, tier]);
+  }, [tier]);
 
   useEffect(() => {
-    handleRef.current?.setCosmetics?.(JSON.parse(cosmeticsKey) as Record<string, string>);
-  }, [cosmeticsKey, state]);
+    viewer?.setShip(def);
+  }, [viewer, def]);
+  const cosmeticKey = Object.values(cosmetics).sort().join("|");
   useEffect(() => {
-    handleRef.current?.setPreview?.(preview);
-  }, [preview, state]);
+    viewer?.setCosmetics(cosmeticKey ? cosmeticKey.split("|") : []);
+  }, [viewer, cosmeticKey]);
   useEffect(() => {
-    handleRef.current?.setAutoRotate?.(autoRotate);
-  }, [autoRotate, state]);
-  useEffect(
-    () =>
-      onAppActiveChange((active) => {
-        const h = handleRef.current;
-        if (!h) return;
-        if (h.setPaused) h.setPaused(!active);
-        else if (active) h.resume?.();
-        else h.pause?.();
-      }),
-    [],
-  );
+    viewer?.setAutoRotate(autoRotate);
+  }, [viewer, autoRotate]);
+  useEffect(() => {
+    viewer?.setCompare(compare);
+  }, [viewer, compare]);
+  useEffect(() => {
+    if (!viewer) return undefined;
+    viewer.previewEngines(preview === "engine" || preview === "fire");
+    viewer.previewDamage(preview === "damage" ? 0.65 : 0);
+    if (preview === "fire" || preview === "shield") {
+      const tick = (): void => (preview === "fire" ? viewer.fireWeapons() : viewer.previewShield());
+      tick();
+      const t = window.setInterval(tick, preview === "fire" ? 900 : 1600);
+      return () => window.clearInterval(t);
+    }
+    return undefined;
+  }, [viewer, preview]);
 
   return (
     <div className={className} style={{ position: "absolute", inset: 0 }}>
-      <canvas ref={canvasRef} className="h-full w-full touch-none" style={{ display: state === "fallback" ? "none" : "block", opacity: state === "ready" ? 1 : 0, transition: "opacity .6s" }} aria-label={`${def.name} 3D preview`} />
-      {state === "fallback" && <ShipBlueprint def={def} />}
-      {state === "loading" && (
+      <canvas
+        ref={canvasRef}
+        className="h-full w-full touch-none"
+        style={{ display: failed ? "none" : "block", opacity: viewer ? 1 : 0, transition: "opacity .6s" }}
+        aria-label={`${def.name} 3D preview`}
+      />
+      {failed && <ShipBlueprint def={def} />}
+      {!viewer && !failed && (
         <div className="absolute inset-0 grid place-items-center">
           <div className="nf-ui text-[12px] uppercase tracking-[0.3em] text-mute">Rendering hull…</div>
         </div>

@@ -1,15 +1,19 @@
 import { Link } from "react-router-dom";
 import { NPCS_BY_ID } from "@nebula/config";
 import { Countdown, CurrencyAmount, HoloPanel, Icon, StatBar } from "@nebula/game-ui";
-import { useRewards, useSeasons } from "../lib/queries.js";
+import { useLeaderboard, useRewards, useSeasons } from "../lib/queries.js";
+import { useSession } from "../hooks/useSession.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { EmptyState, ErrorState, QueryState } from "../components/QueryState.js";
 import { RewardChips } from "../components/RewardChips.js";
 
 /** Season overview + transparent Season Rewards rules (caps, eligibility) — no investment framing. */
 export default function SeasonPage() {
+  const me = useSession();
   const seasons = useSeasons();
   const rewards = useRewards();
+  const board = useLeaderboard("season_score");
+  const mine = board.data?.entries.find((e) => e.userId === me.id);
   return (
     <div>
       <QueryState q={seasons} isEmpty={(d) => d.length === 0} empty={<EmptyState title="No season data" icon="season" />}>
@@ -30,8 +34,8 @@ export default function SeasonPage() {
                 </HoloPanel>
                 <HoloPanel title="Your standing">
                   <div className="grid grid-cols-2 gap-3">
-                    <div><div className="nf-label">Season points</div><div className="nf-display text-[24px] font-bold">{(s.myPoints ?? 0).toLocaleString()}</div></div>
-                    <div><div className="nf-label">Rank</div><div className="nf-display text-[24px] font-bold">{s.myRank ? `#${s.myRank}` : "—"}</div></div>
+                    <div><div className="nf-label">Season points</div><div className="nf-display text-[24px] font-bold">{mine ? mine.score.toLocaleString() : "—"}</div></div>
+                    <div><div className="nf-label">Rank</div><div className="nf-display text-[24px] font-bold">{mine ? `#${mine.rank}` : "Unranked"}</div></div>
                   </div>
                 </HoloPanel>
                 <HoloPanel title="Season boss" accent="#f43f5e">
@@ -44,13 +48,13 @@ export default function SeasonPage() {
                 <HoloPanel title="Leaderboard rewards">
                   <table className="nf-table">
                     <thead><tr><th>Rank</th><th>Rewards</th></tr></thead>
-                    <tbody>{(s.leaderboardRewards ?? []).map((r) => <tr key={r.rankFrom}><td className="nf-ui font-bold">{r.rankFrom === r.rankTo ? `#${r.rankFrom}` : `#${r.rankFrom}–${r.rankTo}`}</td><td><RewardChips bundle={r.bundle} /></td></tr>)}</tbody>
+                    <tbody>{s.leaderboardRewards.map((r) => <tr key={r.rankFrom}><td className="nf-ui font-bold">{r.rankFrom === r.rankTo ? `#${r.rankFrom}` : `#${r.rankFrom}–${r.rankTo}`}</td><td><RewardChips bundle={r.bundle} /></td></tr>)}</tbody>
                   </table>
                 </HoloPanel>
                 <HoloPanel title="Ranked tiers">
                   <table className="nf-table">
                     <thead><tr><th>Tier</th><th>Rating</th><th>Rewards</th></tr></thead>
-                    <tbody>{(s.rankedRewards ?? []).map((r) => <tr key={r.tier}><td className="nf-ui font-bold">{r.tier}</td><td className="tabular-nums">{r.minRating}+</td><td><RewardChips bundle={r.bundle} /></td></tr>)}</tbody>
+                    <tbody>{s.rankedRewards.map((r) => <tr key={r.tier}><td className="nf-ui font-bold">{r.tier}</td><td className="tabular-nums">{r.minRating}+</td><td><RewardChips bundle={r.bundle} /></td></tr>)}</tbody>
                   </table>
                 </HoloPanel>
               </div>

@@ -13,7 +13,6 @@ import { createCloakMaterial } from "./cloak.js";
 export type WeaponVisualStyle = "beam" | "bolt" | "slug" | "missile" | "torpedo" | "wave" | "mine";
 
 const tmpA = new Vector3();
-const tmpB = new Vector3();
 const tmpC = new Color();
 
 /**
@@ -300,7 +299,6 @@ export class EffectsSystem {
     this.debris.dispose();
     this.cloakMaterial.dispose();
     this.group.removeFromParent();
-    void tmpB;
   }
 }
 

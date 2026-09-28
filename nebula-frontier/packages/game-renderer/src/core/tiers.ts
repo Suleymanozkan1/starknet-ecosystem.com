@@ -58,13 +58,13 @@ export interface TierSettings {
 export const TIER_SETTINGS: Readonly<Record<GraphicsTier, TierSettings>> = {
   ULTRA: {
     tier: "ULTRA", maxPixelRatio: 2, minPixelRatio: 1, antialias: true, shadows: true, shadowMapSize: 2048,
-    bloom: true, bloomStrength: 0.85, physicalMaterials: true, textureSize: 512, particleBudget: 6000,
+    bloom: true, bloomStrength: 0.6, physicalMaterials: true, textureSize: 512, particleBudget: 6000,
     trailBudget: 96, trailSegments: 40, projectileBudget: 768, debrisBudget: 48, greebles: true, lodBias: 1.6,
     starCount: 9000, dustCount: 1400, asteroidDetail: 4, targetFps: 60, anisotropy: 8, allowWebGPU: true,
   },
   HIGH: {
     tier: "HIGH", maxPixelRatio: 1.5, minPixelRatio: 0.85, antialias: true, shadows: true, shadowMapSize: 1024,
-    bloom: true, bloomStrength: 0.7, physicalMaterials: false, textureSize: 256, particleBudget: 3500,
+    bloom: true, bloomStrength: 0.5, physicalMaterials: false, textureSize: 256, particleBudget: 3500,
     trailBudget: 64, trailSegments: 28, projectileBudget: 512, debrisBudget: 32, greebles: true, lodBias: 1.2,
     starCount: 6000, dustCount: 900, asteroidDetail: 3, targetFps: 60, anisotropy: 4, allowWebGPU: false,
   },

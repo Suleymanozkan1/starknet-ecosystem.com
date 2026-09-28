@@ -1,6 +1,5 @@
 import {
-  AdditiveBlending, BackSide, Color, Group, Mesh, MeshBasicMaterial, ShaderMaterial, SphereGeometry, Vector3,
-  type BufferGeometry,
+  AdditiveBlending, BackSide, Color, Group, Mesh, MeshBasicMaterial, ShaderMaterial, SphereGeometry, type Vector3,
 } from "three";
 import type { MapDef, ShipVisualDef } from "@nebula/shared";
 import { SHIPS } from "@nebula/config";
@@ -233,4 +232,3 @@ export function buildMapDecor(map: MapDef, ctx: DecorContext): DecorItem[] {
   return out;
 }
 
-export type { BufferGeometry };

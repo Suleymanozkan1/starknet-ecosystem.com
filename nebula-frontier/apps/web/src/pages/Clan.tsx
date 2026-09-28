@@ -4,9 +4,9 @@ import { Link, useParams } from "react-router-dom";
 import { CurrencyAmount, Countdown, FactionEmblem, HoloPanel, Icon, Modal, NeonButton, StatBar, STAT_COLORS, Tabs } from "@nebula/game-ui";
 import { api } from "../lib/api.js";
 import type { ClanDetailDto } from "../lib/dto.js";
+import type { ClanRole } from "@nebula/shared";
 import { idempotencyKey } from "../lib/http.js";
-import { qk, useApiMutation, useClans, useMyClan } from "../lib/queries.js";
-import { useQuery } from "@tanstack/react-query";
+import { qk, useApiMutation, useClan, useClanWars, useClans } from "../lib/queries.js";
 import { faction, humanize, mapName, relTime } from "../lib/gameMeta.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { EmptyState, ErrorState, QueryState } from "../components/QueryState.js";
@@ -18,7 +18,7 @@ function CreateClan() {
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [description, setDescription] = useState("");
-  const create = useApiMutation(() => api.clans.create({ name: name.trim(), tag, description }), { invalidate: [qk.me, qk.myClan, ["clans"]], success: `Clan [${tag}] founded` });
+  const create = useApiMutation(() => api.clans.create({ name: name.trim(), tag, description }), { invalidate: [qk.me, ["clans"]], success: `Clan [${tag}] founded` });
   const valid = /^[A-Za-z0-9 _-]{3,24}$/.test(name.trim()) && /^[A-Z0-9]{2,5}$/.test(tag);
   const submit = (e: FormEvent): void => {
     e.preventDefault();
@@ -39,7 +39,7 @@ function CreateClan() {
 function ClanBrowser({ canJoin }: { canJoin: boolean }) {
   const [search, setSearch] = useState("");
   const clans = useClans(search);
-  const join = useApiMutation((id: string) => api.clans.join(id), { invalidate: [qk.me, qk.myClan], success: "Application sent" });
+  const join = useApiMutation((id: string) => api.clans.join(id), { invalidate: [qk.me, ["clans"]], success: "Welcome aboard", errorTitle: "Cannot join" });
   return (
     <HoloPanel title="Clan registry" actions={<input className="nf-input h-8 min-h-0 w-44 text-[13px]" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search clans" />}>
       <QueryState q={clans} isEmpty={(d) => d.length === 0} empty={<EmptyState title="No clans found" icon="clan" />}>
@@ -53,9 +53,9 @@ function ClanBrowser({ canJoin }: { canJoin: boolean }) {
                   <tr key={c.id}>
                     <td><Link to={`/clan/${c.id}`} className="nf-ui text-[15px] font-bold text-ink no-underline hover:text-accent">[{c.tag}] {c.name}</Link><div className="text-[11px] text-mute">Level {c.level}</div></td>
                     <td>{f ? <FactionEmblem path={f.emblem} color={f.color} size={20} framed={false} title={f.name} /> : "—"}</td>
-                    <td className="tabular-nums">{c.memberCount}</td>
+                    <td className="tabular-nums">{c.members}</td>
                     <td className="tabular-nums">{Number(c.score).toLocaleString()}</td>
-                    <td className="text-right">{canJoin && <NeonButton size="sm" loading={join.isPending && join.variables === c.id} onClick={() => join.mutate(c.id)}>Join</NeonButton>}</td>
+                    <td className="text-right">{canJoin && <NeonButton size="sm" loading={join.isPending && join.variables === c.id} onClick={() => join.mutate(c.id)} title="Requires an invitation from a clan officer">Accept invite</NeonButton>}</td>
                   </tr>
                 );
               })}
@@ -74,15 +74,21 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
   const [warTarget, setWarTarget] = useState<string>("");
   const [confirmLeave, setConfirmLeave] = useState(false);
   const f = faction(clan.factionId);
-  const myRole = clan.myRole ?? clan.members.find((m) => m.userId === me.id)?.role ?? null;
+  const myRole: ClanRole | null = mine ? (me.clan?.role ?? null) : null;
   const officer = myRole === "LEADER" || myRole === "OFFICER";
-  const inv = [qk.myClan, ["clans"], qk.me];
-  const setRole = useApiMutation((v: { userId: string; role: string }) => api.clans.setRole(v.userId, v.role), { invalidate: inv, success: "Role updated" });
-  const kick = useApiMutation((userId: string) => api.clans.kick(userId), { invalidate: inv, success: "Member removed" });
-  const deposit = useApiMutation(() => api.clans.deposit(amount, idempotencyKey("clanbank")), { invalidate: inv, success: "Credits deposited", onSuccess: () => setAmount("") });
+  const inv = [["clans"], qk.me];
+  const setRole = useApiMutation((v: { userId: string; role: string }) => api.clans.promote(clan.id, v.userId, v.role), { invalidate: inv, success: "Role updated" });
+  const kick = useApiMutation((userId: string) => api.clans.kick(clan.id, userId), { invalidate: inv, success: "Member removed" });
+  const deposit = useApiMutation(() => api.clans.deposit(clan.id, amount, idempotencyKey("clanbank")), { invalidate: inv, success: "Credits deposited", onSuccess: () => setAmount("") });
   const leave = useApiMutation(() => api.clans.leave(), { invalidate: inv, success: "You left the clan", onSuccess: () => setConfirmLeave(false) });
-  const declare = useApiMutation(() => api.clans.declareWar(warTarget), { invalidate: inv, success: "War declared" });
+  const declare = useApiMutation(() => api.clans.declareWar(clan.id, warTarget), { invalidate: inv, success: "War declared" });
+  const acceptWar = useApiMutation((warId: string) => api.clans.acceptWar(warId), { invalidate: inv, success: "War accepted" });
   const clans = useClans("");
+  const wars = useClanWars(clan.id);
+  const clanName = (id: string): string => {
+    const c = (clans.data ?? []).find((x) => x.id === id);
+    return c ? `[${c.tag}] ${c.name}` : id === clan.id ? `[${clan.tag}] ${clan.name}` : "Unknown clan";
+  };
   const members = [...clan.members].sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role));
 
   return (
@@ -96,7 +102,7 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
             <div className="nf-display text-[26px] font-bold tracking-[0.06em]">{clan.name}</div>
             <div className="flex flex-wrap items-center gap-2 text-[13px] text-dim">
               {f && <span className="flex items-center gap-1"><FactionEmblem path={f.emblem} color={f.color} size={16} framed={false} />{f.name}</span>}
-              <span>· Level {clan.level}</span><span>· {clan.memberCount} members</span><span>· Score {Number(clan.score).toLocaleString()}</span>
+              <span>· Level {clan.level}</span><span>· {clan.members.length} members</span><span>· Score {Number(clan.score).toLocaleString()}</span>
             </div>
             {clan.announcement && <p className="mb-0 mt-2 text-[13.5px] text-ink/90">{clan.announcement}</p>}
           </div>
@@ -104,7 +110,8 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
         </div>
       </HoloPanel>
 
-      <Tabs value={tab} onChange={setTab} items={[{ key: "members", label: "Members", count: clan.members.length }, { key: "treasury", label: "Treasury" }, { key: "war", label: "Wars", count: clan.wars?.length ?? 0 }, { key: "station", label: "Station & territory" }]} />
+      <Tabs value={tab} onChange={setTab} items={[{ key: "members", label: "Members", count: clan.members.length }, { key: "treasury", label: "Treasury" }, { key: "war", label: "Wars", count: wars.data?.length ?? 0 }, { key: "station", label: "Station & territory" }]} />
+      {clan.description && tab === "members" && <p className="m-0 text-[13.5px] text-dim">{clan.description}</p>}
 
       {tab === "members" && (
         <HoloPanel padded={false}>
@@ -114,7 +121,7 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
               <tbody>
                 {members.map((m) => (
                   <tr key={m.userId}>
-                    <td><Link to={`/profile/${m.userId}`} className="nf-ui text-[15px] font-bold text-ink no-underline hover:text-accent">{m.online && <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-good" />}{m.username}</Link></td>
+                    <td><Link to={`/profile/${m.userId}`} className="nf-ui text-[15px] font-bold text-ink no-underline hover:text-accent">{m.username}</Link></td>
                     <td>
                       {officer && mine && m.userId !== me.id && m.role !== "LEADER" ? (
                         <select className="nf-input h-8 min-h-0 w-auto py-0 text-[13px]" value={m.role} onChange={(e) => setRole.mutate({ userId: m.userId, role: e.target.value })}>
@@ -138,7 +145,7 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
         <div className="grid gap-4 md:grid-cols-2">
           <HoloPanel title="Clan bank">
             <div className="nf-label">Balance</div>
-            <CurrencyAmount amount={clan.bankCredits} currency="CREDITS" size={28} />
+            {clan.treasury !== null ? <CurrencyAmount amount={clan.treasury} currency="CREDITS" size={28} /> : <div className="text-[13px] text-mute">Visible to clan members only.</div>}
             <p className="mb-0 mt-3 text-[13px] text-dim">The bank funds station upgrades, war declarations and territory defense. Withdrawals are officer-only and audited.</p>
           </HoloPanel>
           {mine && (
@@ -166,35 +173,42 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
               </div>
             </HoloPanel>
           )}
-          {(clan.wars ?? []).length === 0 ? <EmptyState title="No wars on record" icon="sword" /> : (clan.wars ?? []).map((w) => (
-            <HoloPanel key={w.id}>
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="nf-display text-[18px] font-bold">[{clan.tag}] <span className="text-accent">{w.scoreUs}</span> : <span className="text-bad">{w.scoreThem}</span> [{w.opponent.tag}]</div>
-                <span className="nf-chip">{humanize(w.phase)}</span>
-                <span className="text-[13px] text-dim">{mapName(w.mapId)}</span>
-                <div className="flex-1" />
-                {new Date(w.endsAt).getTime() > Date.now() ? <Countdown to={new Date(w.startsAt).getTime() > Date.now() ? w.startsAt : w.endsAt} prefix={new Date(w.startsAt).getTime() > Date.now() ? "Starts " : "Ends "} /> : <span className="text-[13px] text-mute">{w.winnerId ? (w.winnerId === clan.id ? "Victory" : "Defeat") : "Draw"}</span>}
-              </div>
-            </HoloPanel>
-          ))}
+          {wars.isLoading ? <div className="nf-skeleton h-20" /> : (wars.data ?? []).length === 0 ? <EmptyState title="No wars on record" icon="sword" /> : (wars.data ?? []).map((w) => {
+            const weAreA = w.clanAId === clan.id;
+            const us = weAreA ? w.scoreA : w.scoreB;
+            const them = weAreA ? w.scoreB : w.scoreA;
+            const opp = weAreA ? w.clanBId : w.clanAId;
+            const pending = w.phase === "DECLARED" || w.phase === "PREPARATION";
+            return (
+              <HoloPanel key={w.id}>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="nf-display text-[18px] font-bold">[{clan.tag}] <span className="text-accent">{us}</span> : <span className="text-bad">{them}</span> <span className="text-dim">{clanName(opp)}</span></div>
+                  <span className="nf-chip">{humanize(w.phase)}</span>
+                  <span className="text-[13px] text-dim">{mapName(w.mapId)}</span>
+                  <div className="flex-1" />
+                  {pending && !weAreA && officer && mine && <NeonButton size="sm" variant="danger" loading={acceptWar.isPending} onClick={() => acceptWar.mutate(w.id)}>Accept war</NeonButton>}
+                  {new Date(w.endsAt).getTime() > Date.now() ? <Countdown to={new Date(w.startsAt).getTime() > Date.now() ? w.startsAt : w.endsAt} prefix={new Date(w.startsAt).getTime() > Date.now() ? "Starts " : "Ends "} /> : <span className="text-[13px] text-mute">{w.winnerId ? (w.winnerId === clan.id ? "Victory" : "Defeat") : "Draw"}</span>}
+                </div>
+              </HoloPanel>
+            );
+          })}
         </div>
       )}
 
       {tab === "station" && (
         <div className="grid gap-4 md:grid-cols-2">
-          {(clan.stations ?? []).length === 0 ? <EmptyState title="No clan station" body="Clan leaders can build a station in a controlled sector." icon="station" /> : (clan.stations ?? []).map((s) => (
+          {clan.stations.length === 0 ? <EmptyState title="No clan station" body="Clan leaders can build a station in a controlled sector." icon="station" /> : clan.stations.map((s) => (
             <HoloPanel key={s.id} title={`${mapName(s.mapId)} station · L${s.level}`}>
               <div className="grid gap-3">
                 <StatBar label="Shield" value={s.shield} max={s.maxShield} color={STAT_COLORS.shield} />
                 <StatBar label="Hull" value={s.hull} max={s.maxHull} color={STAT_COLORS.hull} />
-                {s.underAttackAt && <div className="nf-chip" style={{ color: "var(--nf-bad)" }}><Icon name="warning" size={12} />Under attack {relTime(s.underAttackAt)}</div>}
                 <div className="flex flex-wrap gap-1.5">{s.modules.map((mo) => <span key={mo.kind} className="nf-chip">{humanize(mo.kind)} L{mo.level}</span>)}</div>
               </div>
             </HoloPanel>
           ))}
           <HoloPanel title="Territory">
-            {(clan.territories ?? []).length === 0 ? <div className="text-[13px] text-mute">No sectors held.</div> : (
-              <ul className="m-0 grid list-none gap-1.5 p-0">{(clan.territories ?? []).map((t) => <li key={t.mapId} className="flex justify-between text-[14px]"><span>{mapName(t.mapId)}</span><span className="text-mute">{relTime(t.capturedAt)}</span></li>)}</ul>
+            {clan.territories.length === 0 ? <div className="text-[13px] text-mute">No sectors held.</div> : (
+              <ul className="m-0 grid list-none gap-1.5 p-0">{clan.territories.map((t) => <li key={t} className="flex items-center gap-2 text-[14px]"><Icon name="map" size={14} />{mapName(t)}</li>)}</ul>
             )}
           </HoloPanel>
         </div>
@@ -210,28 +224,22 @@ function ClanView({ clan, mine }: { clan: ClanDetailDto; mine: boolean }) {
 export default function ClanPage() {
   const me = useSession();
   const { clanId } = useParams();
-  const mine = useMyClan(!clanId && Boolean(me.clan));
-  const other = useQuery({ queryKey: ["clans", "detail", clanId], queryFn: () => api.clans.get(clanId!), enabled: Boolean(clanId) });
+  const id = clanId ?? me.clan?.id ?? null;
+  const clan = useClan(id);
 
-  if (clanId) {
+  if (id) {
+    const mine = id === me.clan?.id;
     return (
       <div>
-        <PageHeader eyebrow="Clan dossier" title="Clan" actions={<Link to="/clan" className="nf-btn nf-btn--sm nf-btn--ghost no-underline">Back</Link>} />
-        {other.error ? <ErrorState error={other.error} onRetry={() => void other.refetch()} /> : other.data ? <ClanView clan={other.data} mine={other.data.id === me.clan?.id} /> : <div className="nf-skeleton h-64" />}
-      </div>
-    );
-  }
-  if (me.clan) {
-    return (
-      <div>
-        <PageHeader eyebrow="Your clan" title={`[${me.clan.tag}] ${me.clan.name}`} />
-        {mine.error ? <ErrorState error={mine.error} onRetry={() => void mine.refetch()} /> : mine.data ? <ClanView clan={mine.data} mine /> : <div className="nf-skeleton h-64" />}
+        <PageHeader eyebrow={mine ? "Your clan" : "Clan dossier"} title={clan.data ? `[${clan.data.tag}] ${clan.data.name}` : "Clan"} actions={clanId ? <Link to="/clan" className="nf-btn nf-btn--sm nf-btn--ghost no-underline">Back</Link> : undefined} />
+        {clan.error ? <ErrorState error={clan.error} onRetry={() => void clan.refetch()} /> : clan.data ? <ClanView clan={clan.data} mine={mine} /> : <div className="nf-skeleton h-64" />}
+        {!mine && !me.clan && <div className="mt-5"><ClanBrowser canJoin /></div>}
       </div>
     );
   }
   return (
     <div>
-      <PageHeader eyebrow="Brotherhood" title="Clans" subtitle="Band together for clan wars, stations, shared treasury and territory." />
+      <PageHeader eyebrow="Brotherhood" title="Clans" subtitle="Band together for clan wars, stations, a shared treasury and territory. Joining requires an invitation from a clan officer." />
       <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
         <CreateClan />
         <ClanBrowser canJoin />

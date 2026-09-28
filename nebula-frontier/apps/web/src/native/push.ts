@@ -1,8 +1,8 @@
 /**
  * Push notifications (FCM on Android, APNs on iOS) via @capacitor/push-notifications.
- * The device token is registered with the API: POST /api/notifications/devices.
+ * The device token is registered with the API: POST /api/notifications/push-token.
  */
-import { http } from "../lib/http.js";
+import { api } from "../lib/api.js";
 import { isNative, isPluginAvailable, platform } from "./platform.js";
 import { getDeviceId } from "./secureStorage.js";
 import { deepLinkToRoute } from "./deepLinks.js";
@@ -21,7 +21,7 @@ export async function registerPush(navigate: (route: string) => void): Promise<"
     await PushNotifications.removeAllListeners();
     await PushNotifications.addListener("registration", (token) => {
       void getDeviceId().then((deviceId) =>
-        http.post("/api/notifications/devices", { token: token.value, platform, deviceId }).catch((e: unknown) => {
+        api.notifications.registerPushToken({ token: token.value, platform: platform === "web" ? "web" : platform, deviceId }).catch((e: unknown) => {
           console.warn("push token registration failed", e);
         }),
       );

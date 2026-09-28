@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ITEMS_BY_ID } from "@nebula/config";
 import { CurrencyAmount, HoloPanel, Icon, Modal, NeonButton, RarityBadge, StatBar, Tabs } from "@nebula/game-ui";
@@ -136,7 +137,7 @@ export default function InventoryPage() {
         {() => visible.length === 0 ? (
           <EmptyState title="No items match" body={search ? "Try a different search." : "Loot, craft or buy gear to fill your hold."} icon="inventory" />
         ) : (
-          <div className="nf-grid-cards" style={{ "--card-min": "170px" } as React.CSSProperties}>
+          <div className="nf-grid-cards" style={{ "--card-min": "170px" } as CSSProperties}>
             {visible.map((i) => <ItemTile key={i.id} item={i} onClick={() => setDetail(i)} />)}
           </div>
         )}

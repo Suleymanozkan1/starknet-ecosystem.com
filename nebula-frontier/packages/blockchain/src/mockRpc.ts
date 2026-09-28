@@ -170,8 +170,14 @@ export function createMockSolanaRpc(init: { genesisHash?: string; balances?: Rec
         return ok(state.slot);
       case "getBlockHeight":
         return ok(state.blockHeight);
-      case "getLatestBlockhash":
-        return ok({ context: { slot: state.slot }, value: { blockhash: GENESIS_HASHES.devnet, lastValidBlockHeight: state.blockHeight + 150 } });
+      case "getLatestBlockhash": {
+        // Unique blockhash per call so identical transfers get distinct signatures (like a real chain).
+        state.slot += 1;
+        const bh = new Uint8Array(32);
+        new DataView(bh.buffer).setUint32(0, state.slot);
+        bh[31] = 1;
+        return ok({ context: { slot: state.slot }, value: { blockhash: b58.decode(bh), lastValidBlockHeight: state.blockHeight + 150 } });
+      }
       case "getBalance":
         return ok({ context: { slot: state.slot }, value: state.balances.get(String(params[0])) ?? 0n });
       case "sendTransaction": {

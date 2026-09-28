@@ -111,7 +111,7 @@ export function npcVisual(npc: Pick<NpcDef, "id" | "visual" | "kind">): ShipVisu
   const nozzleCount = L > 12 ? 5 : L > 5 ? 3 : 2;
   const nozzles: [number, number, number][] = [];
   for (let i = 0; i < nozzleCount; i++) {
-    const t = nozzleCount === 1 ? 0 : i / (nozzleCount - 1) - 0.5;
+    const t = i / (nozzleCount - 1) - 0.5;
     nozzles.push([t * L * 0.3, 0, -L / 2]);
   }
   const hpCount = Math.min(8, 2 + Math.floor(L / 4));
