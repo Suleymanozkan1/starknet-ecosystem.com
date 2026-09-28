@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-28T20:42:09.524Z",
+  "generatedAt": "2026-09-28T20:53:16.816Z",
   "total": 249,
-  "implemented": 227,
-  "partial": 20,
-  "notImplemented": 1,
+  "implemented": 235,
+  "partial": 13,
+  "notImplemented": 0,
   "blocked": 1,
-  "completionPercent": 91.2,
+  "completionPercent": 94.4,
   "byCategory": {
     "PROJECT STRUCTURE": {
       "IMPLEMENTED": 7,
@@ -146,20 +146,20 @@
       "BLOCKED": 0
     },
     "PHASER": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "MINIMAP / RADAR": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "AUDIO": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -200,8 +200,8 @@
       "BLOCKED": 0
     },
     "MULTIPLAYER": {
-      "IMPLEMENTED": 1,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 2,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -392,8 +392,8 @@
       "BLOCKED": 0
     },
     "CLAN STATION": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -500,8 +500,8 @@
       "BLOCKED": 0
     },
     "PREMIUM": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -782,8 +782,8 @@
       "BLOCKED": 0
     },
     "ACCOUNT SECURITY": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -962,9 +962,9 @@
       "BLOCKED": 0
     },
     "CODE REVIEW": {
-      "IMPLEMENTED": 0,
+      "IMPLEMENTED": 1,
       "PARTIAL": 0,
-      "NOT_IMPLEMENTED": 1,
+      "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     }
   },
@@ -1349,28 +1349,22 @@
       "id": "PHASER-01",
       "category": "PHASER",
       "requirement": "Phaser used as real 2D layer (radar/minimap/combat text)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MINIMAP-01",
       "category": "MINIMAP / RADAR",
       "requirement": "Radar shows players, enemies, squad, clan, resources, NPC, portals, objectives, boss, events; stealth/scan",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "AUDIO-01",
       "category": "AUDIO",
       "requirement": "Engine/laser/missile/explosion/shield/UI/warp/NPC alert/boss music/ambient/mining with positional audio",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "INPUT-01",
@@ -1446,10 +1440,8 @@
       "id": "MP-07",
       "category": "MULTIPLAYER",
       "requirement": "Reconnection & player/room cleanup",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MP-08",
@@ -1692,10 +1684,8 @@
       "id": "CLAN-03",
       "category": "CLAN STATION",
       "requirement": "Clan battle station with modules, attackable",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "SQUAD-01",
@@ -1827,10 +1817,8 @@
       "id": "PREM-01",
       "category": "PREMIUM",
       "requirement": "FREE/VIP/ELITE premium (cosmetic/convenience, not investment)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MKT-01",
@@ -2181,10 +2169,8 @@
       "id": "SEC-07",
       "category": "ACCOUNT SECURITY",
       "requirement": "New wallet/wallet change/new device/suspicious login checks",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "AC-01",
@@ -2756,10 +2742,8 @@
       "id": "CR-01",
       "category": "CODE REVIEW",
       "requirement": "CodeRabbit continuous review with fixes",
-      "status": "NOT_IMPLEMENTED",
-      "why": [
-        "no implementation evidence found"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     }
   ]
 }

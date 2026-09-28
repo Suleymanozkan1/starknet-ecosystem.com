@@ -1,12 +1,9 @@
 import Phaser from "phaser";
 import type { MapDef } from "@nebula/shared";
 import type { MinimapEntity, MinimapRelation } from "../types.js";
+import { RELATION_COLORS, projectToRadar, radarLayout, radarMarker, zoneColor, type RadarLayout } from "./radar.js";
 
-export const RELATION_COLORS: Readonly<Record<MinimapRelation, number>> = {
-  self: 0xffffff, squad: 0x3ef08a, clan: 0x5fd4ff, faction: 0x6ea8ff, hostile: 0xff4d4d, neutral: 0xc9c9c9, npc: 0xff8a3d,
-  boss: 0xff2d7a, resource: 0xffd166, loot: 0xb388ff, portal: 0x6ee7ff, station: 0x9fe8ff, objective: 0xfff275, event: 0xff9f43,
-  marker: 0xffffff,
-};
+export { RELATION_COLORS } from "./radar.js";
 
 export interface Nameplate {
   id: string;
@@ -84,6 +81,8 @@ class OverlayScene extends Phaser.Scene {
   model!: OverlayModel;
   project: Projector | null = null;
   private readonly scr = { x: 0, y: 0 };
+  private readonly radarPt = { x: 0, y: 0 };
+  private readonly layout: RadarLayout = { scale: 0, x0: 0, y0: 0, w: 0, h: 0 };
   private radarG!: Phaser.GameObjects.Graphics;
   private hudG!: Phaser.GameObjects.Graphics;
   private plateTexts: Phaser.GameObjects.Text[] = [];
@@ -210,11 +209,7 @@ class OverlayScene extends Phaser.Scene {
     g.clear();
     const map = m.map;
     if (!map) return;
-    const W = this.scale.width;
-    const maxW = m.compact ? 130 : 210;
-    const scale = maxW / Math.max(map.width, map.height * 1.25);
-    const w = map.width * scale, h = map.height * scale;
-    const x0 = W - w - 14, y0 = 14;
+    const { scale, x0, y0, w, h } = radarLayout(map, this.scale.width, m.compact, this.layout);
     g.fillStyle(0x050b18, 0.72).fillRoundedRect(x0 - 6, y0 - 6, w + 12, h + 12, 8);
     g.lineStyle(1, 0x2f5a8a, 0.9).strokeRoundedRect(x0 - 6, y0 - 6, w + 12, h + 12, 8);
     // grid
@@ -225,8 +220,7 @@ class OverlayScene extends Phaser.Scene {
     }
     // zones
     for (const z of map.zones) {
-      const c = z.type === "SAFE" ? 0x38d98a : z.type === "PVP" || z.type === "HIGH_RISK" ? 0xff4d4d : z.type === "MINING" ? 0xffd166 : z.type === "BOSS" ? 0xc77dff : 0x5a7aa5;
-      g.lineStyle(1, c, 0.45).strokeCircle(x0 + z.x * scale, y0 + z.y * scale, z.radius * scale);
+      g.lineStyle(1, zoneColor(z.type), 0.45).strokeCircle(x0 + z.x * scale, y0 + z.y * scale, z.radius * scale);
     }
     // stations & portals
     for (const s of map.stations) {
@@ -239,18 +233,18 @@ class OverlayScene extends Phaser.Scene {
     // camera footprint
     g.lineStyle(1, 0xffffff, 0.25).strokeRect(x0 + m.viewX * scale, y0 + m.viewY * scale, m.viewW * scale, m.viewH * scale);
     // entities
+    const pt = this.radarPt;
     for (let i = 0; i < m.radarCount; i++) {
       const e = m.radar[i];
       if (!e) continue;
-      const ex = x0 + e.x * scale, ey = y0 + e.y * scale;
-      if (ex < x0 - 2 || ey < y0 - 2 || ex > x0 + w + 2 || ey > y0 + h + 2) continue;
-      const c = RELATION_COLORS[e.rel];
-      switch (e.rel) {
-        case "boss": g.fillStyle(c, 1).fillCircle(ex, ey, 4.5); g.lineStyle(1, 0xffffff, 0.8).strokeCircle(ex, ey, 6.5); break;
-        case "resource": g.fillStyle(c, 0.7).fillRect(ex - 1, ey - 1, 2, 2); break;
-        case "loot": g.fillStyle(c, 0.9).fillRect(ex - 1.5, ey - 1.5, 3, 3); break;
-        case "objective": case "event": case "marker": g.lineStyle(1.5, c, 1).strokeCircle(ex, ey, 4); break;
-        default: g.fillStyle(c, 1).fillCircle(ex, ey, e.rel === "npc" ? 1.8 : 2.3);
+      if (!projectToRadar(this.layout, e.x, e.y, pt)) continue;
+      const ex = pt.x, ey = pt.y;
+      const mk = radarMarker(e.rel);
+      switch (mk.shape) {
+        case "boss": g.fillStyle(mk.color, mk.alpha).fillCircle(ex, ey, mk.size); g.lineStyle(1, 0xffffff, 0.8).strokeCircle(ex, ey, mk.size + 2); break;
+        case "square": g.fillStyle(mk.color, mk.alpha).fillRect(ex - mk.size, ey - mk.size, mk.size * 2, mk.size * 2); break;
+        case "ring": g.lineStyle(1.5, mk.color, mk.alpha).strokeCircle(ex, ey, mk.size); break;
+        case "dot": g.fillStyle(mk.color, mk.alpha).fillCircle(ex, ey, mk.size); break;
       }
     }
     // self arrow
