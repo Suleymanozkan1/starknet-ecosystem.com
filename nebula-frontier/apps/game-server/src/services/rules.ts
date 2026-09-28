@@ -52,6 +52,11 @@ export interface GameRules {
   /** Raid anti-exploit: min contributors = ceil(size × fraction); daily raid entries per pilot. */
   raidMinPilotsFraction: number;
   raidDailyEntries: number;
+  /** Share of the owner's kill XP granted to the active companion. */
+  petXpShare: number;
+  /** ENEMY_SCAN reveal radius (× pet level scale). */
+  petScanRadius: number;
+  petFollowDistance: number;
 }
 
 export const DEFAULT_RULES: GameRules = {
@@ -87,6 +92,9 @@ export const DEFAULT_RULES: GameRules = {
   clanWarWinScore: 100,
   raidMinPilotsFraction: 0.5,
   raidDailyEntries: 3,
+  petXpShare: 0.1,
+  petScanRadius: 60,
+  petFollowDistance: 6,
 };
 
 const num = z.number().refine((n) => Number.isFinite(n), "must be finite");
@@ -103,7 +111,7 @@ export const GameRulesOverrideSchema = z.object({
   packetRatePerSec: pos, packetBurst: int(1), aoiUpdateEveryTicks: int(1), unarmedMiningFactor: nonNeg, miningRange: pos,
   asteroidAmount: int(1), asteroidRespawnMs: nonNeg, arenaMatchMs: pos, arenaMinPlayers: int(2), arenaCountdownMs: nonNeg,
   arenaScoreToWin: int(1), gateWaveDelayMs: nonNeg, reconnectSeconds: nonNeg, clanWarKillScore: nonNeg, clanWarWinScore: nonNeg,
-  raidMinPilotsFraction: frac, raidDailyEntries: int(0),
+  raidMinPilotsFraction: frac, raidDailyEntries: int(0), petXpShare: frac, petScanRadius: nonNeg, petFollowDistance: nonNeg,
 } satisfies Record<keyof GameRules, z.ZodType>).partial().strict();
 
 export interface LoadedRules {

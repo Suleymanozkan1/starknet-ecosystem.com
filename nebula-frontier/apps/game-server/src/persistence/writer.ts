@@ -14,8 +14,8 @@
 import { ACHIEVEMENTS, ITEMS_BY_ID, PROGRESSION } from "@nebula/config";
 import { grantCryptoReward } from "@nebula/economy";
 import { post, system, userWallet, getBalance, withSerializableTx, type Db, type Tx } from "@nebula/database";
-import { contributionTier, levelForXp, newlyUnlockedAchievements, rankFor } from "@nebula/game-core";
-import type { AchievementDef, Currency, EventDef, ResourceId, RewardBundle, RewardSource } from "@nebula/shared";
+import { clampKarma, contributionTier, factionWarPoints, levelForXp, newlyUnlockedAchievements, petLevelForXp, rankFor, reputationFor } from "@nebula/game-core";
+import type { AchievementDef, Currency, EventDef, PetDef, ResourceId, RewardBundle, RewardSource } from "@nebula/shared";
 import { LedgerAccountType } from "@nebula/shared";
 import { activeSeasonId, type LeaderboardId } from "./catalog.js";
 import type { QuestRuntime } from "./player.js";
@@ -43,6 +43,10 @@ export class PendingDelta {
   bossDamage = 0;
   resourcesMined = 0;
   playtimeSec = 0;
+  /** Karma change (may be fractional in memory; rounded when persisted). */
+  karma = 0;
+  /** XP earned by the active companion. */
+  petXp = 0;
   resources = new Map<string, number>();
   issuance: Issuance[] = [];
   ammo = new Map<string, number>();
@@ -54,7 +58,7 @@ export class PendingDelta {
   isEmpty(): boolean {
     return this.xp === 0 && this.honor === 0 && this.seasonScore === 0 && this.npcKills === 0 && this.playerKills === 0 && this.deaths === 0
       && this.bossKills === 0 && this.gatesCompleted === 0 && this.pvpWins === 0 && this.pvpLosses === 0 && this.damageDealt === 0
-      && this.bossDamage === 0 && this.resourcesMined === 0 && this.playtimeSec === 0 && this.resources.size === 0 && this.issuance.length === 0
+      && this.bossDamage === 0 && this.resourcesMined === 0 && this.playtimeSec === 0 && Math.round(this.karma) === 0 && this.petXp === 0 && this.resources.size === 0 && this.issuance.length === 0
       && this.ammo.size === 0 && this.boards.size === 0 && this.mapsVisited.size === 0 && this.eventContrib.size === 0 && this.position === null;
   }
 
@@ -73,7 +77,7 @@ export class PendingDelta {
 
   /** Merge a failed flush back so nothing is lost (idempotent parts are safe to retry). */
   mergeFrom(o: PendingDelta): void {
-    const numKeys = ["xp", "honor", "seasonScore", "npcKills", "playerKills", "deaths", "bossKills", "gatesCompleted", "pvpWins", "pvpLosses", "damageDealt", "bossDamage", "resourcesMined", "playtimeSec"] as const;
+    const numKeys = ["xp", "honor", "seasonScore", "npcKills", "playerKills", "deaths", "bossKills", "gatesCompleted", "pvpWins", "pvpLosses", "damageDealt", "bossDamage", "resourcesMined", "playtimeSec", "karma", "petXp"] as const;
     for (const k of numKeys) this[k] += o[k];
     for (const [k, v] of o.resources) this.addResource(k, v);
     this.issuance.unshift(...o.issuance);
@@ -93,7 +97,19 @@ export interface EventRewardResult {
   cryptoStatus: string | null;
 }
 
+/** Context needed to apply reputation, companion and faction-war side effects in the same transaction. */
+export interface FlushContext {
+  factionId: string | null;
+  pet: { rowId: string; def: PetDef } | null;
+}
+
 export interface FlushResult {
+  karma: number;
+  reputation: string;
+  hasBounty: boolean;
+  /** A system bounty was placed in this flush (pilot just turned OUTLAW). */
+  systemBountyPlaced: boolean;
+  pet: { level: number; xp: number } | null;
   xp: number;
   level: number;
   honor: number;
@@ -127,7 +143,7 @@ export class Persistence {
   }
 
   /** Flush one player's pending delta atomically. */
-  async flush(userId: string, d: PendingDelta, quests: Iterable<QuestRuntime>, unlocked: Set<string>): Promise<FlushResult> {
+  async flush(userId: string, d: PendingDelta, quests: Iterable<QuestRuntime>, unlocked: Set<string>, ctx: FlushContext = { factionId: null, pet: null }): Promise<FlushResult> {
     const dirtyQuests = [...quests].filter((q) => q.dirty);
     const res = await this.db.$transaction(async (tx) => {
       const user = await tx.user.update({
@@ -240,7 +256,67 @@ export class Persistence {
       if (fresh.length) {
         await tx.userAchievement.createMany({ data: fresh.map((a) => ({ userId, achievementId: a.id })), skipDuplicates: true });
       }
-      return { xp, level, honor, rank, newAchievements: fresh };
+      // ---- Reputation (karma is clamped; status recomputed every flush since bounties change externally)
+      const repCfg = PROGRESSION.reputation;
+      const karmaDelta = Math.round(d.karma);
+      const before = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { karma: true, reputation: true } });
+      let karma = before.karma + karmaDelta;
+      if (repCfg) karma = clampKarma(karma, repCfg);
+      const now = new Date();
+      let hasBounty = (await tx.bounty.count({ where: { targetId: userId, status: "ACTIVE", expiresAt: { gt: now } } })) > 0;
+      const reputation = repCfg ? reputationFor(karma, hasBounty, repCfg) : before.reputation;
+      let systemBountyPlaced = false;
+      if (repCfg && reputation === "OUTLAW" && before.reputation !== "OUTLAW" && repCfg.outlawSystemBountyCredits > 0) {
+        // System-funded bounty on a new outlaw: GAME_ISSUANCE → ESCROW (claimed by the killer via claimBounties).
+        const bucket = now.toISOString().slice(0, 13);
+        const amount = BigInt(Math.floor(repCfg.outlawSystemBountyCredits));
+        const r = await post(tx, {
+          from: system(LedgerAccountType.GAME_ISSUANCE, "CREDITS"), to: system(LedgerAccountType.ESCROW, "CREDITS"), amount,
+          type: "ESCROW", reference: `outlaw:${userId}`, idempotencyKey: `system-bounty:${userId}:${bucket}`, userId, metadata: { kind: "SYSTEM_BOUNTY" },
+        });
+        if (!r.duplicate) {
+          await tx.bounty.create({ data: { targetId: userId, creatorId: null, amount, expiresAt: new Date(now.getTime() + repCfg.systemBountyHours * 3_600_000) } });
+          systemBountyPlaced = true;
+          hasBounty = true;
+        }
+      }
+      if (karma !== before.karma || reputation !== before.reputation) await tx.user.update({ where: { id: userId }, data: { karma, reputation } });
+
+      // ---- Companion XP / level
+      let pet: FlushResult["pet"] = null;
+      if (ctx.pet) {
+        const row = d.petXp > 0
+          ? await tx.pet.update({ where: { id: ctx.pet.rowId }, data: { xp: { increment: Math.floor(d.petXp) } }, select: { xp: true, level: true } })
+          : await tx.pet.findUnique({ where: { id: ctx.pet.rowId }, select: { xp: true, level: true } });
+        if (row) {
+          const lvl = petLevelForXp(row.xp, ctx.pet.def);
+          if (lvl !== row.level) await tx.pet.update({ where: { id: ctx.pet.rowId }, data: { level: lvl } });
+          pet = { level: lvl, xp: row.xp };
+        }
+      }
+
+      // ---- Faction war (same transaction as the player counters → each event counted exactly once)
+      const war = PROGRESSION.factionWar;
+      if (ctx.factionId && war && (d.npcKills || d.playerKills || d.resourcesMined || d.bossKills)) {
+        const delta = { npcKills: d.npcKills, pvpKills: d.playerKills, resources: Math.floor(d.resourcesMined), bossKills: d.bossKills };
+        const points = BigInt(factionWarPoints(delta, war));
+        const inc = {
+          score: { increment: points }, kills: { increment: BigInt(delta.npcKills + delta.pvpKills) },
+          pvpScore: { increment: BigInt(delta.pvpKills * war.pvpKillPoints) }, resources: { increment: BigInt(delta.resources) },
+          bossKills: { increment: delta.bossKills },
+        };
+        await tx.faction.update({ where: { id: ctx.factionId }, data: inc });
+        const seasonId = activeSeasonId();
+        if (seasonId) {
+          await tx.factionSeasonScore.upsert({
+            where: { factionId_seasonId: { factionId: ctx.factionId, seasonId } },
+            create: { factionId: ctx.factionId, seasonId, score: points, kills: BigInt(delta.npcKills + delta.pvpKills), pvpScore: BigInt(delta.pvpKills * war.pvpKillPoints), resources: BigInt(delta.resources), bossKills: delta.bossKills },
+            update: inc,
+          });
+        }
+      }
+
+      return { xp, level, honor, rank, newAchievements: fresh, karma, reputation, hasBounty, systemBountyPlaced, pet };
     }, { timeout: 20_000, maxWait: 10_000 });
     for (const q of dirtyQuests) q.dirty = false;
     for (const a of res.newAchievements) unlocked.add(a.id);

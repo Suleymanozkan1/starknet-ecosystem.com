@@ -303,6 +303,7 @@ export function validateGameData(data: GameDataSet = GAME_DATA): string[] {
     for (const w of f.starterLoadout.weapons) if (!weaponIds.has(w)) err(`${ctx}: unknown starter weapon "${w}"`);
     for (const m of f.starterLoadout.modules) if (!moduleIds.has(m)) err(`${ctx}: unknown starter module "${m}"`);
     for (const d of f.starterLoadout.drones) if (!droneIds.has(d)) err(`${ctx}: unknown starter drone "${d}"`);
+    if (f.starterLoadout.pet !== undefined && !petIds.has(f.starterLoadout.pet)) err(`${ctx}: unknown starter pet "${f.starterLoadout.pet}"`);
     for (const a of f.starterLoadout.ammo ?? []) {
       checkItem(`${ctx} starter ammo`, a.itemId);
       if (!Number.isInteger(a.quantity) || a.quantity <= 0) err(`${ctx}: starter ammo "${a.itemId}" quantity must be a positive integer`);

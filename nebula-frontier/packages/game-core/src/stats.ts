@@ -49,6 +49,8 @@ export interface LoadoutInput {
   modules: Equipped<ModuleDef>[];
   drones: Equipped<DroneDef>[];
   factionBonus?: Partial<Record<StatKey, number>>;
+  /** Companion passive buff (percent points), see `petBuff`. */
+  petBuff?: Partial<Record<StatKey, number>>;
   progression: ProgressionConfig;
   /** Apply PvP stat normalization caps. */
   pvpNormalized?: boolean;
@@ -168,6 +170,7 @@ export function computeStats(input: LoadoutInput, tuning: SimTuning = DEFAULT_TU
   // 2) percent sources
   const percentSources: Partial<Record<StatKey, number>>[] = [];
   if (input.factionBonus) percentSources.push(input.factionBonus);
+  if (input.petBuff) percentSources.push(input.petBuff);
   for (const d of drones) {
     const lvl = Math.max(1, Math.min(d.def.maxLevel, d.level ?? 1));
     const scaled: Partial<Record<StatKey, number>> = {};

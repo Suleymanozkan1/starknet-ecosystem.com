@@ -5,12 +5,13 @@
  * Provisions the faction starter kit idempotently when a user has no ship yet.
  */
 import {
-  DRONES_BY_ID, FACTIONS, FACTIONS_BY_ID, ITEM_AFFIXES, ITEMS_BY_ID, MODULES_BY_ID, PROGRESSION, QUESTS_BY_ID, SHIPS_BY_ID, WEAPONS_BY_ID,
+  DRONES_BY_ID, FACTIONS, FACTIONS_BY_ID, PETS_BY_ID, ITEM_AFFIXES, ITEMS_BY_ID, MODULES_BY_ID, PROGRESSION, QUESTS_BY_ID, SHIPS_BY_ID, WEAPONS_BY_ID,
   itemIdForDef,
 } from "@nebula/config";
 import type { Db } from "@nebula/database";
-import { STARTER_AMMO, clampAffixes, levelForXp, starterAmmoOriginRef, type Equipped, type LoadoutInput } from "@nebula/game-core";
-import type { DroneDef, ModuleDef, QuestDef, WeaponDef } from "@nebula/shared";
+import { STARTER_AMMO, clampAffixes, petBuff, petLevelForXp, starterPetFor, levelForXp, starterAmmoOriginRef, type Equipped, type LoadoutInput } from "@nebula/game-core";
+import type { DroneDef, FactionDef, ModuleDef, PetDef, QuestDef, WeaponDef } from "@nebula/shared";
+import type { DbOrTx } from "@nebula/database";
 
 export interface QuestRuntime {
   userQuestId: string;
@@ -49,6 +50,11 @@ export interface PlayerProfile {
   achievements: Set<string>;
   stats: { npcKills: number; playerKills: number; bossKills: number; gatesCompleted: number; pvpWins: number; resourcesMined: number; mapsVisited: string[]; itemsCrafted: number };
   lastMapId: string | null;
+  karma: number;
+  reputation: string;
+  hasBounty: boolean;
+  /** Active companion (Pet row) if any. */
+  pet: { rowId: string; def: PetDef; name: string; level: number; xp: number } | null;
   lastX: number | null;
   lastY: number | null;
 }
@@ -140,6 +146,7 @@ export async function ensureStarterKit(db: Db, userId: string, preferredMap: str
     const loadout = await tx.shipLoadout.create({ data: { shipInstanceId: ship.id, name: "Starter", preset: "CUSTOM", config: cfg as object } });
     await tx.shipInstance.update({ where: { id: ship.id }, data: { activeLoadoutId: loadout.id } });
     await tx.user.update({ where: { id: userId }, data: { activeShipId: ship.id } });
+    await grantStarterPet(tx, userId, faction);
   });
 }
 
@@ -212,6 +219,10 @@ export async function loadPlayer(db: Db, userId: string, mapId: string): Promise
   }
 
   const quests = await loadActiveQuests(db, userId);
+  const petRow = await db.pet.findFirst({ where: { userId, active: true }, orderBy: { createdAt: "asc" } });
+  const petDef = petRow ? PETS_BY_ID.get(petRow.petId) : undefined;
+  const pet = petRow && petDef ? { rowId: petRow.id, def: petDef, name: petRow.name, level: petLevelForXp(petRow.xp, petDef), xp: petRow.xp } : null;
+  const hasBounty = (await db.bounty.count({ where: { targetId: userId, status: "ACTIVE", expiresAt: { gt: new Date() } } })) > 0;
   const ach = await db.userAchievement.findMany({ where: { userId }, select: { achievementId: true } });
   const factionId = user.playerFaction?.factionId ?? null;
   const faction = factionId ? FACTIONS_BY_ID.get(factionId) : undefined;
@@ -248,6 +259,7 @@ export async function loadPlayer(db: Db, userId: string, mapId: string): Promise
       modules,
       drones,
       factionBonus: faction?.bonus,
+      petBuff: pet ? petBuff(pet.def, pet.level) : undefined,
       progression: PROGRESSION,
     },
     ammo,
@@ -264,6 +276,10 @@ export async function loadPlayer(db: Db, userId: string, mapId: string): Promise
       itemsCrafted: user.stats?.itemsCrafted ?? 0,
     },
     lastMapId: user.lastMapId,
+    karma: user.karma,
+    reputation: user.reputation,
+    hasBounty,
+    pet,
     lastX: user.lastX,
     lastY: user.lastY,
   };
@@ -278,4 +294,15 @@ export async function loadActiveQuests(db: Db, userId: string): Promise<Map<stri
     out.set(r.id, { userQuestId: r.id, def, progress: [...r.progress], status: "ACTIVE", dirty: false });
   }
   return out;
+}
+
+/**
+ * Grant the faction's starter companion (factions.json `starterLoadout.pet`).
+ * Idempotent: unique (userId, petId). Shared semantics with the API's /api/me/faction.
+ */
+export async function grantStarterPet(tx: DbOrTx, userId: string, faction: Pick<FactionDef, "starterLoadout">): Promise<void> {
+  const petId = starterPetFor(faction);
+  const def = petId ? PETS_BY_ID.get(petId) : undefined;
+  if (!petId || !def) return;
+  await tx.pet.createMany({ data: [{ userId, petId, name: def.name, active: true }], skipDuplicates: true });
 }

@@ -26,8 +26,9 @@ export default defineConfig({
     launchOptions: { ...(executablePath ? { executablePath } : {}), args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] },
   },
   projects: [
-    { name: "desktop", testMatch: /(desktop|play)\.spec\.ts$/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
-    { name: "mobile", testMatch: /(mobile|play)\.spec\.ts$/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, userAgent: devices["Pixel 7"].userAgent } },
+    { name: "desktop", testMatch: /(desktop|play|pages)\.spec\.ts$/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
+    { name: "admin", testMatch: /admin\.spec\.ts$/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, baseURL: process.env.E2E_ADMIN_URL ?? "http://localhost:5174" } },
+    { name: "mobile", testMatch: /(mobile|play|pages)\.spec\.ts$/, use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, userAgent: devices["Pixel 7"].userAgent } },
   ],
   webServer: process.env.E2E_BASE_URL
     ? undefined

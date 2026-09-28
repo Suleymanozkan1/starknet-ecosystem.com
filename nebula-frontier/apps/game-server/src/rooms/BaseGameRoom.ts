@@ -22,6 +22,7 @@ import {
   isDamageImpossible, isPvpAllowedAt, isSafeAt, isWeakPointHit, maxShotDamage, mineStep, nearestPortal, npcStats,
   pickAsteroidResource, pruneBuffs, regenerate, resetBoss, resolveAreaDamage, resolveHit, resourceHardness, rollAffixes, rollLoot,
   spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable,
+  clampKarma, decayKarma, hasPetAbility, isOutlaw, petBuff, petLevelForXp, petScale, petXpToNext, reputationFor,
   type AbilitySlotDef, type EffectiveWeapon, type GameplayEvent, type HitResult, type LootDrop, type Rng, type SimTuning,
 } from "@nebula/game-core";
 import {
@@ -38,7 +39,7 @@ import { TicketError } from "../services/tickets.js";
 import { JoinError, loadActiveQuests, loadPlayer } from "../persistence/player.js";
 import { DuplicateLootError, PendingDelta } from "../persistence/writer.js";
 import { activeSeasonId, bossEventId } from "../persistence/catalog.js";
-import type { ActorBase, AsteroidActor, LootActor, NpcActor, ParsedInput, PlayerActor, ShipActor } from "./actors.js";
+import type { ActorBase, AsteroidActor, LootActor, NpcActor, ParsedInput, PetActor, PlayerActor, ShipActor } from "./actors.js";
 
 export interface AuthData {
   userId: string;
@@ -69,7 +70,7 @@ export interface RiftPortal {
   targetMap: string;
   entity: Entity;
 }
-type GridItem = { id: string; x: number; y: number; ref: PlayerActor | NpcActor | LootActor | AsteroidActor };
+type GridItem = { id: string; x: number; y: number; ref: PlayerActor | NpcActor | LootActor | AsteroidActor | PetActor };
 
 const ROOM_FOR_MAP_TYPE: Record<MapDef["roomType"], RoomName> = {
   sector: RoomName.SECTOR, pvp: RoomName.PVP, boss: RoomName.BOSS, gate: RoomName.GATE, raid: RoomName.RAID,
@@ -188,11 +189,36 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   protected shareRewards(npc: NpcActor): boolean {
     return npc.def.kind === "BOSS";
   }
-  /** Player-vs-player hostility. Default (open world): different faction + PvP allowed at both positions. */
+  /**
+   * Player-vs-player hostility ("enemies": auto-targeting, area damage, war kills).
+   * Open world: different faction + PvP allowed at both positions, or the target is an OUTLAW.
+   */
   protected playersHostile(a: PlayerActor, b: PlayerActor): boolean {
     if (a.userId === b.userId) return false;
     if (a.profile.clanId && a.profile.clanId === b.profile.clanId) return false;
+    if (this.outlawTargetable(b)) return true;
+    return this.warHostile(a, b);
+  }
+  /** Faction war: different factions, both inside PvP-enabled space. */
+  protected warHostile(a: PlayerActor, b: PlayerActor): boolean {
     if (!a.profile.factionId || a.profile.factionId === b.profile.factionId) return false;
+    return isPvpAllowedAt(this.map, a.x, a.y) && isPvpAllowedAt(this.map, b.x, b.y);
+  }
+  /** Outlaws are attackable by anyone; per rule they also lose safe-zone protection. */
+  protected outlawTargetable(b: PlayerActor): boolean {
+    const cfg = PROGRESSION.reputation;
+    if (!cfg || !isOutlaw(b.karma, cfg)) return false;
+    return cfg.outlawLosesSafeZone || !isSafeAt(this.map, b.x, b.y);
+  }
+  /**
+   * Whether `a` may deliberately attack `b` (explicit target). Superset of hostility: in PvP
+   * space a pilot may also attack a same-faction, non-clan pilot — an unprovoked attack that
+   * costs karma (see onPlayerHitPlayer). Team rooms use strict team hostility.
+   */
+  protected playersAttackable(a: PlayerActor, b: PlayerActor): boolean {
+    if (this.isTeamRoom()) return this.playersHostile(a, b);
+    if (this.playersHostile(a, b)) return true;
+    if (a.userId === b.userId || (a.profile.clanId && a.profile.clanId === b.profile.clanId)) return false;
     return isPvpAllowedAt(this.map, a.x, a.y) && isPvpAllowedAt(this.map, b.x, b.y);
   }
   /** Match id for PvP reward refs (match rooms override). */
@@ -302,12 +328,15 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     client.view.add(p.entity);
     p.visible.add(p.id);
     this.syncEntity(p);
+    this.spawnPet(p);
     this.updateAoiFor(p);
 
     p.pending.mapsVisited.add(this.map.id);
     this.questEvent(p, { type: "TRAVEL", mapId: this.map.id });
     this.questEvent(p, { type: "LEVEL", level: p.level });
     this.emitTo(client, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name, self: this.selfInfo(p) });
+    this.emitReputation(p, "join");
+    if (p.pet) this.emitPet(p, undefined);
     this.sendNear(p.x, p.y, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name }, p);
     for (const ae of this.svc.events.allActive()) {
       if (ae.def.maps.includes(this.map.id) || ae.def.type === "GLOBAL_RIFT") this.emitTo(client, ServerEvent.EVENT_STARTED, EventEngine.notice(ae));
@@ -439,6 +468,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       cargoUsed: 0, visible: new Set(), firstSeen: new Map(), pending: new PendingDelta(), flushing: false, flushRequested: false,
       deathCount: 0, respawnAt: 0, lastRepairCost: 0, joinedAt: now, lastPlaytimeAt: now, lastSurviveAt: now, formation: profile.formation,
       cosmetics: profile.cosmetics, kills: 0, deaths: 0, score: 0, damageDealt: 0, connected: true, left: false, jumpedTo: null,
+      karma: profile.karma,
+      reputation: PROGRESSION.reputation ? reputationFor(profile.karma, profile.hasBounty, PROGRESSION.reputation) : profile.reputation,
+      hasBounty: profile.hasBounty, unprovokedLog: new Map(), lastKarmaDecayAt: now, pet: null,
     };
     entity.id = p.id;
     entity.kind = "PLAYER";
@@ -456,6 +488,10 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.accruePlaytime(p);
     this.state.entities.delete(p.id);
     for (const o of this.players.values()) o.visible.delete(p.id);
+    if (p.pet) {
+      this.state.entities.delete(p.pet.id);
+      for (const o of this.players.values()) o.visible.delete(p.pet.id);
+    }
     this.sendNear(p.x, p.y, ServerEvent.PLAYER_LEAVE, { entityId: p.id });
     this.svc.risk.drain(p.userId, `game-server:${this.roomKind}`);
     void this.clearPresence(p);
@@ -671,6 +707,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const p of this.players.values()) this.tickPlayerCombat(p);
     for (const p of this.players.values()) this.tickMining(p, dt);
     for (const p of this.players.values()) this.tickVitals(p, dt);
+    for (const p of this.players.values()) this.tickPet(p, dt);
+    if (this.tickCount % (this.svc.config.tickRate * 10) === 0) for (const p of this.players.values()) this.decayKarma(p);
     this.tickWorld();
     this.onTickExtra(dt);
 
@@ -688,6 +726,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const n of this.npcs.values()) items.push({ id: n.id, x: n.x, y: n.y, ref: n });
     for (const l of this.loot.values()) items.push({ id: l.id, x: l.x, y: l.y, ref: l });
     for (const a of this.asteroids.values()) if (!a.depleted) items.push({ id: a.id, x: a.x, y: a.y, ref: a });
+    for (const p of this.players.values()) if (p.pet) items.push({ id: p.pet.id, x: p.pet.x, y: p.pet.y, ref: p.pet });
     this.grid.rebuild(items);
   }
 
@@ -761,7 +800,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     if (!p.firing.PRIMARY && !p.firing.SECONDARY) return;
     if (this.now < p.stunnedUntil) return;
     const target = p.targetId ? this.shipById(p.targetId) : null;
-    if (!target || target.dead || !p.visible.has(target.id) || !this.hostile(p, target)) return;
+    if (!target || target.dead || !p.visible.has(target.id) || !this.attackable(p, target)) return;
     for (const w of p.stats.weapons) {
       if (w.mining) continue;
       if (!p.firing[w.group]) continue;
@@ -854,6 +893,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     if (res.shieldDamage > 0) target.pulseFlags |= EntityFlag.SHIELD_HIT;
     if (weakPoint) target.pulseFlags |= EntityFlag.WEAK_POINT;
     const total = res.shieldDamage + res.hullDamage;
+    if (src && src.kind === "PLAYER" && target.kind === "PLAYER") this.onPlayerHitPlayer(src as PlayerActor, target as PlayerActor);
     if (src) {
       target.damageBy.set(src.id, (target.damageBy.get(src.id) ?? 0) + total);
       target.lastHitBy.set(src.id, this.now);
@@ -1161,6 +1201,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     const credits = Math.round(n.def.credits * mult);
     const honor = Math.round(n.def.honor * mult);
     this.giveXp(p, xp);
+    this.givePetXp(p, xp);
     p.honor += honor;
     p.pending.honor += honor;
     p.pending.seasonScore += honor;
@@ -1232,14 +1273,16 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const p of this.players.values()) p.visible.delete(l.id);
   }
 
-  private async onPickup(p: PlayerActor, lootId: string): Promise<void> {
+  /** `via`: companion LOOT_COLLECT (range measured from the pet, loot radius instead of pickup range). */
+  private async onPickup(p: PlayerActor, lootId: string, via?: { x: number; y: number; range: number }): Promise<void> {
     const l = this.loot.get(lootId);
     // Double clicks / races are normal: an already-claimed loot id is simply gone.
     // Only a database-level duplicate (see below) is treated as a cheat signal.
     if (!l || l.claimed || this.processedLoot.has(lootId)) return this.error(p, "LOOT_GONE", "Loot no longer available");
     if (p.dead) return;
-    if (Math.hypot(l.x - p.x, l.y - p.y) > this.rules.pickupRange) return this.error(p, "TOO_FAR", "Move closer to pick up");
-    if (l.ownerUserId && l.ownerUserId !== p.userId && this.now < l.ownerUntil) return this.error(p, "NOT_OWNER", "Loot reserved for another pilot");
+    const from = via ?? { x: p.x, y: p.y, range: this.rules.pickupRange };
+    if (Math.hypot(l.x - from.x, l.y - from.y) > from.range) return via ? undefined : this.error(p, "TOO_FAR", "Move closer to pick up");
+    if (l.ownerUserId && l.ownerUserId !== p.userId && this.now < l.ownerUntil) return via ? undefined : this.error(p, "NOT_OWNER", "Loot reserved for another pilot");
     l.claimed = true;
     this.processedLoot.add(lootId);
     this.removeLoot(l);
@@ -1318,6 +1361,17 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   /** PvP kill rewards with anti-farming (same victim window, level gap). */
   protected pvpKill(k: PlayerActor, v: PlayerActor): void {
     k.kills++;
+    const cfg = PROGRESSION.reputation;
+    if (cfg && !this.isTeamRoom()) {
+      if (isOutlaw(v.karma, cfg)) {
+        this.adjustKarma(k, cfg.outlawKillReward, "outlaw_kill");
+      } else if (this.isUnprovoked(k, v)) {
+        // Murder of a non-hostile pilot: karma penalty and no PvP rewards.
+        this.adjustKarma(k, -cfg.unprovokedKillPenalty, "unprovoked_kill");
+        this.emitTo(k.client, ServerEvent.NOTICE, { level: "warn", text: "Unprovoked kill — no rewards, karma lost" });
+        return;
+      }
+    }
     const pairKey = `${k.userId}:${v.userId}`;
     const last = this.pvpKillLog.get(pairKey) ?? -Infinity;
     const farming = this.now - last < this.rules.pvpSameVictimWindowMs || k.level - v.level > this.rules.pvpMaxLevelGap || k.profile.clanId !== null && k.profile.clanId === v.profile.clanId;
@@ -1330,6 +1384,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     const honor = Math.round(v.level * this.rules.pvpHonorPerVictimLevel);
     const xp = Math.round(v.level * this.rules.pvpXpPerVictimLevel * this.xpMultiplier);
     this.giveXp(k, xp);
+    this.givePetXp(k, xp);
     k.honor += honor;
     k.pending.honor += honor;
     k.pending.seasonScore += honor;
@@ -1493,6 +1548,226 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.sendNear(p.x, p.y, ServerEvent.PLAYER_RESPAWN, { entityId: p.id, x: p.x, y: p.y, repairCost: p.lastRepairCost });
     this.emitTo(p.client, ServerEvent.PLAYER_RESPAWN, { entityId: p.id, x: p.x, y: p.y, repairCost: p.lastRepairCost });
     this.updateAoiFor(p);
+  }
+
+  // ------------------------------------------------------------------------
+  // Reputation / karma
+  // ------------------------------------------------------------------------
+
+  /** Unprovoked = not a team match, target not an outlaw, not a faction-war enemy, and not self-defense. */
+  protected isUnprovoked(a: PlayerActor, b: PlayerActor): boolean {
+    const cfg = PROGRESSION.reputation;
+    if (!cfg || this.isTeamRoom()) return false;
+    if (isOutlaw(b.karma, cfg) || this.warHostile(a, b)) return false;
+    const provokedAt = a.lastHitBy.get(b.id) ?? -Infinity;
+    return this.now - provokedAt > cfg.selfDefenseWindowSec * 1000;
+  }
+
+  private onPlayerHitPlayer(a: PlayerActor, b: PlayerActor): void {
+    const cfg = PROGRESSION.reputation;
+    if (!cfg || !this.isUnprovoked(a, b)) return;
+    const last = a.unprovokedLog.get(b.userId) ?? -Infinity;
+    if (this.now - last < cfg.unprovokedAttackWindowSec * 1000) return;
+    a.unprovokedLog.set(b.userId, this.now);
+    this.adjustKarma(a, -cfg.unprovokedAttackPenalty, "unprovoked_attack");
+  }
+
+  protected adjustKarma(p: PlayerActor, delta: number, reason: string): void {
+    const cfg = PROGRESSION.reputation;
+    if (!cfg || delta === 0) return;
+    const before = p.karma;
+    const after = clampKarma(before + delta, cfg);
+    if (after === before) return;
+    p.karma = after;
+    p.pending.karma += after - before;
+    const prevRep = p.reputation;
+    p.reputation = reputationFor(after, p.hasBounty, cfg);
+    this.emitReputation(p, reason);
+    if (p.reputation !== prevRep) {
+      if (p.reputation === "OUTLAW") this.sendNear(p.x, p.y, ServerEvent.NOTICE, { level: "warn", text: `${p.name} is now an OUTLAW` });
+      this.requestFlush(p);
+    }
+  }
+
+  private decayKarma(p: PlayerActor): void {
+    const cfg = PROGRESSION.reputation;
+    const dt = (this.now - p.lastKarmaDecayAt) / 1000;
+    p.lastKarmaDecayAt = this.now;
+    if (!cfg || p.karma === 0) return;
+    const next = decayKarma(p.karma, dt, cfg);
+    const delta = next - p.karma;
+    const wasOutlaw = isOutlaw(p.karma, cfg);
+    p.karma = next;
+    p.pending.karma += delta;
+    const rep = reputationFor(Math.round(next), p.hasBounty, cfg);
+    if (rep !== p.reputation || wasOutlaw !== isOutlaw(next, cfg)) {
+      p.reputation = rep;
+      this.emitReputation(p, "decay");
+    }
+  }
+
+  protected emitReputation(p: PlayerActor, reason: string): void {
+    const cfg = PROGRESSION.reputation;
+    if (!p.connected || !cfg) return;
+    this.emitTo(p.client, ServerEvent.REPUTATION, { karma: Math.round(p.karma), reputation: p.reputation, outlaw: isOutlaw(p.karma, cfg), bountyTarget: p.hasBounty, reason });
+  }
+
+  private applyFlushSocial(p: PlayerActor, res: { karma: number; reputation: string; hasBounty: boolean; systemBountyPlaced: boolean; pet: { level: number; xp: number } | null }): void {
+    const bountyChanged = res.hasBounty !== p.hasBounty;
+    p.hasBounty = res.hasBounty;
+    // The DB value plus what accumulated since the flush started is the authoritative karma.
+    p.karma = res.karma + p.pending.karma;
+    const cfg = PROGRESSION.reputation;
+    const rep = cfg ? reputationFor(Math.round(p.karma), p.hasBounty, cfg) : res.reputation;
+    if (rep !== p.reputation || bountyChanged) {
+      p.reputation = rep;
+      this.emitReputation(p, res.systemBountyPlaced ? "system_bounty" : "sync");
+    }
+    if (res.systemBountyPlaced) this.broadcast(ServerEvent.NOTICE, { level: "warn", text: `A bounty has been placed on outlaw ${p.name}` });
+    if (p.pet && res.pet && res.pet.xp > p.pet.xp) {
+      p.pet.xp = res.pet.xp;
+      p.pet.level = Math.max(p.pet.level, res.pet.level);
+    }
+  }
+
+  // ------------------------------------------------------------------------
+  // Companions (pets)
+  // ------------------------------------------------------------------------
+
+  private spawnPet(p: PlayerActor): void {
+    const pr = p.profile.pet;
+    if (!pr) return;
+    const entity = new Entity();
+    const pet: PetActor = {
+      id: `pet${p.id}`, kind: "PET", ownerSessionId: p.sessionId, rowId: pr.rowId, def: pr.def, name: pr.name, level: pr.level, xp: pr.xp,
+      x: p.x - this.rules.petFollowDistance, y: p.y, heading: p.heading, nextCollectAt: 0, nextHintAt: 0, hintKey: "", entity,
+    };
+    entity.id = pet.id;
+    entity.kind = "PET";
+    entity.defId = pr.def.id;
+    entity.name = pr.name;
+    entity.targetId = p.id;
+    entity.faction = p.faction;
+    entity.team = p.team;
+    entity.maxHull = 1;
+    entity.hull = 1;
+    p.pet = pet;
+    this.state.entities.set(pet.id, entity);
+    this.syncPet(p);
+  }
+
+  private syncPet(p: PlayerActor): void {
+    const pet = p.pet;
+    if (!pet) return;
+    const e = pet.entity;
+    e.x = pet.x;
+    e.y = pet.y;
+    e.heading = pet.heading;
+    e.level = Math.min(255, pet.level);
+    e.dead = p.dead;
+    e.cloaked = p.cloaked;
+  }
+
+  /** Follow the owner; LOOT_COLLECT, REPAIR and RESOURCE_DETECTION behaviours. */
+  private tickPet(p: PlayerActor, dt: number): void {
+    const pet = p.pet;
+    if (!pet) return;
+    const d = this.rules.petFollowDistance;
+    const tx = p.x - Math.cos(p.heading) * d;
+    const ty = p.y - Math.sin(p.heading) * d;
+    const dist = Math.hypot(tx - pet.x, ty - pet.y);
+    if (dist > 60) {
+      pet.x = tx;
+      pet.y = ty;
+    } else {
+      const k = Math.min(1, 8 * dt);
+      pet.x += (tx - pet.x) * k;
+      pet.y += (ty - pet.y) * k;
+    }
+    pet.heading = p.heading;
+    const scale = petScale(pet.level, pet.def);
+    if (!p.dead && p.connected) {
+      if (hasPetAbility(pet.def, "LOOT_COLLECT") && this.now >= pet.nextCollectAt) {
+        pet.nextCollectAt = this.now + 500;
+        for (const g of this.grid.query(pet.x, pet.y, pet.def.lootRadius)) {
+          const l = g.ref;
+          if (l.kind !== "LOOT" || l.claimed) continue;
+          if (l.ownerUserId && l.ownerUserId !== p.userId && this.now < l.ownerUntil) continue;
+          void this.onPickup(p, l.id, { x: pet.x, y: pet.y, range: pet.def.lootRadius });
+        }
+      }
+      if (hasPetAbility(pet.def, "REPAIR") && pet.def.repairPerSecond > 0 && p.hull < p.maxHull && this.now - p.lastDamagedAt > this.rules.combatLockMs) {
+        p.hull = Math.min(p.maxHull, p.hull + pet.def.repairPerSecond * scale * dt);
+      }
+      if (hasPetAbility(pet.def, "RESOURCE_DETECTION") && this.now >= pet.nextHintAt) {
+        pet.nextHintAt = this.now + 3000;
+        const range = this.aoiRadiusFor(p) * 2;
+        let best: AsteroidActor | null = null;
+        let bd = range * range;
+        for (const a of this.asteroids.values()) {
+          if (a.depleted) continue;
+          const dd = (a.x - p.x) ** 2 + (a.y - p.y) ** 2;
+          if (dd < bd) { bd = dd; best = a; }
+        }
+        const key = best?.id ?? "";
+        if (key !== pet.hintKey) {
+          pet.hintKey = key;
+          this.emitPet(p, best ? { asteroidId: best.id, resource: best.state.resource, x: best.x, y: best.y, distance: Math.sqrt(bd) } : null);
+        }
+      }
+    }
+    this.syncPet(p);
+  }
+
+  /** RADAR: companion extends the owner's area of interest. */
+  protected aoiRadiusFor(p: PlayerActor): number {
+    const base = this.svc.config.aoiRadius;
+    const pet = p.pet;
+    if (!pet || !hasPetAbility(pet.def, "RADAR")) return base;
+    return base * (1 + pet.def.radarBonus * petScale(pet.level, pet.def));
+  }
+
+  /** Companion XP from the owner's kills; level-ups rescale the passive buff. */
+  protected givePetXp(p: PlayerActor, ownerXp: number): void {
+    const pet = p.pet;
+    if (!pet || ownerXp <= 0) return;
+    const gain = Math.floor(ownerXp * this.rules.petXpShare);
+    if (gain <= 0) return;
+    const before = pet.level;
+    pet.xp += gain;
+    p.pending.petXp += gain;
+    pet.level = petLevelForXp(pet.xp, pet.def);
+    if (pet.level !== before) {
+      this.recomputeStats(p);
+      this.emitPet(p, undefined);
+      this.requestFlush(p);
+    }
+  }
+
+  /** Recompute effective stats (e.g. pet buff level changed) keeping hull/shield/energy ratios. */
+  protected recomputeStats(p: PlayerActor): void {
+    const stats = computeStats({ ...p.profile.loadout, petBuff: p.pet ? petBuff(p.pet.def, p.pet.level) : undefined, pvpNormalized: this.pvpNormalized() }, this.tuning);
+    const r = (v: number, m: number) => (m > 0 ? v / m : 1);
+    const hr = r(p.hull, p.maxHull);
+    const sr = r(p.shield, p.maxShield);
+    const er = r(p.energy, p.maxEnergy);
+    p.stats = stats;
+    p.maxHull = stats.hull;
+    p.maxShield = stats.shield;
+    p.maxEnergy = stats.energy;
+    p.hull = stats.hull * hr;
+    p.shield = stats.shield * sr;
+    p.energy = stats.energy * er;
+  }
+
+  /** `hint`: undefined = unchanged (status only), null = no asteroid in range. */
+  protected emitPet(p: PlayerActor, hint: ServerEvents["pet"]["hint"] | undefined): void {
+    const pet = p.pet;
+    if (!pet || !p.connected) return;
+    this.emitTo(p.client, ServerEvent.PET, {
+      entityId: pet.id, petId: pet.def.id, name: pet.name, level: pet.level, xp: pet.xp, xpToNext: petXpToNext(pet.xp, pet.def),
+      abilities: [...pet.def.abilities], ...(hint !== undefined ? { hint } : {}),
+    });
   }
 
   // ------------------------------------------------------------------------
@@ -1977,12 +2252,16 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     const delta = p.pending;
     p.pending = new PendingDelta();
     try {
-      const res = await this.svc.persistence.flush(p.userId, delta, p.profile.quests.values(), p.profile.achievements);
+      const res = await this.svc.persistence.flush(p.userId, delta, p.profile.quests.values(), p.profile.achievements, {
+        factionId: p.profile.factionId,
+        pet: p.pet ? { rowId: p.pet.rowId, def: p.pet.def } : p.profile.pet ? { rowId: p.profile.pet.rowId, def: p.profile.pet.def } : null,
+      });
       if (res.level > p.level && !p.left) {
         p.level = res.level;
         this.sendNear(p.x, p.y, ServerEvent.PLAYER_LEVEL_UP, { userId: p.userId, level: p.level, entityId: p.id });
       }
       if (res.xp > p.xp) p.xp = res.xp;
+      this.applyFlushSocial(p, res);
       for (const a of res.newAchievements) {
         if (p.connected) this.emitTo(p.client, ServerEvent.NOTICE, { level: "success", text: `Achievement unlocked: ${a.name}` });
       }
@@ -2029,11 +2308,14 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   protected updateAoiFor(p: PlayerActor): void {
     const view = p.client.view;
     if (!view || !p.connected) return;
-    const radius = this.svc.config.aoiRadius;
+    const radius = this.aoiRadiusFor(p);
+    const scan = p.pet && hasPetAbility(p.pet.def, "ENEMY_SCAN") ? this.rules.petScanRadius * petScale(p.pet.level, p.pet.def) : 0;
     const want = new Set<string>([p.id]);
     for (const g of this.grid.query(p.x, p.y, radius)) {
       const o = g.ref;
-      if (o.kind === "PLAYER" && o !== p && o.cloaked && o.team !== p.team && o.faction !== p.faction) continue;
+      // Cloaked enemies stay hidden unless the viewer's companion scans them (ENEMY_SCAN radius);
+      // a revealed entity arrives with `cloaked: true`, which is the client's "scanned" indicator.
+      if (o.kind === "PLAYER" && o !== p && o.cloaked && o.team !== p.team && o.faction !== p.faction && !(scan > 0 && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 <= scan * scan)) continue;
       if (o.kind === "ASTEROID" && o.depleted) continue;
       want.add(o.id);
     }
@@ -2091,6 +2373,12 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     return this.players.get(id) ?? this.npcs.get(id) ?? null;
   }
 
+  /** Explicit attack permission (targeted fire): hostility plus penalised friendly fire in PvP space. */
+  protected attackable(a: ActorBase, b: ActorBase): boolean {
+    if (a.kind === "PLAYER" && b.kind === "PLAYER" && a !== b && !a.dead && !b.dead) return this.playersAttackable(a as PlayerActor, b as PlayerActor);
+    return this.hostile(a, b);
+  }
+
   protected hostile(a: ActorBase, b: ActorBase): boolean {
     if (a === b || b.dead || a.dead) return false;
     const aShip = a.kind === "PLAYER" || a.kind === "NPC" || a.kind === "BOSS";
@@ -2129,6 +2417,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       if (p.docked) flags |= EntityFlag.DOCKED;
       if (p.firing.PRIMARY || p.firing.SECONDARY) flags |= EntityFlag.FIRING;
       if (p.profile.clanId) flags |= EntityFlag.CLAN;
+      const rep = PROGRESSION.reputation;
+      if (rep && isOutlaw(p.karma, rep)) flags |= EntityFlag.OUTLAW;
+      if (p.hasBounty) flags |= EntityFlag.BOUNTY;
       e.cosmetics = p.cosmetics;
     } else {
       e.aiState = (a as NpcActor).brain.state;

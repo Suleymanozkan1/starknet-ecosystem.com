@@ -10,17 +10,18 @@ import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { matchMaker } from "@colyseus/core";
 import { Client as SdkClient } from "@colyseus/sdk";
-import { EVENTS_BY_ID, QUESTS_BY_ID, NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
+import { EVENTS_BY_ID, PETS_BY_ID, PROGRESSION, QUESTS_BY_ID, NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
 import type { KeyRing } from "@nebula/authentication";
 import { createDb, getBalance, post, system, userWallet, type Db } from "@nebula/database";
-import { STARTER_AMMO, isPvpAllowedAt, objectiveIncrement, starterAmmoOriginRef, type HitResult, type LootDrop } from "@nebula/game-core";
-import { LedgerAccountType, RoomName, type MapDef } from "@nebula/shared";
+import { STARTER_AMMO, computeStats, isPvpAllowedAt, objectiveIncrement, starterAmmoOriginRef, type HitResult, type LootDrop } from "@nebula/game-core";
+import { EntityFlag, LedgerAccountType, RoomName, type MapDef } from "@nebula/shared";
 
 import { loadConfig } from "./config.js";
 import { buildServices } from "./bootstrap.js";
 import { ensureCatalog } from "./persistence/catalog.js";
 import { DuplicateLootError, PendingDelta } from "./persistence/writer.js";
 import { ensureStarterKit } from "./persistence/player.js";
+import { activeSeasonId } from "./persistence/catalog.js";
 import { createGameServer } from "./server.js";
 import { createPlayerUser, shieldTestIpcFromPm2, ticketFor } from "./test-utils.js";
 import type { GameServices } from "./services/context.js";
@@ -44,6 +45,7 @@ interface Internals {
   getRiftPortals(): { id: string; x: number; y: number; windowStart: number; eventId: string }[];
   getNpcs(): NpcActor[];
   getLoot(): LootActor[];
+  playersAttackable(a: PlayerActor, b: PlayerActor): boolean;
   clanWarId?: string | null;
 }
 const I = (room: unknown) => room as Internals;
@@ -418,9 +420,8 @@ describe("gate run", () => {
     }
     expect(done).toBe(true);
     expect(waves).toEqual([1, 2, 3, 4, 5, 6]);
-    await I(room).flushAll(false);
-    const st = await db.playerStat.findUniqueOrThrow({ where: { userId: u.id } });
-    expect(st.gatesCompleted).toBe(1);
+    // Rewards are persisted by the batched writer (a flush may already be in flight).
+    await until(async () => (await db.playerStat.findUnique({ where: { userId: u.id } }))?.gatesCompleted === 1);
     // Completion credits (× HARD reward multiplier) arrive through the ledger exactly once.
     await until(async () => (await getBalance(db, userWallet(u.id, "CREDITS"))) > 30_000n);
     await c.leave().catch(() => undefined);
@@ -704,5 +705,170 @@ describe("review fixes (PR #2 round 1)", () => {
     expect(await db.reward.count({ where: { userId: solo.id, source: "RAID" } })).toBe(0);
     expect(I(room).getLoot().filter((l) => l.ownerUserId === solo.id)).toHaveLength(0);
     await c.leave().catch(() => undefined);
+  });
+});
+
+function flagsOf(c: { state: unknown }, id: string): number {
+  return (c.state as { entities?: Map<string, { flags: number }> }).entities?.get(id)?.flags ?? 0;
+}
+
+describe("reputation / karma", () => {
+  const rep = PROGRESSION.reputation!;
+  async function pair(o: { karmaA?: number; factionB?: string } = {}) {
+    const map = MAPS_BY_ID.get("map_vanta_rift")!;
+    const ua = await createPlayerUser(db, { faction: "aurora", level: 20, karma: o.karmaA ?? 0 });
+    const ta = await ticketFor(secret, ua, map.id);
+    const ca = await colyseus.sdk.joinOrCreate(RoomName.SECTOR, { ticket: ta, mapId: map.id });
+    const room = matchMaker.getLocalRoomById(ca.roomId);
+    await until(() => !!I(room).getPlayerByUser(ua.id));
+    const b = await joinSector(map.id, { faction: o.factionB ?? "aurora", level: 20 });
+    const a = I(room).getPlayerByUser(ua.id)!;
+    const spot = await pvpSpot(map);
+    Object.assign(a, { x: spot.x, y: spot.y, invulnerableUntil: 0 });
+    Object.assign(b.actor, { x: spot.x + 5, y: spot.y, invulnerableUntil: 0 });
+    return { ua, ca, room, a, b };
+  }
+  const hit = (dmg: number): HitResult => ({ hit: true, crit: false, weakPoint: false, element: "THERMAL", raw: dmg, shieldDamage: dmg, armorDamage: 0, hullDamage: 0, shieldAfter: 1000, hullAfter: 1000, killed: false });
+
+  it("an unprovoked attack on a same-faction pilot lowers karma (once per window) and is persisted", async () => {
+    const { ua, ca, room, a, b } = await pair();
+    expect(I(room).playersAttackable(a, b.actor)).toBe(true);
+    const events: { karma: number; reason: string }[] = [];
+    ca.onMessage("reputation", (e: { karma: number; reason: string }) => events.push(e));
+    I(room).applyHit(a, b.actor, hit(10), "LASER");
+    I(room).applyHit(a, b.actor, hit(10), "LASER");
+    expect(a.karma).toBe(-rep.unprovokedAttackPenalty);
+    await until(() => events.some((e) => e.reason === "unprovoked_attack" && e.karma === -rep.unprovokedAttackPenalty));
+    // Self-defense is not penalised.
+    I(room).applyHit(b.actor, a, hit(10), "LASER");
+    expect(b.actor.karma).toBe(0);
+    await I(room).flushAll(false);
+    await until(async () => (await db.user.findUniqueOrThrow({ where: { id: ua.id } })).karma === -rep.unprovokedAttackPenalty);
+    await Promise.all([ca.leave(), b.client.leave()]);
+  });
+
+  it("crossing the threshold makes the pilot an OUTLAW (entity flag) with a system bounty; killing an outlaw raises karma", async () => {
+    const { ua, ca, room, a, b } = await pair({ karmaA: rep.outlawKarma + 1 });
+    I(room).applyHit(a, b.actor, hit(10), "LASER");
+    expect(a.karma).toBeLessThanOrEqual(rep.outlawKarma);
+    await until(() => (flagsOf(ca, a.id) & EntityFlag.OUTLAW) !== 0);
+    await I(room).flushAll(false);
+    await until(async () => (await db.user.findUniqueOrThrow({ where: { id: ua.id } })).reputation === "OUTLAW");
+    await until(async () => (await db.bounty.count({ where: { targetId: ua.id, status: "ACTIVE", creatorId: null } })) === 1);
+    await until(() => a.hasBounty);
+    await until(() => (flagsOf(ca, a.id) & EntityFlag.BOUNTY) !== 0);
+    // Same-faction pilot kills the outlaw: rewarded karma, not penalised, and claims the system bounty.
+    Object.assign(a, { invulnerableUntil: 0, shield: 0, hull: 1 });
+    I(room).applyHit(b.actor, a, bigHit(a), "LASER");
+    expect(a.dead).toBe(true);
+    expect(b.actor.karma).toBe(rep.outlawKillReward);
+    await until(async () => (await db.bounty.count({ where: { targetId: ua.id, status: "CLAIMED", claimedBy: b.user.id } })) === 1);
+    expect(await getBalance(db, userWallet(b.user.id, "CREDITS"))).toBe(BigInt(rep.outlawSystemBountyCredits));
+    await Promise.all([ca.leave(), b.client.leave()]);
+  });
+
+  it("an ACTIVE bounty marks the pilot as BOUNTY_TARGET", async () => {
+    const u = await createPlayerUser(db, { faction: "aurora" });
+    await db.bounty.create({ data: { targetId: u.id, creatorId: null, amount: 1000n, expiresAt: new Date(Date.now() + 3_600_000) } });
+    const ticket = await ticketFor(secret, u, "map_aurora_prime");
+    const c = await colyseus.sdk.joinOrCreate(RoomName.SECTOR, { ticket, mapId: "map_aurora_prime" });
+    const got = new Promise<{ reputation: string; bountyTarget: boolean }>((r) => c.onMessage("reputation", r));
+    const ev = await got;
+    expect(ev).toMatchObject({ reputation: "BOUNTY_TARGET", bountyTarget: true });
+    await until(() => (flagsOf(c, c.sessionId) & EntityFlag.BOUNTY) !== 0);
+    await c.leave();
+  });
+});
+
+describe("companions (pets)", () => {
+  it("starter pet follows its owner and auto-collects the owner's loot (idempotent grant path)", async () => {
+    const { client, room, actor, user } = await joinSector("map_aurora_prime");
+    expect(actor.pet?.def.id).toBe("pet_glimmer");
+    await until(() => (client.state as unknown as { entities: Map<string, { kind: string }> }).entities.get(actor.pet!.id)?.kind === "PET");
+    const loot = I(room).dropLoot(actor.pet!.x + 8, actor.pet!.y, [{ kind: "ITEM", ref: "item_repair_kit", quantity: 1 }], user.id);
+    await until(async () => (await db.inventoryItem.count({ where: { userId: user.id, originRef: `loot:${loot.id}:0` } })) === 1);
+    expect(await db.pet.count({ where: { userId: user.id } })).toBe(1);
+    await client.leave();
+  });
+
+  it("REPAIR heals out of combat, PASSIVE_BUFF feeds computeStats, pet level-ups persist", async () => {
+    const u = await createPlayerUser(db, { faction: "aurora" });
+    await ensureStarterKit(db, u.id, "map_aurora_prime");
+    await db.pet.updateMany({ where: { userId: u.id }, data: { active: false } });
+    const ferrox = PETS_BY_ID.get("pet_ferrox")!;
+    await db.pet.create({ data: { userId: u.id, petId: "pet_ferrox", name: "Ferrox", xp: (ferrox.xpPerLevel ?? 400) - 1, active: true } });
+    const c = await colyseus.sdk.joinOrCreate(RoomName.SECTOR, { ticket: await ticketFor(secret, u, "map_aurora_prime"), mapId: "map_aurora_prime" });
+    const room = matchMaker.getLocalRoomById(c.roomId);
+    await until(() => !!I(room).getPlayerByUser(u.id));
+    const p = I(room).getPlayerByUser(u.id)!;
+    expect(p.pet?.def.id).toBe("pet_ferrox");
+    // The companion's buff is an extra percent source in computeStats.
+    const baseline = computeStats({ ...p.profile.loadout, petBuff: undefined }).pct.damage;
+    expect(p.stats.pct.damage - baseline).toBeCloseTo(ferrox.buff.damage ?? 0, 5);
+    p.hull = p.maxHull / 2;
+    p.lastDamagedAt = 0;
+    const h0 = p.hull;
+    await sleep(600);
+    expect(p.hull).toBeGreaterThan(h0);
+    const levels: number[] = [];
+    c.onMessage("pet", (e: { level: number }) => levels.push(e.level));
+    const npc = I(room).spawnNpc(NPCS_BY_ID.get("npc_pirate_raider")!, p.x + 10, p.y, { spawnIndex: null });
+    I(room).applyHit(p, npc, bigHit(npc), "LASER");
+    await until(() => levels.includes(2));
+    expect(p.stats.pct.damage - baseline).toBeGreaterThan(ferrox.buff.damage ?? 0);
+    await I(room).flushAll(false);
+    await until(async () => (await db.pet.findFirstOrThrow({ where: { userId: u.id, petId: "pet_ferrox" } })).level === 2);
+    await c.leave();
+  });
+});
+
+describe("faction war", () => {
+  it("kills, boss kills and mining raise the pilot's faction metrics exactly once", async () => {
+    const faction = "nova";
+    const before = await db.faction.findUniqueOrThrow({ where: { id: faction } });
+    const { client, room, actor, user } = await joinSector("map_nova_crown", { faction });
+    const drone = I(room).spawnNpc(NPCS_BY_ID.get("npc_mining_drone")!, actor.x + 10, actor.y, { spawnIndex: null });
+    I(room).applyHit(actor, drone, bigHit(drone), "LASER");
+    const boss = I(room).spawnNpc(NPCS_BY_ID.get("boss_void_herald")!, actor.x + 10, actor.y, { spawnIndex: null });
+    I(room).applyHit(actor, boss, bigHit(boss), "LASER");
+    actor.pending.resourcesMined += 250;
+    actor.pending.addResource("TITANIUM", 250);
+    await I(room).flushAll(false);
+    await until(async () => (await db.playerStat.findUnique({ where: { userId: user.id } }))?.bossKills === 1);
+    await I(room).flushAll(false);
+    await sleep(300);
+    const after = await db.faction.findUniqueOrThrow({ where: { id: faction } });
+    const war = PROGRESSION.factionWar!;
+    expect(after.kills - before.kills).toBe(2n);
+    expect(after.bossKills - before.bossKills).toBe(1);
+    expect(after.resources - before.resources).toBe(250n);
+    expect(after.score - before.score).toBe(BigInt(Math.floor(2 * war.npcKillPoints + 2.5 * war.resourcePointsPer100 + war.bossKillPoints)));
+    const seasonId = activeSeasonId();
+    if (seasonId) expect((await db.factionSeasonScore.findUniqueOrThrow({ where: { factionId_seasonId: { factionId: faction, seasonId } } })).bossKills).toBeGreaterThanOrEqual(1);
+    await client.leave();
+  });
+});
+
+describe("docking", () => {
+  it("docks near a station (services) and rejects docking from afar", async () => {
+    const { client, actor } = await joinSector("map_aurora_prime");
+    const st = MAPS_BY_ID.get("map_aurora_prime")!.stations[0]!;
+    const errors: string[] = [];
+    client.onMessage("error", (e: { code: string }) => errors.push(e.code));
+    actor.x = st.x + 200;
+    actor.y = st.y;
+    client.send("dock", { stationId: st.id });
+    await until(() => errors.includes("DOCK_OUT_OF_RANGE"));
+    expect(actor.docked).toBeNull();
+    actor.x = st.x + 3;
+    actor.y = st.y;
+    actor.lastDamagedAt = 0;
+    const docked = new Promise<{ stationId: string; services: string[] }>((r) => client.onMessage("docked", r));
+    client.send("dock", { stationId: st.id });
+    const ev = await docked;
+    expect(ev.stationId).toBe(st.id);
+    expect(ev.services).toEqual(st.services);
+    expect(actor.docked).toBe(st.id);
+    await client.leave();
   });
 });

@@ -4,7 +4,7 @@ import type {
   AbilityState, AsteroidState, CooldownViolationTracker, EffectiveStats, FireRateAuditor, HeatState, LootDrop, MovementBudget,
   MoveInput, NpcBrain, PacketRateLimiter, ReactionTimeDetector, RepeatedMovementDetector, SeqValidator, TokenBucket, WeaponRuntime,
 } from "@nebula/game-core";
-import type { EntityKind, NpcDef, Rarity } from "@nebula/shared";
+import type { EntityKind, NpcDef, PetDef, Rarity } from "@nebula/shared";
 import type { PendingDelta } from "../persistence/writer.js";
 import type { PlayerProfile } from "../persistence/player.js";
 import type { Entity } from "../schema/state.js";
@@ -103,6 +103,33 @@ export interface PlayerActor extends ShipActor {
   left: boolean;
   /** Set after a successful portal jump: persisted position is the arrival portal. */
   jumpedTo: { mapId: string; x: number; y: number } | null;
+  // reputation
+  karma: number;
+  reputation: string;
+  hasBounty: boolean;
+  /** victim userId → last unprovoked-attack penalty time (ms). */
+  unprovokedLog: Map<string, number>;
+  lastKarmaDecayAt: number;
+  pet: PetActor | null;
+}
+
+/** Companion following its owner (kind PET). */
+export interface PetActor {
+  id: string;
+  kind: "PET";
+  ownerSessionId: string;
+  rowId: string;
+  def: PetDef;
+  name: string;
+  level: number;
+  xp: number;
+  x: number;
+  y: number;
+  heading: number;
+  nextCollectAt: number;
+  nextHintAt: number;
+  hintKey: string;
+  entity: Entity;
 }
 
 export interface NpcActor extends ShipActor {
@@ -155,4 +182,4 @@ export interface AsteroidActor {
   entity: Entity;
 }
 
-export type AnyActor = PlayerActor | NpcActor | LootActor | AsteroidActor;
+export type AnyActor = PlayerActor | NpcActor | LootActor | AsteroidActor | PetActor;

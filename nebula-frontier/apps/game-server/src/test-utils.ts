@@ -4,9 +4,9 @@ import { signGameTicket, type KeyRing } from "@nebula/authentication";
 import { post, system, userWallet, type Db } from "@nebula/database";
 import { LedgerAccountType } from "@nebula/shared";
 
-export async function createPlayerUser(db: Db, o: { prefix?: string; faction?: string; level?: number; xp?: number; credits?: number } = {}): Promise<{ id: string; username: string }> {
+export async function createPlayerUser(db: Db, o: { prefix?: string; faction?: string; level?: number; xp?: number; credits?: number; karma?: number } = {}): Promise<{ id: string; username: string }> {
   const username = `${o.prefix ?? "t_"}${randomUUID().replace(/-/g, "").slice(0, 12)}`;
-  const user = await db.user.create({ data: { username, level: o.level ?? 1, xp: BigInt(o.xp ?? 0) } });
+  const user = await db.user.create({ data: { username, level: o.level ?? 1, xp: BigInt(o.xp ?? 0), karma: o.karma ?? 0 } });
   if (o.faction) await db.playerFaction.create({ data: { userId: user.id, factionId: o.faction } });
   if (o.credits && o.credits > 0) {
     await db.$transaction((tx) => post(tx, {

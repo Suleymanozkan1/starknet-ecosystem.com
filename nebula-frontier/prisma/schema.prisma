@@ -206,6 +206,21 @@ model Faction {
   updatedAt   DateTime        @updatedAt
 }
 
+/// Per-season faction war standings (the Faction row keeps all-time totals).
+model FactionSeasonScore {
+  factionId String
+  seasonId  String
+  score     BigInt   @default(0)
+  kills     BigInt   @default(0)
+  pvpScore  BigInt   @default(0)
+  resources BigInt   @default(0)
+  bossKills Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([factionId, seasonId])
+  @@index([seasonId, score])
+}
+
 model PlayerFaction {
   userId     String   @id
   factionId  String
@@ -373,6 +388,7 @@ model Pet {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, petId])
   @@index([userId])
 }
 
