@@ -1,0 +1,795 @@
+[
+  {
+    "id": "shop_ship_wisp",
+    "sku": "sku_ship_wisp",
+    "name": "Wisp Scout",
+    "category": "SHIPS",
+    "description": "Fast scout hull.",
+    "currency": "CREDITS",
+    "price": 60000,
+    "grants": {
+      "ships": [
+        "ship_wisp"
+      ]
+    },
+    "requiredLevel": 3,
+    "active": true
+  },
+  {
+    "id": "shop_ship_prospector",
+    "sku": "sku_ship_prospector",
+    "name": "Prospector Miner",
+    "category": "SHIPS",
+    "description": "Dedicated mining hull.",
+    "currency": "CREDITS",
+    "price": 80000,
+    "grants": {
+      "ships": [
+        "ship_prospector"
+      ]
+    },
+    "requiredLevel": 5,
+    "active": true
+  },
+  {
+    "id": "shop_ship_kestrel",
+    "sku": "sku_ship_kestrel",
+    "name": "Kestrel Interceptor",
+    "category": "SHIPS",
+    "description": "Pursuit interceptor.",
+    "currency": "CREDITS",
+    "price": 180000,
+    "grants": {
+      "ships": [
+        "ship_kestrel"
+      ]
+    },
+    "requiredLevel": 8,
+    "active": true
+  },
+  {
+    "id": "shop_ship_pathfinder",
+    "sku": "sku_ship_pathfinder",
+    "name": "Pathfinder Explorer",
+    "category": "SHIPS",
+    "description": "Long-range survey vessel.",
+    "currency": "CREDITS",
+    "price": 220000,
+    "grants": {
+      "ships": [
+        "ship_pathfinder"
+      ]
+    },
+    "requiredLevel": 10,
+    "active": true
+  },
+  {
+    "id": "shop_ship_mender",
+    "sku": "sku_ship_mender",
+    "name": "Mender Support",
+    "category": "SHIPS",
+    "description": "Field support frigate.",
+    "currency": "CREDITS",
+    "price": 300000,
+    "grants": {
+      "ships": [
+        "ship_mender"
+      ]
+    },
+    "requiredLevel": 12,
+    "active": true
+  },
+  {
+    "id": "shop_ship_bastion",
+    "sku": "sku_ship_bastion",
+    "name": "Bastion Tank",
+    "category": "SHIPS",
+    "description": "Heavy tank hull.",
+    "currency": "CREDITS",
+    "price": 750000,
+    "grants": {
+      "ships": [
+        "ship_bastion"
+      ]
+    },
+    "requiredLevel": 18,
+    "active": true
+  },
+  {
+    "id": "shop_ship_harrow",
+    "sku": "sku_ship_harrow",
+    "name": "Harrow Destroyer",
+    "category": "SHIPS",
+    "description": "Broadside destroyer.",
+    "currency": "CREDITS",
+    "price": 800000,
+    "grants": {
+      "ships": [
+        "ship_harrow"
+      ]
+    },
+    "requiredLevel": 20,
+    "active": true
+  },
+  {
+    "id": "shop_ship_cipher",
+    "sku": "sku_ship_cipher",
+    "name": "Cipher EW",
+    "category": "SHIPS",
+    "description": "Electronic warfare hull.",
+    "currency": "CREDITS",
+    "price": 1100000,
+    "grants": {
+      "ships": [
+        "ship_cipher"
+      ]
+    },
+    "requiredLevel": 24,
+    "active": true
+  },
+  {
+    "id": "shop_ship_cradle",
+    "sku": "sku_ship_cradle",
+    "name": "Cradle Carrier",
+    "category": "SHIPS",
+    "description": "Drone carrier.",
+    "currency": "CREDITS",
+    "price": 2400000,
+    "grants": {
+      "ships": [
+        "ship_cradle"
+      ]
+    },
+    "requiredLevel": 28,
+    "active": true
+  },
+  {
+    "id": "shop_ship_sovereign",
+    "sku": "sku_ship_sovereign",
+    "name": "Sovereign Battlecruiser",
+    "category": "SHIPS",
+    "description": "Capital battlecruiser.",
+    "currency": "CREDITS",
+    "price": 3000000,
+    "grants": {
+      "ships": [
+        "ship_sovereign"
+      ]
+    },
+    "requiredLevel": 30,
+    "active": true,
+    "featured": true
+  },
+  {
+    "id": "shop_ship_zenith",
+    "sku": "sku_ship_zenith",
+    "name": "Zenith Battlecruiser",
+    "category": "SHIPS",
+    "description": "Legendary star-core capital ship.",
+    "currency": "CREDITS",
+    "price": 9000000,
+    "grants": {
+      "ships": [
+        "ship_zenith"
+      ]
+    },
+    "requiredLevel": 38,
+    "active": true
+  },
+  {
+    "id": "shop_part_plating",
+    "sku": "sku_part_plating",
+    "name": "Reinforced Hull Plating x5",
+    "category": "SHIP_PARTS",
+    "description": "Crafting components.",
+    "currency": "CREDITS",
+    "price": 12000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_part_reinforced_plating",
+          "quantity": 5
+        }
+      ]
+    },
+    "requiredLevel": 5,
+    "active": true
+  },
+  {
+    "id": "shop_part_reactor",
+    "sku": "sku_part_reactor",
+    "name": "Stabilised Reactor Core",
+    "category": "SHIP_PARTS",
+    "description": "Crafting component.",
+    "currency": "CREDITS",
+    "price": 20000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_part_reactor_core",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 12,
+    "active": true
+  },
+  {
+    "id": "shop_wpn_laser_mk2",
+    "sku": "sku_wpn_laser_mk2",
+    "name": "Photon Lance Mk II",
+    "category": "WEAPONS",
+    "description": "Standard upgrade laser.",
+    "currency": "CREDITS",
+    "price": 30000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_wpn_laser_mk2",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 8,
+    "active": true
+  },
+  {
+    "id": "shop_wpn_laser_prism",
+    "sku": "sku_wpn_laser_prism",
+    "name": "Prism Splitter",
+    "category": "WEAPONS",
+    "description": "Rare cyan laser.",
+    "currency": "CREDITS",
+    "price": 110000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_wpn_laser_prism",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 16,
+    "active": true
+  },
+  {
+    "id": "shop_wpn_rocket_pod",
+    "sku": "sku_wpn_rocket_pod",
+    "name": "Brawler Rocket Pod",
+    "category": "WEAPONS",
+    "description": "Close-range rocket pod.",
+    "currency": "CREDITS",
+    "price": 25000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_wpn_rocket_pod",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 6,
+    "active": true
+  },
+  {
+    "id": "shop_wpn_mining_deep",
+    "sku": "sku_wpn_mining_deep",
+    "name": "Deepcore Extraction Beam",
+    "category": "WEAPONS",
+    "description": "Advanced mining laser.",
+    "currency": "CREDITS",
+    "price": 70000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_wpn_mining_laser_deep",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 15,
+    "active": true
+  },
+  {
+    "id": "shop_mod_shield_booster",
+    "sku": "sku_mod_shield_booster",
+    "name": "Shield Booster",
+    "category": "MODULES",
+    "description": "Active shield restore module.",
+    "currency": "CREDITS",
+    "price": 25000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_mod_shield_booster",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 4,
+    "active": true
+  },
+  {
+    "id": "shop_gen_shield_s2",
+    "sku": "sku_gen_shield_s2",
+    "name": "Aegis Cell Mk II",
+    "category": "MODULES",
+    "description": "Shield generator.",
+    "currency": "CREDITS",
+    "price": 45000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_gen_shield_s2",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 10,
+    "active": true
+  },
+  {
+    "id": "shop_gen_speed_s2",
+    "sku": "sku_gen_speed_s2",
+    "name": "Thrustcell Mk II",
+    "category": "MODULES",
+    "description": "Speed generator.",
+    "currency": "CREDITS",
+    "price": 45000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_gen_speed_s2",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 10,
+    "active": true
+  },
+  {
+    "id": "shop_mod_mining_booster",
+    "sku": "sku_mod_mining_booster",
+    "name": "Resonant Mining Coil",
+    "category": "MODULES",
+    "description": "Mining booster module.",
+    "currency": "CREDITS",
+    "price": 20000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_mod_mining_booster",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 5,
+    "active": true
+  },
+  {
+    "id": "shop_drone_bulwark",
+    "sku": "sku_drone_bulwark",
+    "name": "Bulwark Drone",
+    "category": "DRONES",
+    "description": "Defensive drone.",
+    "currency": "CREDITS",
+    "price": 60000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_drone_bulwark",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 6,
+    "active": true
+  },
+  {
+    "id": "shop_drone_harvester",
+    "sku": "sku_drone_harvester",
+    "name": "Harvester Drone",
+    "category": "DRONES",
+    "description": "Mining drone.",
+    "currency": "CREDITS",
+    "price": 50000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_drone_harvester",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 5,
+    "active": true
+  },
+  {
+    "id": "shop_ammo_hornet_500",
+    "sku": "sku_ammo_hornet_500",
+    "name": "Hornet Missiles x500",
+    "category": "AMMO",
+    "description": "Kinetic missile ammunition.",
+    "currency": "CREDITS",
+    "price": 9000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_ammo_hornet",
+          "quantity": 500
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_ammo_seeker_100",
+    "sku": "sku_ammo_seeker_100",
+    "name": "Seeker Missiles x100",
+    "category": "AMMO",
+    "description": "Guided swarm missiles.",
+    "currency": "CREDITS",
+    "price": 5500,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_ammo_seeker",
+          "quantity": 100
+        }
+      ]
+    },
+    "requiredLevel": 16,
+    "active": true
+  },
+  {
+    "id": "shop_ammo_rocket_500",
+    "sku": "sku_ammo_rocket_500",
+    "name": "Brawler Rockets x500",
+    "category": "AMMO",
+    "description": "Unguided rockets.",
+    "currency": "CREDITS",
+    "price": 5500,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_ammo_rocket",
+          "quantity": 500
+        }
+      ]
+    },
+    "requiredLevel": 6,
+    "active": true
+  },
+  {
+    "id": "shop_skin_lumen_solar_crown",
+    "sku": "sku_skin_lumen_solar_crown",
+    "name": "Lumen: Solar Crown",
+    "category": "SKINS",
+    "description": "Cosmetic hull skin that reshapes the Lumen's wings. No stat changes.",
+    "currency": "GEMS",
+    "price": 1200,
+    "grants": {
+      "items": [
+        {
+          "itemId": "skin_lumen_solar_crown",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true,
+    "featured": true
+  },
+  {
+    "id": "shop_skin_gale_stormbreaker",
+    "sku": "sku_skin_gale_stormbreaker",
+    "name": "Gale: Stormbreaker",
+    "category": "SKINS",
+    "description": "Cosmetic hull skin for the Gale. No stat changes.",
+    "currency": "GEMS",
+    "price": 1200,
+    "grants": {
+      "items": [
+        {
+          "itemId": "skin_gale_stormbreaker",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_skin_ember_phoenix",
+    "sku": "sku_skin_ember_phoenix",
+    "name": "Ember: Phoenix Rebirth",
+    "category": "SKINS",
+    "description": "Legendary cosmetic skin for the Ember. No stat changes.",
+    "currency": "GEMS",
+    "price": 2000,
+    "grants": {
+      "items": [
+        {
+          "itemId": "skin_ember_phoenix",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_cos_aurora_flare",
+    "sku": "sku_cos_aurora_flare",
+    "name": "Aurora Flare Engines",
+    "category": "COSMETICS",
+    "description": "Cosmetic engine effect.",
+    "currency": "GEMS",
+    "price": 600,
+    "grants": {
+      "items": [
+        {
+          "itemId": "cos_engine_aurora_flare",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_cos_founder_title",
+    "sku": "sku_cos_founder_title",
+    "name": "Frontier Founder Title",
+    "category": "COSMETICS",
+    "description": "Cosmetic title for early supporters.",
+    "currency": "GEMS",
+    "price": 400,
+    "grants": {
+      "items": [
+        {
+          "itemId": "cos_title_founder",
+          "quantity": 1
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true,
+    "limitPerUser": 1
+  },
+  {
+    "id": "shop_booster_xp_3",
+    "sku": "sku_booster_xp_3",
+    "name": "XP Booster x3",
+    "category": "BOOSTERS",
+    "description": "Three 1-hour XP boosters (convenience).",
+    "currency": "GEMS",
+    "price": 150,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_xp_booster_1h",
+          "quantity": 3
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_booster_drop_3",
+    "sku": "sku_booster_drop_3",
+    "name": "Salvage Booster x3",
+    "category": "BOOSTERS",
+    "description": "Three 1-hour salvage boosters (convenience).",
+    "currency": "GEMS",
+    "price": 180,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_drop_booster_1h",
+          "quantity": 3
+        }
+      ]
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_battlepass_s1_premium",
+    "sku": "sku_battlepass_s1_premium",
+    "name": "Season I Premium Pass",
+    "category": "BATTLE_PASS",
+    "description": "Unlocks the premium cosmetic track of the Season I pass.",
+    "currency": "GEMS",
+    "price": 950,
+    "grants": {
+      "battlePassPremium": true
+    },
+    "requiredLevel": 1,
+    "active": true,
+    "limitPerUser": 1,
+    "featured": true
+  },
+  {
+    "id": "shop_battlepass_s2_premium",
+    "sku": "sku_battlepass_s2_premium",
+    "name": "Season II Premium Pass",
+    "category": "BATTLE_PASS",
+    "description": "Unlocks the premium cosmetic track of the Season II pass.",
+    "currency": "GEMS",
+    "price": 950,
+    "grants": {
+      "battlePassPremium": true
+    },
+    "requiredLevel": 1,
+    "active": false,
+    "limitPerUser": 1
+  },
+  {
+    "id": "shop_battlepass_s3_premium",
+    "sku": "sku_battlepass_s3_premium",
+    "name": "Season III Premium Pass",
+    "category": "BATTLE_PASS",
+    "description": "Unlocks the premium cosmetic track of the Season III pass.",
+    "currency": "GEMS",
+    "price": 950,
+    "grants": {
+      "battlePassPremium": true
+    },
+    "requiredLevel": 1,
+    "active": false,
+    "limitPerUser": 1
+  },
+  {
+    "id": "shop_premium_vip_30",
+    "sku": "sku_premium_vip_30",
+    "name": "VIP Membership (30 days)",
+    "category": "PREMIUM",
+    "description": "Convenience perks: +10% XP, extra inventory slots, one extra daily quest. Not an investment and has no cash value.",
+    "currency": "GEMS",
+    "price": 500,
+    "grants": {
+      "premium": {
+        "tier": "VIP",
+        "days": 30
+      }
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_premium_elite_30",
+    "sku": "sku_premium_elite_30",
+    "name": "ELITE Membership (30 days)",
+    "category": "PREMIUM",
+    "description": "Convenience and cosmetic perks: +20% XP, more inventory, two extra daily quests. Not an investment and has no cash value.",
+    "currency": "GEMS",
+    "price": 1000,
+    "grants": {
+      "premium": {
+        "tier": "ELITE",
+        "days": 30
+      }
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_bundle_starter",
+    "sku": "sku_bundle_starter",
+    "name": "Frontier Starter Bundle",
+    "category": "BUNDLES",
+    "description": "Consumables and a cosmetic badge to get you flying.",
+    "currency": "GEMS",
+    "price": 300,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_repair_kit",
+          "quantity": 10
+        },
+        {
+          "itemId": "item_shield_cell",
+          "quantity": 10
+        },
+        {
+          "itemId": "item_xp_booster_1h",
+          "quantity": 2
+        },
+        {
+          "itemId": "cos_nameplate_frontier",
+          "quantity": 1
+        }
+      ],
+      "credits": 50000
+    },
+    "requiredLevel": 1,
+    "active": true,
+    "limitPerUser": 1
+  },
+  {
+    "id": "shop_bundle_miner",
+    "sku": "sku_bundle_miner",
+    "name": "Prospector's Bundle",
+    "category": "BUNDLES",
+    "description": "Mining boosters and supplies.",
+    "currency": "GEMS",
+    "price": 450,
+    "grants": {
+      "items": [
+        {
+          "itemId": "item_mining_booster_1h",
+          "quantity": 5
+        },
+        {
+          "itemId": "item_repair_kit",
+          "quantity": 5
+        }
+      ],
+      "resources": {
+        "TITANIUM": 200
+      }
+    },
+    "requiredLevel": 5,
+    "active": true
+  },
+  {
+    "id": "shop_gems_100",
+    "sku": "sku_gems_100",
+    "name": "100 Gems",
+    "category": "GEMS",
+    "description": "Premium currency for cosmetics and convenience. Purchased with devnet SOL; has no cash value and cannot be withdrawn.",
+    "currency": "SOL",
+    "price": 50000000,
+    "grants": {
+      "gems": 100
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_gems_550",
+    "sku": "sku_gems_550",
+    "name": "550 Gems",
+    "category": "GEMS",
+    "description": "Premium currency pack (+10% bonus). Devnet SOL; no cash value.",
+    "currency": "SOL",
+    "price": 250000000,
+    "grants": {
+      "gems": 550
+    },
+    "requiredLevel": 1,
+    "active": true
+  },
+  {
+    "id": "shop_gems_1200",
+    "sku": "sku_gems_1200",
+    "name": "1,200 Gems",
+    "category": "GEMS",
+    "description": "Premium currency pack (+20% bonus). Devnet SOL; no cash value.",
+    "currency": "SOL",
+    "price": 500000000,
+    "grants": {
+      "gems": 1200
+    },
+    "requiredLevel": 1,
+    "active": true,
+    "featured": true
+  },
+  {
+    "id": "shop_gems_2600",
+    "sku": "sku_gems_2600",
+    "name": "2,600 Gems",
+    "category": "GEMS",
+    "description": "Premium currency pack (+30% bonus). Devnet SOL; no cash value.",
+    "currency": "SOL",
+    "price": 1000000000,
+    "grants": {
+      "gems": 2600
+    },
+    "requiredLevel": 1,
+    "active": true
+  }
+]

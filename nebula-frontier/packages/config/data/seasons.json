@@ -1,0 +1,314 @@
+[
+  {
+    "id": "season_1",
+    "number": 1,
+    "name": "Season I: The Singing Dark",
+    "theme": "The Null Choir awakens and the Vanta Colossus rises.",
+    "startAt": "2026-09-01T00:00:00Z",
+    "endAt": "2026-12-31T23:59:59Z",
+    "bossId": "boss_vanta_colossus",
+    "battlePassId": "pass_s1",
+    "leaderboardRewards": [
+      {
+        "rankFrom": 1,
+        "rankTo": 1,
+        "bundle": {
+          "gems": 500,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 10
+          }
+        }
+      },
+      {
+        "rankFrom": 2,
+        "rankTo": 10,
+        "bundle": {
+          "gems": 250,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 4
+          }
+        }
+      },
+      {
+        "rankFrom": 11,
+        "rankTo": 100,
+        "bundle": {
+          "gems": 100,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 1
+          }
+        }
+      },
+      {
+        "rankFrom": 101,
+        "rankTo": 1000,
+        "bundle": {
+          "gems": 25
+        }
+      }
+    ],
+    "rankedRewards": [
+      {
+        "tier": "BRONZE",
+        "minRating": 0,
+        "bundle": {
+          "credits": 20000
+        }
+      },
+      {
+        "tier": "SILVER",
+        "minRating": 1200,
+        "bundle": {
+          "credits": 50000,
+          "gems": 10
+        }
+      },
+      {
+        "tier": "GOLD",
+        "minRating": 1500,
+        "bundle": {
+          "gems": 30
+        }
+      },
+      {
+        "tier": "PLATINUM",
+        "minRating": 1800,
+        "bundle": {
+          "gems": 60,
+          "cryptoEligible": {
+            "source": "RANKED_SEASON",
+            "weight": 1
+          }
+        }
+      },
+      {
+        "tier": "NEBULA",
+        "minRating": 2100,
+        "bundle": {
+          "gems": 120,
+          "items": [
+            {
+              "itemId": "cos_title_s1_vanguard",
+              "quantity": 1
+            }
+          ],
+          "cryptoEligible": {
+            "source": "RANKED_SEASON",
+            "weight": 3
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "season_2",
+    "number": 2,
+    "name": "Season II: Rift Tide",
+    "theme": "The Void Herald leads an incursion from beyond the Rift.",
+    "startAt": "2027-01-01T00:00:00Z",
+    "endAt": "2027-04-30T23:59:59Z",
+    "bossId": "boss_void_herald",
+    "battlePassId": "pass_s2",
+    "leaderboardRewards": [
+      {
+        "rankFrom": 1,
+        "rankTo": 1,
+        "bundle": {
+          "gems": 600,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 10
+          }
+        }
+      },
+      {
+        "rankFrom": 2,
+        "rankTo": 10,
+        "bundle": {
+          "gems": 300,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 4
+          }
+        }
+      },
+      {
+        "rankFrom": 11,
+        "rankTo": 100,
+        "bundle": {
+          "gems": 120,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 1
+          }
+        }
+      },
+      {
+        "rankFrom": 101,
+        "rankTo": 1000,
+        "bundle": {
+          "gems": 30
+        }
+      }
+    ],
+    "rankedRewards": [
+      {
+        "tier": "BRONZE",
+        "minRating": 0,
+        "bundle": {
+          "credits": 20000
+        }
+      },
+      {
+        "tier": "SILVER",
+        "minRating": 1200,
+        "bundle": {
+          "credits": 50000,
+          "gems": 10
+        }
+      },
+      {
+        "tier": "GOLD",
+        "minRating": 1500,
+        "bundle": {
+          "gems": 30
+        }
+      },
+      {
+        "tier": "PLATINUM",
+        "minRating": 1800,
+        "bundle": {
+          "gems": 60,
+          "cryptoEligible": {
+            "source": "RANKED_SEASON",
+            "weight": 1
+          }
+        }
+      },
+      {
+        "tier": "NEBULA",
+        "minRating": 2100,
+        "bundle": {
+          "gems": 120,
+          "items": [
+            {
+              "itemId": "cos_title_s2_harbinger",
+              "quantity": 1
+            }
+          ],
+          "cryptoEligible": {
+            "source": "RANKED_SEASON",
+            "weight": 3
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "season_3",
+    "number": 3,
+    "name": "Season III: Titanfall",
+    "theme": "The Titan Vault's Warden stirs and the Leviathans migrate.",
+    "startAt": "2027-05-01T00:00:00Z",
+    "endAt": "2027-08-31T23:59:59Z",
+    "bossId": "boss_titan_warden",
+    "battlePassId": "pass_s3",
+    "leaderboardRewards": [
+      {
+        "rankFrom": 1,
+        "rankTo": 1,
+        "bundle": {
+          "gems": 700,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 10
+          }
+        }
+      },
+      {
+        "rankFrom": 2,
+        "rankTo": 10,
+        "bundle": {
+          "gems": 350,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 4
+          }
+        }
+      },
+      {
+        "rankFrom": 11,
+        "rankTo": 100,
+        "bundle": {
+          "gems": 140,
+          "cryptoEligible": {
+            "source": "LEADERBOARD",
+            "weight": 1
+          }
+        }
+      },
+      {
+        "rankFrom": 101,
+        "rankTo": 1000,
+        "bundle": {
+          "gems": 35
+        }
+      }
+    ],
+    "rankedRewards": [
+      {
+        "tier": "BRONZE",
+        "minRating": 0,
+        "bundle": {
+          "credits": 20000
+        }
+      },
+      {
+        "tier": "SILVER",
+        "minRating": 1200,
+        "bundle": {
+          "credits": 50000,
+          "gems": 10
+        }
+      },
+      {
+        "tier": "GOLD",
+        "minRating": 1500,
+        "bundle": {
+          "gems": 30
+        }
+      },
+      {
+        "tier": "PLATINUM",
+        "minRating": 1800,
+        "bundle": {
+          "gems": 60,
+          "cryptoEligible": {
+            "source": "RANKED_SEASON",
+            "weight": 1
+          }
+        }
+      },
+      {
+        "tier": "NEBULA",
+        "minRating": 2100,
+        "bundle": {
+          "gems": 120,
+          "items": [
+            {
+              "itemId": "cos_title_s3_ascendant",
+              "quantity": 1
+            }
+          ],
+          "cryptoEligible": {
+            "source": "RANKED_SEASON",
+            "weight": 3
+          }
+        }
+      }
+    ]
+  }
+]

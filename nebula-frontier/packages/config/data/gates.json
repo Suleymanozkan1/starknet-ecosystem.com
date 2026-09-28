@@ -1,0 +1,245 @@
+[
+  {
+    "id": "gate_alpha_breach",
+    "name": "Alpha Breach Gate",
+    "map": "map_gate_alpha",
+    "requiredLevel": 15,
+    "entryCost": {
+      "credits": 20000,
+      "resources": {
+        "QUANTUM_SHARD": 5
+      }
+    },
+    "waves": [
+      {
+        "name": "Wave 1",
+        "npcs": [
+          {
+            "npcId": "npc_xyrr_scout",
+            "count": 10
+          }
+        ]
+      },
+      {
+        "name": "Wave 2",
+        "npcs": [
+          {
+            "npcId": "npc_xyrr_fighter",
+            "count": 8
+          },
+          {
+            "npcId": "npc_leviathan_spawnling",
+            "count": 6
+          }
+        ]
+      },
+      {
+        "name": "Wave 3",
+        "npcs": [
+          {
+            "npcId": "npc_xyrr_fighter",
+            "count": 8
+          },
+          {
+            "npcId": "npc_xyrr_elite",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "name": "Elite",
+        "npcs": [
+          {
+            "npcId": "npc_xyrr_elite",
+            "count": 5
+          }
+        ],
+        "elite": true
+      },
+      {
+        "name": "Mini Boss",
+        "npcs": [
+          {
+            "npcId": "npc_xyrr_praetorian",
+            "count": 1
+          },
+          {
+            "npcId": "npc_xyrr_fighter",
+            "count": 4
+          }
+        ],
+        "boss": true
+      },
+      {
+        "name": "Final Boss",
+        "npcs": [
+          {
+            "npcId": "boss_breach_sovereign",
+            "count": 1
+          }
+        ],
+        "boss": true
+      }
+    ],
+    "difficulties": {
+      "NORMAL": {
+        "hullMultiplier": 1,
+        "damageMultiplier": 1,
+        "rewardMultiplier": 1
+      },
+      "HARD": {
+        "hullMultiplier": 1.6,
+        "damageMultiplier": 1.4,
+        "rewardMultiplier": 1.75
+      },
+      "NIGHTMARE": {
+        "hullMultiplier": 2.5,
+        "damageMultiplier": 2,
+        "rewardMultiplier": 3
+      },
+      "MYTHIC": {
+        "hullMultiplier": 4,
+        "damageMultiplier": 3,
+        "rewardMultiplier": 5
+      }
+    },
+    "rewards": {
+      "xp": 40000,
+      "honor": 500,
+      "credits": 60000,
+      "gems": 20,
+      "seasonPoints": 150,
+      "passXp": 400,
+      "resources": {
+        "QUANTUM_SHARD": 15,
+        "DARK_MATTER": 3
+      },
+      "cryptoEligible": {
+        "source": "GATE",
+        "weight": 1
+      }
+    }
+  },
+  {
+    "id": "gate_omega_singularity",
+    "name": "Omega Singularity Gate",
+    "map": "map_gate_omega",
+    "requiredLevel": 30,
+    "entryCost": {
+      "credits": 60000,
+      "resources": {
+        "DARK_MATTER": 10,
+        "QUANTUM_SHARD": 10
+      }
+    },
+    "waves": [
+      {
+        "name": "Wave 1",
+        "npcs": [
+          {
+            "npcId": "npc_null_sentinel",
+            "count": 8
+          }
+        ]
+      },
+      {
+        "name": "Wave 2",
+        "npcs": [
+          {
+            "npcId": "npc_null_sentinel",
+            "count": 6
+          },
+          {
+            "npcId": "npc_null_destroyer",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "name": "Wave 3",
+        "npcs": [
+          {
+            "npcId": "npc_null_destroyer",
+            "count": 4
+          },
+          {
+            "npcId": "npc_pirate_warlord",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "name": "Elite",
+        "npcs": [
+          {
+            "npcId": "npc_null_destroyer",
+            "count": 5
+          }
+        ],
+        "elite": true
+      },
+      {
+        "name": "Mini Boss",
+        "npcs": [
+          {
+            "npcId": "npc_leviathan",
+            "count": 1
+          },
+          {
+            "npcId": "npc_leviathan_spawnling",
+            "count": 10
+          }
+        ],
+        "boss": true
+      },
+      {
+        "name": "Final Boss",
+        "npcs": [
+          {
+            "npcId": "boss_omega_mindshard",
+            "count": 1
+          }
+        ],
+        "boss": true
+      }
+    ],
+    "difficulties": {
+      "NORMAL": {
+        "hullMultiplier": 1,
+        "damageMultiplier": 1,
+        "rewardMultiplier": 1
+      },
+      "HARD": {
+        "hullMultiplier": 1.6,
+        "damageMultiplier": 1.4,
+        "rewardMultiplier": 1.75
+      },
+      "NIGHTMARE": {
+        "hullMultiplier": 2.5,
+        "damageMultiplier": 2,
+        "rewardMultiplier": 3
+      },
+      "MYTHIC": {
+        "hullMultiplier": 4,
+        "damageMultiplier": 3,
+        "rewardMultiplier": 5
+      }
+    },
+    "rewards": {
+      "xp": 90000,
+      "honor": 1200,
+      "credits": 150000,
+      "gems": 40,
+      "seasonPoints": 300,
+      "passXp": 800,
+      "resources": {
+        "DARK_MATTER": 12,
+        "VOID_ESSENCE": 2
+      },
+      "cryptoEligible": {
+        "source": "GATE",
+        "weight": 2
+      }
+    }
+  }
+]

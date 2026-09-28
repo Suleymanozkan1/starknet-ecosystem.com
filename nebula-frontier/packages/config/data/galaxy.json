@@ -1,0 +1,119 @@
+{
+  "id": "galaxy_nebula_frontier",
+  "name": "The Nebula Frontier",
+  "sectors": [
+    {
+      "id": "sector_helios",
+      "name": "Helios Sector",
+      "systems": [
+        {
+          "id": "sys_helios_prime",
+          "name": "Helios Prime",
+          "maps": [
+            "map_helios_frontier"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_vanta_rift",
+      "name": "Vanta Rift",
+      "systems": [
+        {
+          "id": "sys_vanta_maw",
+          "name": "Vanta Maw",
+          "maps": [
+            "map_vanta_rift",
+            "map_gate_alpha"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_orion_belt",
+      "name": "Orion Belt",
+      "systems": [
+        {
+          "id": "sys_orion_drift",
+          "name": "Orion Drift",
+          "maps": [
+            "map_orion_belt"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_astra_graveyard",
+      "name": "Astra Graveyard",
+      "systems": [
+        {
+          "id": "sys_astra_necropolis",
+          "name": "Astra Necropolis",
+          "maps": [
+            "map_astra_graveyard",
+            "map_gate_omega"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_eclipse_zone",
+      "name": "Eclipse Zone",
+      "systems": [
+        {
+          "id": "sys_eclipse_ring",
+          "name": "Eclipse Ring",
+          "maps": [
+            "map_eclipse_arena"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_titan_expanse",
+      "name": "Titan Expanse",
+      "systems": [
+        {
+          "id": "sys_titan_forge",
+          "name": "Titan Forge",
+          "maps": [
+            "map_vortex_haven"
+          ]
+        },
+        {
+          "id": "sys_titan_vault",
+          "name": "Titan Vault",
+          "maps": [
+            "map_raid_titan_vault"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_void_frontier",
+      "name": "Void Frontier",
+      "systems": [
+        {
+          "id": "sys_crown_reach",
+          "name": "Crown Reach",
+          "maps": [
+            "map_nova_crown"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sector_nebula_corridor",
+      "name": "Nebula Corridor",
+      "systems": [
+        {
+          "id": "sys_lyra_dawn",
+          "name": "Lyra Dawn",
+          "maps": [
+            "map_aurora_prime"
+          ]
+        }
+      ]
+    }
+  ]
+}

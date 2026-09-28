@@ -1,0 +1,98 @@
+[
+  {
+    "id": "aurora",
+    "name": "AURORA INDUSTRIES",
+    "tag": "AUR",
+    "motto": "Light the way.",
+    "lore": "Born from the solar-sail shipyards that first ringed the Lyra Dawn star, Aurora Industries grew into the frontier's largest builder of civilian and survey craft. Its engineers believe that every dark lane can be charted and every derelict repaired. When the Rift began swallowing trade routes, Aurora armed its survey fleets rather than abandon the colonies that depend on them.",
+    "color": "#6ee7ff",
+    "secondaryColor": "#ffd36b",
+    "emblem": "M12 2 L15 9 L22 9 L16.5 13.5 L18.5 21 L12 16.5 L5.5 21 L7.5 13.5 L2 9 L9 9 Z",
+    "homeSector": "sector_nebula_corridor",
+    "homeMap": "map_aurora_prime",
+    "starterShip": "ship_aurora_lumen",
+    "starterLoadout": {
+      "weapons": [
+        "wpn_laser_mk1",
+        "wpn_laser_mk1",
+        "wpn_missile_hornet"
+      ],
+      "modules": [
+        "gen_shield_s1",
+        "gen_speed_s1",
+        "mod_shield_booster"
+      ],
+      "drones": [
+        "drone_striker"
+      ]
+    },
+    "bonus": {
+      "shieldRegen": 3,
+      "speed": 2
+    }
+  },
+  {
+    "id": "vortex",
+    "name": "VORTEX CONSORTIUM",
+    "tag": "VTX",
+    "motto": "Everything has a price. We set it.",
+    "lore": "The Vortex Consortium is a merger of a hundred salvage guilds, freight lines and mercenary charters bound by a single ledger. Its gunships escort the ore convoys of the Titan Expanse, and its brokers own half the docks between. The Consortium fights for contracts, not ideals, and it always collects.",
+    "color": "#ff9f43",
+    "secondaryColor": "#3b3f4a",
+    "emblem": "M12 2 C6 2 2 6 2 12 C2 18 6 22 12 22 C9 18 9 14 12 12 C15 10 15 6 12 2 Z M12 12 C15 14 15 18 12 22 C18 22 22 18 22 12 C22 6 18 2 12 2 C15 6 15 10 12 12 Z",
+    "homeSector": "sector_titan_expanse",
+    "homeMap": "map_vortex_haven",
+    "starterShip": "ship_vortex_gale",
+    "starterLoadout": {
+      "weapons": [
+        "wpn_laser_mk1",
+        "wpn_laser_mk1",
+        "wpn_missile_hornet"
+      ],
+      "modules": [
+        "gen_shield_s1",
+        "gen_speed_s1",
+        "mod_engine_overdrive"
+      ],
+      "drones": [
+        "drone_striker"
+      ]
+    },
+    "bonus": {
+      "hull": 3,
+      "cargo": 5
+    }
+  },
+  {
+    "id": "nova",
+    "name": "NOVA DYNASTY",
+    "tag": "NOV",
+    "motto": "Burn bright. Burn forever.",
+    "lore": "The Nova Dynasty traces its line to the colonists who survived the collapse of the Crown star by riding its shockwave outward. Their houses rule by lineage and duel, and their warships are forged as heirlooms. The Dynasty sees the Void Frontier as an ancestral trial: whoever tames it will earn the right to rekindle the Crown.",
+    "color": "#ff4d6d",
+    "secondaryColor": "#d4a017",
+    "emblem": "M12 1 L14 8 L21 6 L16 12 L21 18 L14 16 L12 23 L10 16 L3 18 L8 12 L3 6 L10 8 Z",
+    "homeSector": "sector_void_frontier",
+    "homeMap": "map_nova_crown",
+    "starterShip": "ship_nova_ember",
+    "starterLoadout": {
+      "weapons": [
+        "wpn_laser_mk1",
+        "wpn_laser_mk1",
+        "wpn_missile_hornet"
+      ],
+      "modules": [
+        "gen_shield_s1",
+        "gen_speed_s1",
+        "mod_shield_booster"
+      ],
+      "drones": [
+        "drone_striker"
+      ]
+    },
+    "bonus": {
+      "damage": 2,
+      "critChance": 1
+    }
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "pet_glimmer",
+    "name": "Glimmer",
+    "abilities": [
+      "LOOT_COLLECT",
+      "RADAR",
+      "RESOURCE_DETECTION"
+    ],
+    "maxLevel": 20,
+    "lootRadius": 18,
+    "repairPerSecond": 0,
+    "radarBonus": 0.15,
+    "buff": {
+      "miningSpeed": 3
+    }
+  },
+  {
+    "id": "pet_ferrox",
+    "name": "Ferrox",
+    "abilities": [
+      "REPAIR",
+      "ENEMY_SCAN",
+      "PASSIVE_BUFF",
+      "LOOT_COLLECT"
+    ],
+    "maxLevel": 20,
+    "lootRadius": 10,
+    "repairPerSecond": 25,
+    "radarBonus": 0.05,
+    "buff": {
+      "damage": 2,
+      "armor": 2
+    }
+  }
+]
