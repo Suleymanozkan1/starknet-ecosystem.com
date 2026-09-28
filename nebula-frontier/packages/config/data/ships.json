@@ -1,0 +1,1730 @@
+[
+  {
+    "id": "ship_aurora_lumen",
+    "name": "Lumen",
+    "class": "INTERCEPTOR",
+    "faction": "aurora",
+    "tier": 1,
+    "rarity": "COMMON",
+    "description": "Aurora Industries' academy interceptor. A slim solar-sail dart that trades armor for raw acceleration and a forgiving reactor.",
+    "requiredLevel": 1,
+    "stats": {
+      "hull": 1200,
+      "shield": 1000,
+      "armor": 20,
+      "energy": 160,
+      "energyRegen": 12,
+      "shieldRegen": 18,
+      "speed": 34,
+      "acceleration": 60,
+      "turnRate": 2.6,
+      "cargo": 60,
+      "heatCapacity": 100
+    },
+    "slots": {
+      "laser": 2,
+      "missile": 1,
+      "generator": 2,
+      "module": 1,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "THERMAL": 0.05
+    },
+    "abilities": [
+      {
+        "id": "abl_aurora_lumen_passive",
+        "name": "Solar Trim",
+        "kind": "PASSIVE",
+        "description": "Sail foils tuned for sprinting: +6% speed.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "speed",
+          "percent": 6
+        }
+      },
+      {
+        "id": "abl_aurora_lumen_active",
+        "name": "Afterglow Dash",
+        "kind": "ACTIVE",
+        "description": "Blink forward along the flight vector.",
+        "cooldownMs": 9000,
+        "durationMs": 0,
+        "energyCost": 30,
+        "effect": {
+          "type": "DASH",
+          "distance": 22
+        }
+      },
+      {
+        "id": "abl_aurora_lumen_ultimate",
+        "name": "Dawnshield",
+        "kind": "ULTIMATE",
+        "description": "Floods the emitters with stored light, restoring 45% shield.",
+        "cooldownMs": 60000,
+        "durationMs": 0,
+        "energyCost": 80,
+        "effect": {
+          "type": "SHIELD_RESTORE",
+          "percent": 45
+        }
+      }
+    ],
+    "visual": {
+      "hull": "dart",
+      "engine": "twin",
+      "wings": "swept",
+      "cockpit": "bubble",
+      "reactor": "twin-cell",
+      "armor": "light",
+      "antenna": "mast",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 1,
+      "length": 3,
+      "primaryColor": "#e8f4ff",
+      "secondaryColor": "#7fb8ff",
+      "accentColor": "#ffd36b",
+      "engineColor": "#6ee7ff",
+      "hardpoints": [
+        [0.6, 0, 1.26],
+        [-0.6, 0, 1.26],
+        [0, 0.18, 0.9]
+      ],
+      "nozzles": [
+        [0.43, 0, -1.5],
+        [-0.43, 0, -1.5]
+      ]
+    },
+    "tradeable": false,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_vortex_gale",
+    "name": "Gale",
+    "class": "ASSAULT",
+    "faction": "vortex",
+    "tier": 1,
+    "rarity": "COMMON",
+    "description": "The Consortium's contract gunship: a stubby delta wedge with bolt-on armor plates and a cargo pod for salvage runs.",
+    "requiredLevel": 1,
+    "stats": {
+      "hull": 1600,
+      "shield": 900,
+      "armor": 45,
+      "energy": 150,
+      "energyRegen": 10,
+      "shieldRegen": 14,
+      "speed": 29,
+      "acceleration": 48,
+      "turnRate": 2.2,
+      "cargo": 90,
+      "heatCapacity": 110
+    },
+    "slots": {
+      "laser": 2,
+      "missile": 1,
+      "generator": 2,
+      "module": 1,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "KINETIC": 0.06
+    },
+    "abilities": [
+      {
+        "id": "abl_vortex_gale_passive",
+        "name": "Contract Plating",
+        "kind": "PASSIVE",
+        "description": "Bolt-on plates: +8% hull.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "hull",
+          "percent": 8
+        }
+      },
+      {
+        "id": "abl_vortex_gale_active",
+        "name": "Hostile Takeover",
+        "kind": "ACTIVE",
+        "description": "Overclocks the gun deck for +20% damage.",
+        "cooldownMs": 20000,
+        "durationMs": 6000,
+        "energyCost": 40,
+        "effect": {
+          "type": "DAMAGE_BOOST",
+          "multiplier": 1.2
+        }
+      },
+      {
+        "id": "abl_vortex_gale_ultimate",
+        "name": "Liquidation Barrage",
+        "kind": "ULTIMATE",
+        "description": "Dumps every rack in a thermal saturation strike.",
+        "cooldownMs": 75000,
+        "durationMs": 0,
+        "energyCost": 90,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 14,
+          "damage": 900,
+          "element": "THERMAL"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "wedge",
+      "engine": "quad",
+      "wings": "delta",
+      "cockpit": "slit",
+      "reactor": "exposed-core",
+      "armor": "plated",
+      "antenna": "none",
+      "cargo": "pods",
+      "droneDock": false,
+      "scale": 1.13,
+      "length": 3.4,
+      "primaryColor": "#3b3f4a",
+      "secondaryColor": "#f28c28",
+      "accentColor": "#ffe066",
+      "engineColor": "#ff9f43",
+      "hardpoints": [
+        [0.72, 0, 1.43],
+        [-0.72, 0, 1.43],
+        [0, 0.2, 1.02]
+      ],
+      "nozzles": [
+        [0.4, 0.14, -1.7],
+        [-0.4, 0.14, -1.7],
+        [0.87, -0.1, -1.7],
+        [-0.87, -0.1, -1.7]
+      ]
+    },
+    "tradeable": false,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_nova_ember",
+    "name": "Ember",
+    "class": "STRIKER",
+    "faction": "nova",
+    "tier": 1,
+    "rarity": "COMMON",
+    "description": "Nova Dynasty's ceremonial striker, forged around a ring-core reactor. Its forward-swept wings hide ablative lacquer plates.",
+    "requiredLevel": 1,
+    "stats": {
+      "hull": 1350,
+      "shield": 1050,
+      "armor": 30,
+      "energy": 170,
+      "energyRegen": 13,
+      "shieldRegen": 16,
+      "speed": 31,
+      "acceleration": 54,
+      "turnRate": 2.4,
+      "cargo": 60,
+      "heatCapacity": 105
+    },
+    "slots": {
+      "laser": 2,
+      "missile": 1,
+      "generator": 2,
+      "module": 1,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "PLASMA": 0.06
+    },
+    "abilities": [
+      {
+        "id": "abl_nova_ember_passive",
+        "name": "Dynastic Focus",
+        "kind": "PASSIVE",
+        "description": "Heirloom targeting optics: +5% crit chance.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "critChance",
+          "percent": 5
+        }
+      },
+      {
+        "id": "abl_nova_ember_active",
+        "name": "Cinder Veil",
+        "kind": "ACTIVE",
+        "description": "Vents ablative ash, reducing incoming damage by 25%.",
+        "cooldownMs": 18000,
+        "durationMs": 5000,
+        "energyCost": 35,
+        "effect": {
+          "type": "DAMAGE_REDUCTION",
+          "multiplier": 0.75
+        }
+      },
+      {
+        "id": "abl_nova_ember_ultimate",
+        "name": "Crown of Embers",
+        "kind": "ULTIMATE",
+        "description": "A plasma nova erupts around the hull.",
+        "cooldownMs": 70000,
+        "durationMs": 0,
+        "energyCost": 90,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 12,
+          "damage": 850,
+          "element": "PLASMA"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "arrowhead",
+      "engine": "vector",
+      "wings": "forward-swept",
+      "cockpit": "canopy",
+      "reactor": "ring-core",
+      "armor": "ablative",
+      "antenna": "spikes",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 1.07,
+      "length": 3.2,
+      "primaryColor": "#5a0f1e",
+      "secondaryColor": "#d4a017",
+      "accentColor": "#ff4d6d",
+      "engineColor": "#ff6b35",
+      "hardpoints": [
+        [0.72, 0, 1.34],
+        [-0.72, 0, 1.34],
+        [0, 0.19, 0.96]
+      ],
+      "nozzles": [
+        [0.52, 0, -1.6],
+        [-0.52, 0, -1.6]
+      ]
+    },
+    "tradeable": false,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_wisp",
+    "name": "Wisp",
+    "class": "SCOUT",
+    "tier": 1,
+    "rarity": "UNCOMMON",
+    "description": "A needle-thin courier with a single oversized drive and a sensor eye that sees heat blooms through dust clouds.",
+    "requiredLevel": 3,
+    "stats": {
+      "hull": 900,
+      "shield": 800,
+      "armor": 10,
+      "energy": 140,
+      "energyRegen": 14,
+      "shieldRegen": 16,
+      "speed": 40,
+      "acceleration": 70,
+      "turnRate": 3,
+      "cargo": 40,
+      "heatCapacity": 90
+    },
+    "slots": {
+      "laser": 1,
+      "missile": 1,
+      "generator": 1,
+      "module": 2,
+      "drone": 0,
+      "ability": 3
+    },
+    "resistances": {
+      "EM": 0.05
+    },
+    "abilities": [
+      {
+        "id": "abl_wisp_passive",
+        "name": "Longsight",
+        "kind": "PASSIVE",
+        "description": "Sensor eye extends weapon range by 8%.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "range",
+          "percent": 8
+        }
+      },
+      {
+        "id": "abl_wisp_active",
+        "name": "Slipstream",
+        "kind": "ACTIVE",
+        "description": "Rides its own wake for +45% speed.",
+        "cooldownMs": 15000,
+        "durationMs": 5000,
+        "energyCost": 25,
+        "effect": {
+          "type": "SPEED_BOOST",
+          "multiplier": 1.45
+        }
+      },
+      {
+        "id": "abl_wisp_ultimate",
+        "name": "Ghost Signal",
+        "kind": "ULTIMATE",
+        "description": "Masks the drive signature entirely.",
+        "cooldownMs": 80000,
+        "durationMs": 8000,
+        "energyCost": 70,
+        "effect": {
+          "type": "CLOAK"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "needle",
+      "engine": "single-large",
+      "wings": "canard",
+      "cockpit": "sensor-eye",
+      "reactor": "buried",
+      "armor": "light",
+      "antenna": "dish",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 0.87,
+      "length": 2.6,
+      "primaryColor": "#dfe7ec",
+      "secondaryColor": "#4ecdc4",
+      "accentColor": "#f7fff7",
+      "engineColor": "#9bf6ff",
+      "hardpoints": [
+        [0.36, 0, 1.09],
+        [-0.36, 0, 1.09]
+      ],
+      "nozzles": [
+        [0, 0, -1.3]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_prospector",
+    "name": "Prospector",
+    "class": "MINING",
+    "tier": 1,
+    "rarity": "UNCOMMON",
+    "description": "A beetle-shelled ore hauler with a container rack spine. Slow, patient, and very hard to crack open.",
+    "requiredLevel": 5,
+    "stats": {
+      "hull": 2200,
+      "shield": 1100,
+      "armor": 60,
+      "energy": 180,
+      "energyRegen": 12,
+      "shieldRegen": 14,
+      "speed": 20,
+      "acceleration": 30,
+      "turnRate": 1.6,
+      "cargo": 400,
+      "heatCapacity": 120
+    },
+    "slots": {
+      "laser": 2,
+      "missile": 0,
+      "generator": 2,
+      "module": 2,
+      "drone": 2,
+      "ability": 3
+    },
+    "resistances": {
+      "KINETIC": 0.1
+    },
+    "abilities": [
+      {
+        "id": "abl_prospector_passive",
+        "name": "Deep Survey",
+        "kind": "PASSIVE",
+        "description": "Calibrated beam heads: +15% mining speed.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "miningSpeed",
+          "percent": 15
+        }
+      },
+      {
+        "id": "abl_prospector_active",
+        "name": "Hunker Down",
+        "kind": "ACTIVE",
+        "description": "Seals the shell, reducing damage by 40%.",
+        "cooldownMs": 25000,
+        "durationMs": 6000,
+        "energyCost": 30,
+        "effect": {
+          "type": "DAMAGE_REDUCTION",
+          "multiplier": 0.6
+        }
+      },
+      {
+        "id": "abl_prospector_ultimate",
+        "name": "Overburden Blast",
+        "kind": "ULTIMATE",
+        "description": "Detonates spare charges in a kinetic ring.",
+        "cooldownMs": 90000,
+        "durationMs": 0,
+        "energyCost": 80,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 16,
+          "damage": 700,
+          "element": "KINETIC"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "beetle",
+      "engine": "twin",
+      "wings": "none",
+      "cockpit": "canopy",
+      "reactor": "buried",
+      "armor": "plated",
+      "antenna": "mast",
+      "cargo": "container-rack",
+      "droneDock": false,
+      "scale": 1.4,
+      "length": 4.2,
+      "primaryColor": "#c9a227",
+      "secondaryColor": "#4a4e57",
+      "accentColor": "#f5f3ce",
+      "engineColor": "#ffb703",
+      "hardpoints": [
+        [1, 0, 1.76],
+        [-1, 0, 1.76]
+      ],
+      "nozzles": [
+        [0.72, 0, -2.1],
+        [-0.72, 0, -2.1]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_kestrel",
+    "name": "Kestrel",
+    "class": "INTERCEPTOR",
+    "tier": 2,
+    "rarity": "UNCOMMON",
+    "description": "Blade-winged pursuit craft with an exposed reactor core that glows brighter the harder it turns.",
+    "requiredLevel": 8,
+    "stats": {
+      "hull": 2600,
+      "shield": 2400,
+      "armor": 40,
+      "energy": 220,
+      "energyRegen": 16,
+      "shieldRegen": 26,
+      "speed": 37,
+      "acceleration": 66,
+      "turnRate": 2.8,
+      "cargo": 70,
+      "heatCapacity": 120
+    },
+    "slots": {
+      "laser": 3,
+      "missile": 1,
+      "generator": 3,
+      "module": 2,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "THERMAL": 0.05,
+      "KINETIC": 0.05
+    },
+    "abilities": [
+      {
+        "id": "abl_kestrel_passive",
+        "name": "Talon Reflex",
+        "kind": "PASSIVE",
+        "description": "+10% turn rate.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "turnRate",
+          "percent": 10
+        }
+      },
+      {
+        "id": "abl_kestrel_active",
+        "name": "Stoop",
+        "kind": "ACTIVE",
+        "description": "A diving dash onto prey.",
+        "cooldownMs": 8000,
+        "durationMs": 0,
+        "energyCost": 30,
+        "effect": {
+          "type": "DASH",
+          "distance": 26
+        }
+      },
+      {
+        "id": "abl_kestrel_ultimate",
+        "name": "Raptor Frenzy",
+        "kind": "ULTIMATE",
+        "description": "+35% damage for a short burst.",
+        "cooldownMs": 60000,
+        "durationMs": 6000,
+        "energyCost": 80,
+        "effect": {
+          "type": "DAMAGE_BOOST",
+          "multiplier": 1.35
+        }
+      }
+    ],
+    "visual": {
+      "hull": "arrowhead",
+      "engine": "twin",
+      "wings": "blade",
+      "cockpit": "bubble",
+      "reactor": "exposed-core",
+      "armor": "light",
+      "antenna": "none",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 1,
+      "length": 3,
+      "primaryColor": "#1d3557",
+      "secondaryColor": "#a8dadc",
+      "accentColor": "#e63946",
+      "engineColor": "#48cae4",
+      "hardpoints": [
+        [0.68, 0, 1.26],
+        [-0.67, 0, 1.26],
+        [1.16, 0, 0.9],
+        [-1.16, 0, 0.9]
+      ],
+      "nozzles": [
+        [0.49, 0, -1.5],
+        [-0.49, 0, -1.5]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_pathfinder",
+    "name": "Pathfinder",
+    "class": "EXPLORATION",
+    "tier": 2,
+    "rarity": "UNCOMMON",
+    "description": "A spine-frame survey vessel with folding x-struts, a deep-space dish and a long-range ion array for charting unmapped lanes.",
+    "requiredLevel": 10,
+    "stats": {
+      "hull": 3200,
+      "shield": 3000,
+      "armor": 35,
+      "energy": 300,
+      "energyRegen": 20,
+      "shieldRegen": 24,
+      "speed": 33,
+      "acceleration": 50,
+      "turnRate": 2.2,
+      "cargo": 180,
+      "heatCapacity": 120
+    },
+    "slots": {
+      "laser": 2,
+      "missile": 1,
+      "generator": 3,
+      "module": 3,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "EM": 0.08,
+      "VOID": 0.05
+    },
+    "abilities": [
+      {
+        "id": "abl_pathfinder_passive",
+        "name": "Cartographer",
+        "kind": "PASSIVE",
+        "description": "+12% energy regeneration.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "energyRegen",
+          "percent": 12
+        }
+      },
+      {
+        "id": "abl_pathfinder_active",
+        "name": "Lane Jump",
+        "kind": "ACTIVE",
+        "description": "Micro-warp along a charted lane.",
+        "cooldownMs": 12000,
+        "durationMs": 0,
+        "energyCost": 50,
+        "effect": {
+          "type": "DASH",
+          "distance": 40
+        }
+      },
+      {
+        "id": "abl_pathfinder_ultimate",
+        "name": "Survey Pulse",
+        "kind": "ULTIMATE",
+        "description": "An EM survey ping that scrambles hostile shields.",
+        "cooldownMs": 75000,
+        "durationMs": 0,
+        "energyCost": 90,
+        "effect": {
+          "type": "EMP",
+          "radius": 20,
+          "shieldDamagePercent": 15,
+          "stunMs": 1500
+        }
+      }
+    ],
+    "visual": {
+      "hull": "spine",
+      "engine": "ion-array",
+      "wings": "x-wing",
+      "cockpit": "sensor-eye",
+      "reactor": "twin-cell",
+      "armor": "light",
+      "antenna": "dish",
+      "cargo": "hold",
+      "droneDock": false,
+      "scale": 1.53,
+      "length": 4.6,
+      "primaryColor": "#f1faee",
+      "secondaryColor": "#2a9d8f",
+      "accentColor": "#e9c46a",
+      "engineColor": "#80ffdb",
+      "hardpoints": [
+        [0.92, 0, 1.93],
+        [-0.92, 0, 1.93],
+        [0, 0.28, 1.38]
+      ],
+      "nozzles": [
+        [0, 0, -2.3],
+        [1.03, 0, -2.3],
+        [-1.03, 0, -2.3]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_mender",
+    "name": "Mender",
+    "class": "SUPPORT",
+    "tier": 2,
+    "rarity": "RARE",
+    "description": "A halo-ringed field medic whose crystal lattice armor doubles as a shield projector for its wing.",
+    "requiredLevel": 12,
+    "stats": {
+      "hull": 3600,
+      "shield": 4200,
+      "armor": 40,
+      "energy": 360,
+      "energyRegen": 24,
+      "shieldRegen": 40,
+      "speed": 30,
+      "acceleration": 48,
+      "turnRate": 2.3,
+      "cargo": 90,
+      "heatCapacity": 110
+    },
+    "slots": {
+      "laser": 2,
+      "missile": 1,
+      "generator": 4,
+      "module": 3,
+      "drone": 2,
+      "ability": 3
+    },
+    "resistances": {
+      "EM": 0.1,
+      "PLASMA": 0.05
+    },
+    "abilities": [
+      {
+        "id": "abl_mender_passive",
+        "name": "Lattice Harmonics",
+        "kind": "PASSIVE",
+        "description": "+15% shield regeneration.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "shieldRegen",
+          "percent": 15
+        }
+      },
+      {
+        "id": "abl_mender_active",
+        "name": "Suture Field",
+        "kind": "ACTIVE",
+        "description": "Nanite weave repairs 20% hull.",
+        "cooldownMs": 20000,
+        "durationMs": 0,
+        "energyCost": 60,
+        "effect": {
+          "type": "HULL_REPAIR",
+          "percent": 20
+        }
+      },
+      {
+        "id": "abl_mender_ultimate",
+        "name": "Halo Restoration",
+        "kind": "ULTIMATE",
+        "description": "Resets the shield lattice to 70%.",
+        "cooldownMs": 90000,
+        "durationMs": 0,
+        "energyCost": 120,
+        "effect": {
+          "type": "SHIELD_RESTORE",
+          "percent": 70
+        }
+      }
+    ],
+    "visual": {
+      "hull": "halo",
+      "engine": "ring",
+      "wings": "ring",
+      "cockpit": "canopy",
+      "reactor": "exposed-core",
+      "armor": "crystal",
+      "antenna": "array",
+      "cargo": "pods",
+      "droneDock": false,
+      "scale": 1.27,
+      "length": 3.8,
+      "primaryColor": "#f8f9fa",
+      "secondaryColor": "#52b788",
+      "accentColor": "#b7e4c7",
+      "engineColor": "#95d5b2",
+      "hardpoints": [
+        [0.95, 0, 1.6],
+        [-0.95, 0, 1.6],
+        [0, 0.23, 1.14]
+      ],
+      "nozzles": [
+        [0, 0, -1.9]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_bastion",
+    "name": "Bastion",
+    "class": "TANK",
+    "tier": 3,
+    "rarity": "RARE",
+    "description": "A slab-sided monolith with no wings at all, just heavy plating, a buried reactor and a cluster drive that shoves it forward like a tide.",
+    "requiredLevel": 18,
+    "stats": {
+      "hull": 12000,
+      "shield": 8000,
+      "armor": 180,
+      "energy": 320,
+      "energyRegen": 18,
+      "shieldRegen": 40,
+      "speed": 22,
+      "acceleration": 30,
+      "turnRate": 1.4,
+      "cargo": 150,
+      "heatCapacity": 160
+    },
+    "slots": {
+      "laser": 3,
+      "missile": 2,
+      "generator": 5,
+      "module": 3,
+      "drone": 2,
+      "ability": 3
+    },
+    "resistances": {
+      "KINETIC": 0.15,
+      "THERMAL": 0.1
+    },
+    "abilities": [
+      {
+        "id": "abl_bastion_passive",
+        "name": "Bulwark Frame",
+        "kind": "PASSIVE",
+        "description": "+12% armor.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "armor",
+          "percent": 12
+        }
+      },
+      {
+        "id": "abl_bastion_active",
+        "name": "Brace",
+        "kind": "ACTIVE",
+        "description": "Locks bulkheads: -45% damage taken.",
+        "cooldownMs": 25000,
+        "durationMs": 6000,
+        "energyCost": 50,
+        "effect": {
+          "type": "DAMAGE_REDUCTION",
+          "multiplier": 0.55
+        }
+      },
+      {
+        "id": "abl_bastion_ultimate",
+        "name": "Last Wall",
+        "kind": "ULTIMATE",
+        "description": "Emergency repair of 40% hull.",
+        "cooldownMs": 100000,
+        "durationMs": 0,
+        "energyCost": 120,
+        "effect": {
+          "type": "HULL_REPAIR",
+          "percent": 40
+        }
+      }
+    ],
+    "visual": {
+      "hull": "monolith",
+      "engine": "cluster",
+      "wings": "none",
+      "cockpit": "bridge",
+      "reactor": "buried",
+      "armor": "heavy",
+      "antenna": "array",
+      "cargo": "hold",
+      "droneDock": false,
+      "scale": 2,
+      "length": 6,
+      "primaryColor": "#495057",
+      "secondaryColor": "#adb5bd",
+      "accentColor": "#ffd166",
+      "engineColor": "#ffaa00",
+      "hardpoints": [
+        [1.13, 0, 2.52],
+        [-1.12, 0, 2.52],
+        [1.94, 0, 1.8],
+        [-1.93, 0, 1.8],
+        [0, 0.36, 1.08]
+      ],
+      "nozzles": [
+        [0, 0, -3],
+        [0.9, 0.3, -3],
+        [-0.9, 0.3, -3],
+        [0.9, -0.3, -3],
+        [-0.9, -0.3, -3]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_harrow",
+    "name": "Harrow",
+    "class": "DESTROYER",
+    "tier": 3,
+    "rarity": "RARE",
+    "description": "Hammerhead destroyer with folded gun wings that unfold into a broadside of four barrels.",
+    "requiredLevel": 20,
+    "stats": {
+      "hull": 10000,
+      "shield": 9000,
+      "armor": 120,
+      "energy": 340,
+      "energyRegen": 20,
+      "shieldRegen": 36,
+      "speed": 26,
+      "acceleration": 36,
+      "turnRate": 1.6,
+      "cargo": 140,
+      "heatCapacity": 170
+    },
+    "slots": {
+      "laser": 5,
+      "missile": 2,
+      "generator": 4,
+      "module": 3,
+      "drone": 2,
+      "ability": 3
+    },
+    "resistances": {
+      "THERMAL": 0.1,
+      "PLASMA": 0.08
+    },
+    "abilities": [
+      {
+        "id": "abl_harrow_passive",
+        "name": "Broadside Doctrine",
+        "kind": "PASSIVE",
+        "description": "+8% damage.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "damage",
+          "percent": 8
+        }
+      },
+      {
+        "id": "abl_harrow_active",
+        "name": "Unfold Batteries",
+        "kind": "ACTIVE",
+        "description": "+25% damage while the wings are deployed.",
+        "cooldownMs": 22000,
+        "durationMs": 7000,
+        "energyCost": 60,
+        "effect": {
+          "type": "DAMAGE_BOOST",
+          "multiplier": 1.25
+        }
+      },
+      {
+        "id": "abl_harrow_ultimate",
+        "name": "Harrowing Salvo",
+        "kind": "ULTIMATE",
+        "description": "Saturation strike on everything nearby.",
+        "cooldownMs": 80000,
+        "durationMs": 0,
+        "energyCost": 130,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 18,
+          "damage": 2400,
+          "element": "KINETIC"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "hammer",
+      "engine": "quad",
+      "wings": "folded",
+      "cockpit": "bridge",
+      "reactor": "twin-cell",
+      "armor": "heavy",
+      "antenna": "mast",
+      "cargo": "pods",
+      "droneDock": false,
+      "scale": 2.13,
+      "length": 6.4,
+      "primaryColor": "#2b2d42",
+      "secondaryColor": "#8d99ae",
+      "accentColor": "#ef233c",
+      "engineColor": "#ff5400",
+      "hardpoints": [
+        [1.28, 0, 2.69],
+        [-1.28, 0, 2.69],
+        [2.2, 0, 1.92],
+        [-2.2, 0, 1.92],
+        [3.12, 0, 1.15],
+        [-3.12, 0, 1.15],
+        [0, 0.38, 0.38]
+      ],
+      "nozzles": [
+        [0.72, 0.26, -3.2],
+        [-0.72, 0.26, -3.2],
+        [1.54, -0.19, -3.2],
+        [-1.54, -0.19, -3.2]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_umbra",
+    "name": "Umbra",
+    "class": "STEALTH",
+    "tier": 3,
+    "rarity": "EPIC",
+    "description": "A crescent of light-drinking ablative ceramic. It has no antenna, no running lights and, on most scanners, no existence.",
+    "requiredLevel": 22,
+    "stats": {
+      "hull": 6000,
+      "shield": 5500,
+      "armor": 60,
+      "energy": 320,
+      "energyRegen": 22,
+      "shieldRegen": 30,
+      "speed": 36,
+      "acceleration": 60,
+      "turnRate": 2.6,
+      "cargo": 60,
+      "heatCapacity": 130
+    },
+    "slots": {
+      "laser": 4,
+      "missile": 1,
+      "generator": 4,
+      "module": 3,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "EM": 0.12,
+      "VOID": 0.08
+    },
+    "abilities": [
+      {
+        "id": "abl_umbra_passive",
+        "name": "Umbral Coating",
+        "kind": "PASSIVE",
+        "description": "+10% evasion.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "evasion",
+          "percent": 10
+        }
+      },
+      {
+        "id": "abl_umbra_active",
+        "name": "Fade",
+        "kind": "ACTIVE",
+        "description": "Full optical and sensor cloak.",
+        "cooldownMs": 30000,
+        "durationMs": 10000,
+        "energyCost": 60,
+        "effect": {
+          "type": "CLOAK"
+        }
+      },
+      {
+        "id": "abl_umbra_ultimate",
+        "name": "Eclipse Strike",
+        "kind": "ULTIMATE",
+        "description": "+50% damage out of the shadows.",
+        "cooldownMs": 75000,
+        "durationMs": 5000,
+        "energyCost": 110,
+        "effect": {
+          "type": "DAMAGE_BOOST",
+          "multiplier": 1.5
+        }
+      }
+    ],
+    "visual": {
+      "hull": "crescent",
+      "engine": "vector",
+      "wings": "blade",
+      "cockpit": "slit",
+      "reactor": "buried",
+      "armor": "ablative",
+      "antenna": "none",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 1.2,
+      "length": 3.6,
+      "primaryColor": "#0b0c10",
+      "secondaryColor": "#1f2833",
+      "accentColor": "#c5c6c7",
+      "engineColor": "#7b2cbf",
+      "hardpoints": [
+        [0.99, 0, 1.51],
+        [-0.99, 0, 1.51],
+        [1.7, 0, 1.08],
+        [-1.7, 0, 1.08],
+        [0, 0.22, 0.65]
+      ],
+      "nozzles": [
+        [0.71, 0, -1.8],
+        [-0.71, 0, -1.8]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_cipher",
+    "name": "Cipher",
+    "class": "ELECTRONIC_WARFARE",
+    "tier": 3,
+    "rarity": "EPIC",
+    "description": "An EW needle bristling with spike emitters, built to strip shields and scramble fire-control across a whole engagement.",
+    "requiredLevel": 24,
+    "stats": {
+      "hull": 7000,
+      "shield": 7500,
+      "armor": 60,
+      "energy": 420,
+      "energyRegen": 30,
+      "shieldRegen": 34,
+      "speed": 32,
+      "acceleration": 52,
+      "turnRate": 2.4,
+      "cargo": 80,
+      "heatCapacity": 130
+    },
+    "slots": {
+      "laser": 3,
+      "missile": 2,
+      "generator": 4,
+      "module": 4,
+      "drone": 1,
+      "ability": 3
+    },
+    "resistances": {
+      "EM": 0.18
+    },
+    "abilities": [
+      {
+        "id": "abl_cipher_passive",
+        "name": "Signal Parasite",
+        "kind": "PASSIVE",
+        "description": "+10% shield damage.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "shieldDamage",
+          "percent": 10
+        }
+      },
+      {
+        "id": "abl_cipher_active",
+        "name": "Scramble",
+        "kind": "ACTIVE",
+        "description": "Short EMP that jams nearby fire control.",
+        "cooldownMs": 20000,
+        "durationMs": 0,
+        "energyCost": 70,
+        "effect": {
+          "type": "EMP",
+          "radius": 16,
+          "shieldDamagePercent": 20,
+          "stunMs": 2000
+        }
+      },
+      {
+        "id": "abl_cipher_ultimate",
+        "name": "Blackout Cascade",
+        "kind": "ULTIMATE",
+        "description": "Massive EMP collapsing shields in a wide radius.",
+        "cooldownMs": 90000,
+        "durationMs": 0,
+        "energyCost": 150,
+        "effect": {
+          "type": "EMP",
+          "radius": 28,
+          "shieldDamagePercent": 45,
+          "stunMs": 3500
+        }
+      }
+    ],
+    "visual": {
+      "hull": "needle",
+      "engine": "ring",
+      "wings": "x-wing",
+      "cockpit": "sensor-eye",
+      "reactor": "ring-core",
+      "armor": "crystal",
+      "antenna": "spikes",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 1.33,
+      "length": 4,
+      "primaryColor": "#10002b",
+      "secondaryColor": "#5a189a",
+      "accentColor": "#e0aaff",
+      "engineColor": "#c77dff",
+      "hardpoints": [
+        [0.9, 0, 1.68],
+        [-0.9, 0, 1.68],
+        [1.55, 0, 1.2],
+        [-1.55, 0, 1.2],
+        [0, 0.24, 0.72]
+      ],
+      "nozzles": [
+        [0, 0, -2]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_cradle",
+    "name": "Cradle",
+    "class": "CARRIER",
+    "tier": 4,
+    "rarity": "EPIC",
+    "description": "A manta-winged carrier with a ring of launch cradles. Its drone wing is its gun deck; the hull itself barely bothers with turrets.",
+    "requiredLevel": 28,
+    "stats": {
+      "hull": 20000,
+      "shield": 18000,
+      "armor": 140,
+      "energy": 480,
+      "energyRegen": 30,
+      "shieldRegen": 60,
+      "speed": 24,
+      "acceleration": 30,
+      "turnRate": 1.3,
+      "cargo": 260,
+      "heatCapacity": 170
+    },
+    "slots": {
+      "laser": 3,
+      "missile": 2,
+      "generator": 6,
+      "module": 4,
+      "drone": 6,
+      "ability": 3
+    },
+    "resistances": {
+      "KINETIC": 0.1,
+      "EM": 0.1
+    },
+    "abilities": [
+      {
+        "id": "abl_cradle_passive",
+        "name": "Flight Deck",
+        "kind": "PASSIVE",
+        "description": "+10% cooldown reduction.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "cooldownReduction",
+          "percent": 10
+        }
+      },
+      {
+        "id": "abl_cradle_active",
+        "name": "Scramble Wing",
+        "kind": "ACTIVE",
+        "description": "Drones surge: +20% damage.",
+        "cooldownMs": 25000,
+        "durationMs": 8000,
+        "energyCost": 80,
+        "effect": {
+          "type": "DAMAGE_BOOST",
+          "multiplier": 1.2
+        }
+      },
+      {
+        "id": "abl_cradle_ultimate",
+        "name": "Swarm Tide",
+        "kind": "ULTIMATE",
+        "description": "The full wing sweeps the area.",
+        "cooldownMs": 90000,
+        "durationMs": 0,
+        "energyCost": 160,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 24,
+          "damage": 3600,
+          "element": "EM"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "manta",
+      "engine": "cluster",
+      "wings": "ring",
+      "cockpit": "bridge",
+      "reactor": "ring-core",
+      "armor": "plated",
+      "antenna": "dish",
+      "cargo": "hold",
+      "droneDock": true,
+      "scale": 2.83,
+      "length": 8.5,
+      "primaryColor": "#003049",
+      "secondaryColor": "#669bbc",
+      "accentColor": "#fdf0d5",
+      "engineColor": "#00b4d8",
+      "hardpoints": [
+        [2.55, 0, 3.57],
+        [-2.55, 0, 3.57],
+        [4.39, 0, 2.55],
+        [-4.39, 0, 2.55],
+        [0, 0.51, 1.53]
+      ],
+      "nozzles": [
+        [0, 0, -4.25],
+        [2.04, 0.43, -4.25],
+        [-2.04, 0.43, -4.25],
+        [2.04, -0.43, -4.25],
+        [-2.04, -0.43, -4.25]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_sovereign",
+    "name": "Sovereign",
+    "class": "BATTLECRUISER",
+    "tier": 4,
+    "rarity": "EPIC",
+    "description": "A trident-prowed battlecruiser with a container-rack keel and an ion array long enough to hold a small station's worth of thrust.",
+    "requiredLevel": 30,
+    "stats": {
+      "hull": 26000,
+      "shield": 22000,
+      "armor": 200,
+      "energy": 520,
+      "energyRegen": 32,
+      "shieldRegen": 60,
+      "speed": 25,
+      "acceleration": 32,
+      "turnRate": 1.3,
+      "cargo": 220,
+      "heatCapacity": 200
+    },
+    "slots": {
+      "laser": 7,
+      "missile": 3,
+      "generator": 6,
+      "module": 4,
+      "drone": 3,
+      "ability": 3
+    },
+    "resistances": {
+      "THERMAL": 0.12,
+      "PLASMA": 0.1,
+      "KINETIC": 0.08
+    },
+    "abilities": [
+      {
+        "id": "abl_sovereign_passive",
+        "name": "Command Presence",
+        "kind": "PASSIVE",
+        "description": "+10% hull.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "hull",
+          "percent": 10
+        }
+      },
+      {
+        "id": "abl_sovereign_active",
+        "name": "Trident Lance",
+        "kind": "ACTIVE",
+        "description": "+30% damage from the spinal array.",
+        "cooldownMs": 25000,
+        "durationMs": 6000,
+        "energyCost": 90,
+        "effect": {
+          "type": "DAMAGE_BOOST",
+          "multiplier": 1.3
+        }
+      },
+      {
+        "id": "abl_sovereign_ultimate",
+        "name": "Sovereign Decree",
+        "kind": "ULTIMATE",
+        "description": "Orbital-grade thermal bombardment.",
+        "cooldownMs": 100000,
+        "durationMs": 0,
+        "energyCost": 200,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 26,
+          "damage": 5200,
+          "element": "THERMAL"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "trident",
+      "engine": "ion-array",
+      "wings": "delta",
+      "cockpit": "bridge",
+      "reactor": "ring-core",
+      "armor": "plated",
+      "antenna": "array",
+      "cargo": "container-rack",
+      "droneDock": false,
+      "scale": 3,
+      "length": 9,
+      "primaryColor": "#14213d",
+      "secondaryColor": "#e5e5e5",
+      "accentColor": "#fca311",
+      "engineColor": "#ffd60a",
+      "hardpoints": [
+        [2.03, 0, 3.78],
+        [-2.02, 0, 3.78],
+        [3.48, 0, 2.7],
+        [-3.48, 0, 2.7],
+        [4.94, 0, 1.62],
+        [-4.94, 0, 1.62],
+        [6.4, 0, 0.54],
+        [-6.4, 0, 0.54],
+        [7.86, 0, -0.54],
+        [-7.86, 0, -0.54]
+      ],
+      "nozzles": [
+        [0, 0, -4.5],
+        [2.27, 0, -4.5],
+        [-2.27, 0, -4.5]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": false
+  },
+  {
+    "id": "ship_zenith",
+    "name": "Zenith",
+    "class": "BATTLECRUISER",
+    "tier": 5,
+    "rarity": "LEGENDARY",
+    "description": "A hammer-browed capital ship grown around an exposed star-core. Crystal armor refracts incoming beams into its own capacitors.",
+    "requiredLevel": 38,
+    "stats": {
+      "hull": 38000,
+      "shield": 34000,
+      "armor": 260,
+      "energy": 600,
+      "energyRegen": 40,
+      "shieldRegen": 80,
+      "speed": 24,
+      "acceleration": 30,
+      "turnRate": 1.2,
+      "cargo": 260,
+      "heatCapacity": 230
+    },
+    "slots": {
+      "laser": 8,
+      "missile": 3,
+      "generator": 7,
+      "module": 5,
+      "drone": 3,
+      "ability": 3
+    },
+    "resistances": {
+      "THERMAL": 0.15,
+      "EM": 0.12,
+      "PLASMA": 0.12,
+      "VOID": 0.08
+    },
+    "abilities": [
+      {
+        "id": "abl_zenith_passive",
+        "name": "Refraction Lattice",
+        "kind": "PASSIVE",
+        "description": "+12% shield.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "shield",
+          "percent": 12
+        }
+      },
+      {
+        "id": "abl_zenith_active",
+        "name": "Starcore Vent",
+        "kind": "ACTIVE",
+        "description": "Restores 35% shield from captured energy.",
+        "cooldownMs": 30000,
+        "durationMs": 0,
+        "energyCost": 120,
+        "effect": {
+          "type": "SHIELD_RESTORE",
+          "percent": 35
+        }
+      },
+      {
+        "id": "abl_zenith_ultimate",
+        "name": "Zenith Flare",
+        "kind": "ULTIMATE",
+        "description": "The core flares: a void-tinged nova.",
+        "cooldownMs": 110000,
+        "durationMs": 0,
+        "energyCost": 250,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 30,
+          "damage": 7000,
+          "element": "VOID"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "hammer",
+      "engine": "ion-array",
+      "wings": "forward-swept",
+      "cockpit": "bridge",
+      "reactor": "exposed-core",
+      "armor": "crystal",
+      "antenna": "array",
+      "cargo": "pods",
+      "droneDock": false,
+      "scale": 3.33,
+      "length": 10,
+      "primaryColor": "#f8f9fa",
+      "secondaryColor": "#3a0ca3",
+      "accentColor": "#f72585",
+      "engineColor": "#b5179e",
+      "hardpoints": [
+        [2.38, 0, 4.2],
+        [-2.37, 0, 4.2],
+        [4.09, 0, 3],
+        [-4.08, 0, 3],
+        [5.8, 0, 1.8],
+        [-5.79, 0, 1.8],
+        [7.51, 0, 0.6],
+        [-7.51, 0, 0.6],
+        [9.22, 0, -0.6],
+        [-9.21, 0, -0.6],
+        [0, 0.6, -1.8]
+      ],
+      "nozzles": [
+        [0, 0, -5],
+        [2.66, 0, -5],
+        [-2.66, 0, -5]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": true
+  },
+  {
+    "id": "ship_riftbreaker",
+    "name": "Riftbreaker",
+    "class": "ASSAULT",
+    "tier": 5,
+    "rarity": "LEGENDARY",
+    "description": "Built from salvage recovered at the Vanta Rift, this spiked crystal wedge hits like a capital ship and moves like a fighter.",
+    "requiredLevel": 40,
+    "stats": {
+      "hull": 30000,
+      "shield": 28000,
+      "armor": 200,
+      "energy": 560,
+      "energyRegen": 38,
+      "shieldRegen": 70,
+      "speed": 34,
+      "acceleration": 50,
+      "turnRate": 2.1,
+      "cargo": 120,
+      "heatCapacity": 220
+    },
+    "slots": {
+      "laser": 7,
+      "missile": 3,
+      "generator": 6,
+      "module": 4,
+      "drone": 2,
+      "ability": 3
+    },
+    "resistances": {
+      "VOID": 0.15,
+      "KINETIC": 0.1,
+      "THERMAL": 0.1
+    },
+    "abilities": [
+      {
+        "id": "abl_riftbreaker_passive",
+        "name": "Rift-Tempered",
+        "kind": "PASSIVE",
+        "description": "+8% critical damage.",
+        "cooldownMs": 0,
+        "durationMs": 0,
+        "energyCost": 0,
+        "effect": {
+          "type": "PASSIVE_STAT",
+          "stat": "critDamage",
+          "percent": 8
+        }
+      },
+      {
+        "id": "abl_riftbreaker_active",
+        "name": "Tear Through",
+        "kind": "ACTIVE",
+        "description": "Phase-dash through the battlefield.",
+        "cooldownMs": 12000,
+        "durationMs": 0,
+        "energyCost": 60,
+        "effect": {
+          "type": "DASH",
+          "distance": 34
+        }
+      },
+      {
+        "id": "abl_riftbreaker_ultimate",
+        "name": "Breach Cascade",
+        "kind": "ULTIMATE",
+        "description": "Rips open a micro-rift, dealing void damage.",
+        "cooldownMs": 100000,
+        "durationMs": 0,
+        "energyCost": 220,
+        "effect": {
+          "type": "BARRAGE",
+          "radius": 22,
+          "damage": 6500,
+          "element": "VOID"
+        }
+      }
+    ],
+    "visual": {
+      "hull": "wedge",
+      "engine": "vector",
+      "wings": "x-wing",
+      "cockpit": "slit",
+      "reactor": "exposed-core",
+      "armor": "crystal",
+      "antenna": "spikes",
+      "cargo": "none",
+      "droneDock": false,
+      "scale": 1.73,
+      "length": 5.2,
+      "primaryColor": "#03071e",
+      "secondaryColor": "#6a040f",
+      "accentColor": "#00f5d4",
+      "engineColor": "#9d4edd",
+      "hardpoints": [
+        [1.3, 0, 2.18],
+        [-1.3, 0, 2.18],
+        [2.24, 0, 1.56],
+        [-2.24, 0, 1.56],
+        [3.17, 0, 0.94],
+        [-3.17, 0, 0.94],
+        [4.11, 0, 0.31],
+        [-4.11, 0, 0.31],
+        [5.04, 0, -0.31],
+        [-5.04, 0, -0.31]
+      ],
+      "nozzles": [
+        [0.94, 0, -2.6],
+        [-0.94, 0, -2.6]
+      ]
+    },
+    "tradeable": true,
+    "nftEligible": true
+  }
+]
