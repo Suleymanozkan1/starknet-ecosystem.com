@@ -33,6 +33,8 @@ export interface SimTuning {
   shieldRegenDelaySec: number;
   /** Boss enrage timer (ms after engage) when data provides no ENRAGE phase trigger. */
   bossEnrageAfterMs: number;
+  /** Damage multiplier for time-based enrage (phase-based enrage uses the phase's own multiplier). */
+  bossEnrageDamageMultiplier: number;
   /** NPC leash radius multiplier over aggro range. */
   npcLeashFactor: number;
   /** Hard stat caps (percent points unless noted). */
@@ -55,6 +57,7 @@ export const DEFAULT_TUNING: SimTuning = {
   maxResist: 0.85,
   shieldRegenDelaySec: 3,
   bossEnrageAfterMs: 15 * 60_000,
+  bossEnrageDamageMultiplier: 1.5,
   npcLeashFactor: 2.5,
   caps: {
     critChance: 60,

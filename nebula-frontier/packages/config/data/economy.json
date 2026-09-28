@@ -39,7 +39,8 @@
     "baseRate": 0.01,
     "maxRewardRate": 0.03,
     "activityMultiplierMax": 1.5,
-    "seasonMultiplier": 1
+    "seasonMultiplier": 1,
+    "rewardUnitLamports": 100000
   },
   "treasuryHealth": {
     "healthy": 2,
@@ -145,5 +146,16 @@
       "inventorySlots": 120,
       "extraDailyQuests": 2
     }
+  },
+  "risk": {
+    "mediumScore": 25,
+    "highScore": 50,
+    "criticalScore": 80,
+    "windowDays": 30,
+    "repeatedRewardsPerDay": 60,
+    "regularIntervalCvMax": 0.08,
+    "clusterSizeWarn": 3,
+    "duplicateClaimSignalsMax": 5,
+    "autoReviewWithdrawalRisk": "MEDIUM"
   }
 }
