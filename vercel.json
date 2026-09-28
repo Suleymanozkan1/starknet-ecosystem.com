@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd nebula-frontier && corepack enable && corepack prepare pnpm@10.33.0 --activate && pnpm install --frozen-lockfile",
+  "buildCommand": "cd nebula-frontier && pnpm --filter @nebula/web build",
+  "outputDirectory": "nebula-frontier/apps/web/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

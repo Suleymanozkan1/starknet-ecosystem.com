@@ -140,6 +140,11 @@ Treasury bootstrap (`scripts/economy-bootstrap.ts` → `bootstrapTreasury`): rea
   - `cancel_tournament`.
   - `refund_entry`: refunds fee + rent when cancelled, and rent only after settlement.
 
+**Required pre-deployment steps** (the program is not deployed yet):
+1. Create a dedicated deployer / upgrade-authority keypair at `.secrets/program-deployer-devnet.json`. It must never be the treasury key. Run `anchor deploy`, then call `initialize`, signed by that upgrade authority. `initialize` rejects any other signer.
+2. Create a **separate admin key**, ideally a multisig, and hand config authority to it with `propose_authority(<admin>)`, signed by the deployer, then `accept_authority`, signed by the admin. The deployer then keeps only upgrade rights. Consider moving those to the multisig as well, or making the program immutable.
+3. Set the reward signer with `update_config`. The reward signer is the game-reward co-signing key, distinct from both the treasury and the admin. Also set the per-claim and per-epoch emission caps.
+
 The Anchor provider wallet is a dedicated deployer key (`.secrets/program-deployer-devnet.json`), never the treasury key. `anchor test` runs `cargo test`, which runs the Rust unit tests for the config and emission checks, fee cap and refund rules. On-chain (bankrun) tests are not written yet.
 
 It is intentionally **not deployed** for the MVP because:
