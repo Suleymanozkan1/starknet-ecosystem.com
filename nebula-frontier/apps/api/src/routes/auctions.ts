@@ -87,6 +87,7 @@ export default async function auctionRoutes(app: FastifyInstance): Promise<void>
       return res;
     });
     const a = await db.auction.findUniqueOrThrow({ where: { id: recordId } });
+    app.analytics.track("AUCTION", userId, { action: "CREATE", auctionId: a.id, itemId: a.itemId, startPrice: a.startPrice.toString(), listingFee: listingFee.toString(), currency });
     return reply.status(201).send({ auction: await dto(a) });
   });
 
@@ -139,6 +140,7 @@ export default async function auctionRoutes(app: FastifyInstance): Promise<void>
       if (upd.count !== 1) throw conflict("CONCURRENT_BID", "Another bid was placed, retry");
       return { bidId: bid.id, endsAt };
     });
+    app.analytics.track("AUCTION", bidderId, { action: "BID", auctionId, bidId: result.bidId, amount: amount.toString() });
     return { ok: true, bidId: result.bidId, amount: amount.toString(), endsAt: result.endsAt.toISOString() };
   });
 
@@ -185,6 +187,7 @@ export default async function auctionRoutes(app: FastifyInstance): Promise<void>
       });
       await notify(tx, a.sellerId, "AUCTION_SOLD", "Auction sold", `Your auction was bought out for ${a.buyoutPrice.toString()} ${a.currency}.`, { auctionId: a.id });
     });
+    app.analytics.track("AUCTION", buyerId, { action: "BUYOUT", auctionId });
     return { ok: true };
   });
 
@@ -211,6 +214,7 @@ export default async function auctionRoutes(app: FastifyInstance): Promise<void>
       }
       await releaseEscrowed(tx, a.inventoryItemId, `auction:${a.id}`);
     });
+    app.analytics.track("AUCTION", req.user.id, { action: "CANCEL", auctionId });
     return { ok: true };
   });
 }

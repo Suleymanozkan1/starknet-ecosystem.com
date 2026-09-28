@@ -342,6 +342,12 @@ export class WorldRenderer {
     else this.updateSimple(entry, e);
   }
 
+  /** Extra display scale for an entity visual (UI previews / showcase). */
+  setDisplayScale(id: string, scale: number): void {
+    const e = this.entries.get(id);
+    if (e?.type === "ship") e.root.scale.setScalar(scale);
+  }
+
   has(id: string): boolean {
     return this.entries.has(id);
   }

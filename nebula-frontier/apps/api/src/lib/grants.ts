@@ -11,6 +11,7 @@ import { grantCryptoReward } from "@nebula/economy";
 import { badRequest } from "../errors.js";
 import { getCatalog } from "./catalog.js";
 import { grantItems } from "./inventory.js";
+import { PushType, notify } from "./notify.js";
 import { levelFor, rankOf } from "./progression.js";
 
 export interface GrantResult {
@@ -139,5 +140,8 @@ export async function grantBundle(tx: Tx, userId: string, bundle: RewardBundle, 
  */
 export async function settleCrypto(db: Db, userId: string, result: GrantResult, sourceRef: string, reason: string): Promise<void> {
   if (!result.crypto) return;
-  await grantCryptoReward(db, { userId, source: result.crypto.source, sourceRef, weight: result.crypto.weight, reason });
+  const r = await grantCryptoReward(db, { userId, source: result.crypto.source, sourceRef, weight: result.crypto.weight, reason });
+  if (r.status === "GRANTED" && r.amount > 0n) {
+    await notify(db, userId, PushType.REWARD_READY, "Reward ready", `${reason}: a reward is ready to claim in your wallet.`, { sourceRef, source: result.crypto.source });
+  }
 }

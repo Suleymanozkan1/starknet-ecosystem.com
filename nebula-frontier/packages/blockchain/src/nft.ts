@@ -13,7 +13,8 @@ import {
   type KeyPairSigner,
   type TransactionSigner
 } from "@solana/kit";
-import { createNft, findMetadataPda } from "@metaplex-foundation/mpl-token-metadata-kit";
+// Loaded lazily so processes that never mint (API, game server) don't load the Metaplex client.
+const metaplex = () => import("@metaplex-foundation/mpl-token-metadata-kit");
 import type { SolanaRpcClient } from "./rpc.js";
 import { waitForConfirmation, type ConfirmationOutcome } from "./transfer.js";
 
@@ -121,6 +122,7 @@ export interface MintNftInstructionsInput {
 /** [createV1, mintV1] instructions via the Metaplex kit client (NonFungible, supply 1). */
 export async function buildMintNftInstructions(input: MintNftInstructionsInput): Promise<Instruction[]> {
   if (Buffer.byteLength(input.uri, "utf8") > 200) throw new Error("NFT uri exceeds 200 bytes");
+  const { createNft } = await metaplex();
   const [createIx, mintIx] = await createNft({
     mint: input.mint,
     authority: input.payer,
@@ -135,6 +137,7 @@ export async function buildMintNftInstructions(input: MintNftInstructionsInput):
 }
 
 export async function getMetadataAddress(mint: string): Promise<string> {
+  const { findMetadataPda } = await metaplex();
   const [pda] = await findMetadataPda({ mint: toAddress(mint) } as Parameters<typeof findMetadataPda>[0]);
   return pda;
 }

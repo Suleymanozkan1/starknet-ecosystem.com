@@ -335,7 +335,7 @@ export default async function socialRoutes(app: FastifyInstance): Promise<void> 
   app.post<{ Params: { id: string } }>("/api/mail/:id/claim", auth, async (req) => {
     const mailId = app.parse(idSchema, req.params.id);
     const userId = req.user.id;
-    return db.$transaction(async (tx) => {
+    const out = await db.$transaction(async (tx) => {
       const m = await tx.mail.findFirst({ where: { id: mailId, toUserId: userId } });
       if (!m) throw notFound("Mail");
       if (m.attachments === null) throw badRequest("NO_ATTACHMENTS", "This mail has no attachments");
@@ -348,5 +348,7 @@ export default async function socialRoutes(app: FastifyInstance): Promise<void> 
       const res = await grantBundle(tx, userId, safe, `mail:${m.id}`, `mail:${m.subject}`);
       return { ok: true, items: res.items };
     });
+    app.analytics.track("REWARD_CLAIM", userId, { source: "MAIL", mailId });
+    return out;
   });
 }

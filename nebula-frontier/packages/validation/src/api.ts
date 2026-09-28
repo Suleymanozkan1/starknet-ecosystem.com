@@ -276,3 +276,27 @@ export type EquipRequestInput = z.infer<typeof equipRequestSchema>;
 export type MarketListInput = z.infer<typeof marketListSchema>;
 export type AuctionCreateInput = z.infer<typeof auctionCreateSchema>;
 export type FeatureFlagRules = z.infer<typeof adminFeatureFlagSchema>["rules"];
+
+// ---------------- Internal (game server -> API) ----------------
+const gid = z.string().min(1).max(80).regex(/^[A-Za-z0-9_:-]+$/);
+const qty = z.number().int().min(0).max(1_000_000);
+/** Mirrors `GameplayEvent` in @nebula/game-core quests.ts. */
+export const gameplayEventSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("KILL"), npcId: gid, boss: z.boolean(), mapId: gid }),
+  z.object({ type: z.literal("KILL_PLAYER"), victimId: gid, mapId: gid }),
+  z.object({ type: z.literal("COLLECT"), itemId: gid, quantity: qty, mapId: gid }),
+  z.object({ type: z.literal("MINE"), resourceId: gid, quantity: qty, mapId: gid }),
+  z.object({ type: z.literal("TRAVEL"), mapId: gid }),
+  z.object({ type: z.literal("DAMAGE_BOSS"), bossId: gid, amount: qty, mapId: gid }),
+  z.object({ type: z.literal("COMPLETE_GATE"), gateId: gid, mapId: gid }),
+  z.object({ type: z.literal("WIN_PVP"), mapId: gid }),
+  z.object({ type: z.literal("LEVEL"), level: z.number().int().min(1).max(1000) }),
+  z.object({ type: z.literal("CRAFT"), blueprintId: gid, quantity: qty }),
+  z.object({ type: z.literal("SURVIVE"), seconds: qty, mapId: gid }),
+  z.object({ type: z.literal("DELIVER"), resourceId: gid, quantity: qty, mapId: gid }),
+  z.object({ type: z.literal("ESCORT"), mapId: gid }),
+]);
+export const clanMissionProgressSchema = z.object({
+  events: z.array(z.object({ userId: idSchema, event: gameplayEventSchema })).min(1).max(500),
+});
+export const adminAnalyticsQuerySchema = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) });

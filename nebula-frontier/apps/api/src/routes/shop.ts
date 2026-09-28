@@ -44,6 +44,7 @@ export default async function shopRoutes(app: FastifyInstance, opts: { metrics: 
     if (!res.duplicate) {
       const p = await db.purchase.findUnique({ where: { id: res.purchaseId }, select: { currency: true } });
       opts.metrics.purchases.inc({ currency: p?.currency ?? "UNKNOWN" });
+      app.analytics.track("PURCHASE", req.user.id, { purchaseId: res.purchaseId, productId: body.productId, quantity: body.quantity, currency: p?.currency ?? null });
     }
     return { purchaseId: res.purchaseId, balances: res.balances, duplicate: res.duplicate };
   });

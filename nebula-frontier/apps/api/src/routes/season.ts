@@ -4,13 +4,12 @@
  * array_append guarded by NOT ANY()).
  */
 import type { FastifyInstance } from "fastify";
-import { BATTLE_PASSES, EVENTS, SEASONS, SHOP_BY_SKU } from "@nebula/config";
+import { BATTLE_PASSES, SEASONS, SHOP_BY_SKU } from "@nebula/config";
 import { activeEventWindow, nextEventWindow } from "@nebula/game-core";
-import type { EventDef } from "@nebula/shared";
 import { battlePassClaimSchema } from "@nebula/validation";
 import { badRequest, conflict, forbidden, notFound } from "../errors.js";
 import { activeSeasonId, grantBundle } from "../lib/grants.js";
-import { asRecord } from "../lib/json.js";
+import { loadEventDefs } from "../lib/events.js";
 
 export default async function seasonRoutes(app: FastifyInstance): Promise<void> {
   const { db } = app;
@@ -30,15 +29,7 @@ export default async function seasonRoutes(app: FastifyInstance): Promise<void> 
 
   app.get("/api/events", async () => {
     const now = Date.now();
-    // DB rows (admin-managed) override / extend config events.
-    const rows = await db.event.findMany();
-    const defs = new Map<string, EventDef & { enabled: boolean }>();
-    for (const e of EVENTS) defs.set(e.id, { ...e, enabled: true });
-    for (const r of rows) {
-      const base = defs.get(r.id) ?? (asRecord(r.data) as unknown as EventDef);
-      defs.set(r.id, { ...base, ...(asRecord(r.data) as Partial<EventDef>), id: r.id, name: r.name, type: r.type as EventDef["type"], startAt: r.startAt.toISOString(), endAt: r.endAt.toISOString(), enabled: r.active });
-    }
-    const list = [...defs.values()].filter((d) => d.enabled);
+    const list = await loadEventDefs(db);
     return {
       events: list
         .map((d) => {
@@ -98,6 +89,7 @@ export default async function seasonRoutes(app: FastifyInstance): Promise<void> 
       if (n !== 1) throw conflict("ALREADY_CLAIMED", "Tier reward already claimed");
       return grantBundle(tx, userId, bundle, `bp:${seasonId}:${body.track}:${body.tier}:${userId}`, `battlepass:${pass.id}:${body.tier}`);
     });
+    app.analytics.track("REWARD_CLAIM", userId, { source: "BATTLE_PASS", seasonId, tier: body.tier, track: body.track });
     return { ok: true, items: res.items };
   });
 }

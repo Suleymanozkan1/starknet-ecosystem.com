@@ -4,6 +4,7 @@ const SECRET_KEYS = /secret|private|token|password|seed|keypair/i;
 function redact(v: unknown, depth = 0): unknown {
   if (depth > 4 || v === null || typeof v !== "object") return typeof v === "bigint" ? v.toString() : v;
   if (v instanceof Error) return { message: v.message, name: v.name };
+  if (Array.isArray(v)) return v.map((x) => redact(x, depth + 1));
   const out: Record<string, unknown> = {};
   for (const [k, x] of Object.entries(v as Record<string, unknown>)) out[k] = SECRET_KEYS.test(k) ? "[redacted]" : redact(x, depth + 1);
   return out;

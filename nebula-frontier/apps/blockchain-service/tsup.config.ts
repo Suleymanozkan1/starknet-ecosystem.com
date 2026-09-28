@@ -9,5 +9,5 @@ export default defineConfig({
   clean: true,
   // Bundle workspace packages (consumed as TS source); keep npm deps external.
   noExternal: [/^@nebula\//],
-  external: ["@prisma/client", "@prisma/adapter-pg", "pg", "bullmq", "ioredis", "fastify", "@solana/kit"]
+  external: ["@prisma/client", "@prisma/adapter-pg", "pg", "bullmq", "ioredis", "fastify", /^@solana\//, /^@solana-program\//, /^@metaplex-foundation\//]
 });

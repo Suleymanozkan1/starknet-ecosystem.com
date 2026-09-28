@@ -1,4 +1,5 @@
-import { RewardSource, LedgerAccountType, Currency } from "@nebula/shared";
+import type { RewardSource} from "@nebula/shared";
+import { LedgerAccountType, Currency } from "@nebula/shared";
 import { getBalance, system, type DbOrTx } from "@nebula/database";
 import type { EconomyConfig } from "./config.js";
 import { mulRatioFloor } from "./util.js";

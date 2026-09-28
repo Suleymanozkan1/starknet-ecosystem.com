@@ -42,7 +42,8 @@ export class TicketService {
   }
 
   async consumeJti(jti: string): Promise<boolean> {
-    const key = `nf:ticket:jti:${jti}`;
+    // Shared with the API: `gt:<jti>` (SET NX EX). Any process that sees the key first wins.
+    const key = `gt:${jti}`;
     if (this.redis) {
       const r = await this.redis.set(key, "1", "EX", JTI_TTL_SEC, "NX");
       return r === "OK";

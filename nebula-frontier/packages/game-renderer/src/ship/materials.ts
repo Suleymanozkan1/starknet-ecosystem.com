@@ -4,6 +4,21 @@ import {
 } from "three";
 import { createPanelTextures, type PanelTextureSet } from "../textures/procedural.js";
 
+const tmpHsl = { h: 0, s: 0, l: 0 };
+
+/** Hull paint: real paint never reaches pure white/black under ACES — clamp lightness. */
+function paint(hex: string): Color {
+  const c = new Color(hex);
+  c.getHSL(tmpHsl);
+  c.setHSL(tmpHsl.h, tmpHsl.s, Math.min(0.68, Math.max(0.06, tmpHsl.l)));
+  return c;
+}
+
+function luminanceOf(hex: string): number {
+  const c = new Color(hex);
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+}
+
 /** Material slots a ship part can be assigned to. Geometry is merged per slot → ~7 draw calls per ship. */
 export const MaterialSlot = {
   PRIMARY: "primary",
@@ -62,7 +77,7 @@ export class MaterialLibrary {
   private hull(color: string, roughness: number, metalness: number, accent: string, emissiveStrength: number): Material {
     const t = this.textures;
     const params = {
-      color: new Color(color),
+      color: paint(color),
       map: t.albedo,
       normalMap: t.normal,
       normalScale: new Vector2(0.9, 0.9),
@@ -99,10 +114,11 @@ export class MaterialLibrary {
       normalMap: this.textures.normal,
       roughnessMap: this.textures.orm,
     });
+    const accentLum = luminanceOf(p.accent);
     const accent = new MeshStandardMaterial({
       color: new Color(p.accent),
       emissive: new Color(p.accent),
-      emissiveIntensity: wreck ? 0.05 : variant === "boss" ? 1.8 : 0.9,
+      emissiveIntensity: (wreck ? 0.05 : variant === "boss" ? 1.8 : 0.9) * (1 - accentLum * 0.55),
       roughness: 0.35,
       metalness: 0.2,
     });

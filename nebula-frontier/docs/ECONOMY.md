@@ -109,7 +109,7 @@ Breakers set by the controller are released automatically when the condition cle
 
 ## Player-facing terminology
 
-Use: **Battle Rewards, Season Rewards, Tournament Rewards, Marketplace Earnings**. Never use: APY, interest, yield, guaranteed return, passive income, investment, staking returns. The rules text shown in `GET /api/economy/rewards` is generated from live config and states that rewards are not an investment, have no promised value, are finite, and that devnet tokens have no monetary value.
+Use: **Battle Rewards, Season Rewards, Tournament Rewards, Marketplace Earnings**. Never use: APY, interest, yield, guaranteed return, passive income, investment, staking returns. The rules text shown in `GET /api/economy/rewards` is generated from live config and states that rewards are earned through gameplay only, carry no promise of value, are finite, and that devnet tokens have no monetary value.
 
 ## API
 

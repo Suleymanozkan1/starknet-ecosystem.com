@@ -14,7 +14,10 @@ import { loadEnv, type Env } from "./env.js";
 import { sendError } from "./errors.js";
 import { createLogger } from "@nebula/telemetry";
 import { REDACT_PATHS } from "./lib/logger.js";
+import { AnalyticsWriter } from "./lib/analytics.js";
 import { createMetrics } from "./lib/metrics.js";
+import { configurePush } from "./lib/notify.js";
+import { PushSender, defaultTransport, pushConfigFromEnv, type PushTransport } from "./lib/push.js";
 import { registerCore, registerSecurity } from "./plugins/core.js";
 import "./types.js";
 
@@ -36,6 +39,7 @@ import progressRoutes from "./routes/progress.js";
 import galaxyRoutes from "./routes/galaxy.js";
 import seasonRoutes from "./routes/season.js";
 import adminRoutes from "./routes/admin.js";
+import internalRoutes from "./routes/internal.js";
 // Economy engineer's route modules (wallet / deposits / withdrawals / rewards / economy admin).
 import walletRoutes from "./routes/wallet.js";
 import economyRoutes from "./routes/economy.js";
@@ -53,6 +57,10 @@ export interface BuildAppOptions {
   rateLimitScale?: number;
   /** Redis namespace for rate-limit counters (tests isolate runs). */
   rateLimitNamespace?: string;
+  /** Push transport override (tests mock the network). */
+  pushTransport?: PushTransport;
+  /** Push provider env override (defaults to process.env). */
+  pushEnv?: Record<string, string | undefined>;
 }
 
 const REQUEST_ID_RE = /^[A-Za-z0-9._-]{8,128}$/;
@@ -113,6 +121,13 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     );
   });
 
+  const pushSender = new PushSender(pushConfigFromEnv(opts.pushEnv ?? process.env, app.log), opts.pushTransport ?? defaultTransport, app.log);
+  if (!pushSender.enabled) app.log.info("push notifications disabled (no FCM/APNs credentials); notifications are in-app only");
+  configurePush({ db, redis, sender: pushSender });
+  const analytics = new AnalyticsWriter(db, { log: app.log });
+  app.decorate("pushSender", pushSender);
+  app.decorate("analytics", analytics);
+
   await app.register(healthRoutes, { metrics });
   await app.register(authRoutes);
   await app.register(meRoutes);
@@ -131,12 +146,15 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(galaxyRoutes);
   await app.register(seasonRoutes);
   await app.register(adminRoutes);
+  await app.register(internalRoutes);
   await app.register(walletRoutes);
   await app.register(economyRoutes);
   await app.register(rewardsRoutes);
   await app.register(adminEconomyRoutes);
 
   app.addHook("onClose", async () => {
+    await analytics.close();
+    configurePush(null);
     if (ownsRedis) await redis.quit().catch(() => undefined);
     if (ownsDb) await db.$disconnect().catch(() => undefined);
   });

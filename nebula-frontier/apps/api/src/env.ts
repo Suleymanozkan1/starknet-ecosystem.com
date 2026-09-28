@@ -2,6 +2,7 @@
  * Typed, validated environment. The process refuses to start with weak/missing secrets in production.
  */
 import { z } from "zod";
+import { parseKeyRing, type KeyRing } from "@nebula/authentication";
 
 const csv = z
   .string()
@@ -20,8 +21,12 @@ const envSchema = z.object({
   API_HOST: z.string().default("0.0.0.0"),
   DATABASE_URL: z.string().min(1).default("postgresql://nebula:nebula@localhost:5432/nebula"),
   REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
-  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
-  GAME_TICKET_SECRET: z.string().min(32, "GAME_TICKET_SECRET must be at least 32 characters"),
+  /** Legacy single secrets (used when the *_SECRETS rotation lists are empty). */
+  JWT_SECRET: z.string().optional(),
+  GAME_TICKET_SECRET: z.string().optional(),
+  /** Rotation lists `kid:secret,kid:secret` — first entry signs, all entries verify. */
+  JWT_SECRETS: z.string().optional(),
+  GAME_TICKET_SECRETS: z.string().optional(),
   INTERNAL_SERVICE_TOKEN: z.string().min(32).optional(),
   COOKIE_DOMAIN: z.string().optional().transform((v) => (v ? v : undefined)),
   CORS_ORIGINS: csv,
@@ -39,7 +44,7 @@ const envSchema = z.object({
   REGION: z.string().default("EU"),
 });
 
-export type Env = z.infer<typeof envSchema> & { authDomain: string; isProd: boolean };
+export type Env = z.infer<typeof envSchema> & { authDomain: string; isProd: boolean; jwtKeys: KeyRing; gameTicketKeys: KeyRing };
 
 const WEAK = /dev-only|change-me|changeme|secret|password/i;
 
@@ -51,9 +56,17 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
   }
   const e = parsed.data;
   const isProd = e.NODE_ENV === "production";
+  let jwtKeys: KeyRing;
+  let gameTicketKeys: KeyRing;
+  try {
+    jwtKeys = parseKeyRing(e.JWT_SECRETS, e.JWT_SECRET);
+    gameTicketKeys = parseKeyRing(e.GAME_TICKET_SECRETS, e.GAME_TICKET_SECRET);
+  } catch (err) {
+    throw new Error(`Invalid environment: JWT/GAME_TICKET secrets: ${(err as Error).message}`);
+  }
   if (isProd) {
-    for (const k of ["JWT_SECRET", "GAME_TICKET_SECRET"] as const) {
-      if (WEAK.test(e[k])) throw new Error(`${k} looks like a development placeholder; refusing to start in production`);
+    for (const [name, ring] of [["JWT", jwtKeys], ["GAME_TICKET", gameTicketKeys]] as const) {
+      if (ring.keys.some((k) => WEAK.test(k.secret))) throw new Error(`${name} secret looks like a development placeholder; refusing to start in production`);
     }
     if (e.SOLANA_NETWORK !== "devnet") throw new Error("This build only supports SOLANA_NETWORK=devnet");
   }
@@ -65,5 +78,5 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       authDomain = "localhost";
     }
   }
-  return { ...e, ...overrides, authDomain, isProd };
+  return { ...e, ...overrides, authDomain, isProd, jwtKeys, gameTicketKeys };
 }

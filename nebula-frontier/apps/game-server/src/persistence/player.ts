@@ -32,6 +32,7 @@ export interface PlayerProfile {
   factionId: string | null;
   clanId: string | null;
   clanTag: string;
+  squadId: string | null;
   mutedUntil: Date | null;
   restrictions: string[];
   riskLevel: string;
@@ -142,7 +143,7 @@ export async function ensureStarterKit(db: Db, userId: string, preferredMap: str
 export async function loadPlayer(db: Db, userId: string, mapId: string): Promise<PlayerProfile> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    include: { playerFaction: true, clanMember: { include: { clan: { select: { id: true, tag: true } } } }, stats: true },
+    include: { playerFaction: true, clanMember: { include: { clan: { select: { id: true, tag: true } } } }, squadMember: { select: { squadId: true } }, stats: true },
   });
   if (!user) throw new JoinError("NO_USER", "User not found");
   if (user.bannedAt) throw new JoinError("BANNED", "Account suspended");
@@ -225,6 +226,7 @@ export async function loadPlayer(db: Db, userId: string, mapId: string): Promise
     factionId,
     clanId: user.clanMember?.clan.id ?? null,
     clanTag: user.clanMember?.clan.tag ?? "",
+    squadId: user.squadMember?.squadId ?? null,
     mutedUntil: user.mutedUntil,
     restrictions: user.restrictions,
     riskLevel: user.riskLevel,

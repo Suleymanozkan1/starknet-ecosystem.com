@@ -10,24 +10,27 @@
     "build:android": "cap sync android && cd android && ./gradlew assembleDebug",
     "open": "cap open",
     "typecheck": "tsc -p tsconfig.json",
-    "build": "cap sync || true"
+    "build": "node scripts/sync.mjs",
+    "doctor": "cap doctor"
   },
   "dependencies": {
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/ios": "^8.0.0",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/push-notifications": "^8.0.0",
-    "@capacitor/preferences": "^8.0.0",
-    "@capacitor/haptics": "^8.0.0",
-    "@capacitor/clipboard": "^8.0.0",
-    "@capacitor/share": "^8.0.0",
-    "@capacitor/device": "^8.0.0",
-    "@capacitor/local-notifications": "^8.0.0",
+    "@aparajita/capacitor-biometric-auth": "^10.0.0",
     "@aparajita/capacitor-secure-storage": "^8.0.0",
-    "@aparajita/capacitor-biometric-auth": "^10.0.0"
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/clipboard": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/device": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "^8.0.0",
+    "typescript": "5.9.3"
   }
 }

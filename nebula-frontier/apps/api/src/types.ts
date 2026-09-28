@@ -17,6 +17,8 @@
  *   app.limiter(name,max,ms)    preHandler factory for custom per-user limits
  *   app.rateLimits              route `config.rateLimit` presets (auth, wallet, chat, purchase, market, ...)
  *   app.parse(schema, data)     zod parse -> typed data, or 400 VALIDATION_ERROR ApiError
+ *   app.analytics               batched AnalyticsEvent writer
+ *   app.pushSender              FCM/APNs sender (notify() uses it automatically for push types)
  */
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Redis } from "ioredis";
@@ -25,6 +27,8 @@ import type { AdminRole } from "@nebula/shared";
 import type { AccessClaims } from "@nebula/authentication";
 import type { Db, Tx } from "@nebula/database";
 import type { Env } from "./env.js";
+import type { AnalyticsWriter } from "./lib/analytics.js";
+import type { PushSender } from "./lib/push.js";
 
 export interface AuthUser {
   id: string;
@@ -69,6 +73,10 @@ declare module "fastify" {
     limiter: (name: string, max: number, windowMs: number) => PreHandler;
     rateLimits: Record<RateLimitPresetName, RateLimitPreset>;
     parse: <S extends z.ZodType>(schema: S, data: unknown) => z.output<S>;
+    /** Batched AnalyticsEvent writer (`app.analytics.track(name, userId, props)`). */
+    analytics: AnalyticsWriter;
+    /** Push sender (FCM/APNs); disabled when credentials are absent. */
+    pushSender: PushSender;
   }
   interface FastifyRequest {
     /** Set by app.authenticate. Only read it in handlers protected by authenticate. */

@@ -15,7 +15,12 @@ export interface NonceResponse { nonce: string; message: string; expiresAt: stri
 export interface VerifyRequest { address: string; nonce: string; signature: string /* base58 */ ; deviceId?: string }
 export interface RegisterRequest { email: string; password: string; username: string }
 export interface LoginRequest { email: string; password: string; deviceId?: string }
-export interface AuthResponse { user: MeResponse; accessTokenExpiresAt: string }
+export interface AuthResponse {
+  user: MeResponse;
+  accessTokenExpiresAt: string;
+  /** Double-submit CSRF token (same value as the readable `nf_csrf` cookie); send it as `x-nf-csrf`. */
+  csrfToken?: string;
+}
 
 // ---------------- User ----------------
 export interface MeResponse {

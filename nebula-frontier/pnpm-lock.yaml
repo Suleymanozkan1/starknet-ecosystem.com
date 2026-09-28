@@ -196,6 +196,9 @@ importers:
 
   apps/blockchain-service:
     dependencies:
+      '@metaplex-foundation/mpl-token-metadata-kit':
+        specifier: 0.0.3
+        version: 0.0.3(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@nebula/blockchain':
         specifier: workspace:*
         version: link:../../packages/blockchain
@@ -214,6 +217,15 @@ importers:
       '@nebula/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
+      '@solana-program/memo':
+        specifier: ^0.15.0
+        version: 0.15.0(@solana/kit@8.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@solana-program/system':
+        specifier: ^0.15.0
+        version: 0.15.0(@solana/kit@8.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@solana-program/token':
+        specifier: ^0.17.0
+        version: 0.17.0(@solana/kit@8.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
       '@solana/kit':
         specifier: ^8.4.0
         version: 8.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
@@ -378,10 +390,16 @@ importers:
       '@capacitor/share':
         specifier: ^8.0.0
         version: 8.0.2(@capacitor/core@8.5.2)
+      '@capacitor/splash-screen':
+        specifier: ^8.0.2
+        version: 8.0.2(@capacitor/core@8.5.2)
     devDependencies:
       '@capacitor/cli':
         specifier: ^8.0.0
         version: 8.5.2
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   apps/web:
     dependencies:
@@ -875,6 +893,11 @@ packages:
 
   '@capacitor/share@8.0.2':
     resolution: {integrity: sha512-L2M4iBLTf/IaMmg+ruuriAoJyBzu1EgayWhgC5cX1HJGkA665g2ROz8c2Z5lfkT/XSLbAuG3bb7VlW3eGgUCNQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
+  '@capacitor/splash-screen@8.0.2':
+    resolution: {integrity: sha512-0C6rYScr13WfAE9nPl4ScOQynmjFv9NT3Th+RZkD4ezYHmER6mcl1/lDYsv7jg3Rj3FOvLrlTlmNkUrr83kZzQ==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -7055,6 +7078,10 @@ snapshots:
       '@capacitor/core': 8.5.2
 
   '@capacitor/share@8.0.2(@capacitor/core@8.5.2)':
+    dependencies:
+      '@capacitor/core': 8.5.2
+
+  '@capacitor/splash-screen@8.0.2(@capacitor/core@8.5.2)':
     dependencies:
       '@capacitor/core': 8.5.2
 

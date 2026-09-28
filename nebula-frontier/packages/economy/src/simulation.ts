@@ -5,7 +5,8 @@
  * Units: fiat values in USD (float); reward asset in whole tokens (float), converted to integer
  * micro-units (1e-6) when calling the bigint policy functions.
  */
-import { mulberry32, TreasuryHealth, CircuitBreakerMode } from "@nebula/shared";
+import type { TreasuryHealth} from "@nebula/shared";
+import { mulberry32, CircuitBreakerMode } from "@nebula/shared";
 import type { EconomyConfig } from "./config.js";
 import { computeTreasuryHealth } from "./treasury.js";
 import { computeEmissionRate } from "./emission.js";

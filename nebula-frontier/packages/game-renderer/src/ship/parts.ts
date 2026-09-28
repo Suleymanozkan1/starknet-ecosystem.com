@@ -474,7 +474,7 @@ export function buildCargo(kind: ShipVisualDef["cargo"], L: number, hull: HullIn
           const z = -L * 0.02 - c * cl * 1.1;
           const x = hw + cw * (0.6 + r * 1.1);
           const y = Math.max(0, hull.topAt(0, z)) * 0.2;
-          const slot = (r + c) % 2 === 0 ? MaterialSlot.SECONDARY : MaterialSlot.ACCENT;
+          const slot = (r + c) % 2 === 0 ? MaterialSlot.SECONDARY : MaterialSlot.PRIMARY;
           pc.addMirrored(slot, transform(chamferBox(cw, ch, cl, L * 0.006), [x, y, z]));
         }
       }
@@ -503,10 +503,28 @@ export function buildHardpoints(hps: readonly V3[], L: number, hull: HullInfo, w
   const s = Math.min(L * 0.035, 0.12 + L * 0.012);
   const segs = seg(d, 6, 8, 12);
   for (const [x, y0, z] of hps) {
+    const onHull = insideMirrored(hull.outline, x, z);
     const baseY = Math.max(y0, seatY(hull, wingY, x, z));
     if (d === 0) {
       muzzles.push([x, baseY + s * 0.8, z + s * 3.2]);
       continue;
+    }
+    if (!onHull) {
+      // sponson strut back to the nearest hull structure at (clamped) same station
+      const zc = Math.min(hull.noseZ - L * 0.12, Math.max(hull.tailZ + L * 0.12, z));
+      let ex = 0;
+      for (let k = 1; k <= 24; k++) {
+        const xt = x * (1 - k / 24);
+        if (insideMirrored(hull.outline, xt, zc)) { ex = xt; break; }
+      }
+      const dx = ex - x, dz = zc - z;
+      const len = Math.hypot(dx, dz);
+      if (len > s * 0.8) {
+        const ang = Math.atan2(dx, dz);
+        pc.add(MaterialSlot.TRIM, transform(chamferBox(s * 0.55, s * 0.45, len, s * 0.12), [x + dx / 2, baseY - s * 0.05, z + dz / 2], [0, ang, 0]));
+        pc.add(MaterialSlot.SECONDARY, transform(chamferBox(s * 2.1, s * 0.5, s * 2.4, s * 0.3), [x, baseY - s * 0.2, z]));
+        if (d > 1) pc.add(MaterialSlot.GLOW, transform(box(s * 0.16, s * 0.1, len * 0.7), [x + dx / 2, baseY + s * 0.2, z + dz / 2], [0, ang, 0]));
+      }
     }
     pc.add(MaterialSlot.TRIM, transform(cyl(s * 1.1, s * 1.3, s * 0.5, segs), [x, baseY + s * 0.25, z]));
     pc.add(MaterialSlot.SECONDARY, transform(chamferBox(s * 1.6, s * 0.8, s * 1.8, s * 0.3), [x, baseY + s * 0.8, z]));

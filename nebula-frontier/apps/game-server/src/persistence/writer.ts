@@ -11,12 +11,13 @@
  *   rejected by the database, not just by memory).
  * - Redis never holds any of this state.
  */
-import { ACHIEVEMENTS, PROGRESSION } from "@nebula/config";
-import { post, system, userWallet, getBalance, type Db, type Tx } from "@nebula/database";
-import { levelForXp, newlyUnlockedAchievements, rankFor } from "@nebula/game-core";
-import type { AchievementDef, Currency, ResourceId } from "@nebula/shared";
+import { ACHIEVEMENTS, ITEMS_BY_ID, PROGRESSION } from "@nebula/config";
+import { grantCryptoReward } from "@nebula/economy";
+import { post, system, userWallet, getBalance, withSerializableTx, type Db, type Tx } from "@nebula/database";
+import { contributionTier, levelForXp, newlyUnlockedAchievements, rankFor } from "@nebula/game-core";
+import type { AchievementDef, Currency, EventDef, ResourceId, RewardBundle, RewardSource } from "@nebula/shared";
 import { LedgerAccountType } from "@nebula/shared";
-import type { LeaderboardId } from "./catalog.js";
+import { activeSeasonId, type LeaderboardId } from "./catalog.js";
 import type { QuestRuntime } from "./player.js";
 
 export interface Issuance {
@@ -82,6 +83,14 @@ export class PendingDelta {
     for (const e of o.eventContrib.values()) this.addEvent(e.eventId, e.instanceKey, e.amount);
     this.position ??= o.position;
   }
+}
+
+export interface EventRewardResult {
+  userId: string;
+  tier: string | null;
+  contributionPct: number;
+  bundle: RewardBundle;
+  cryptoStatus: string | null;
 }
 
 export interface FlushResult {
@@ -299,6 +308,107 @@ export class Persistence {
       const r = await tx.playerResource.updateMany({ where: { userId, resourceId, amount: { gte: BigInt(amount) } }, data: { amount: { decrement: BigInt(amount) } } });
       if (r.count !== 1) throw new Error(`INSUFFICIENT_RESOURCE:${resourceId}`);
     }
+  }
+
+  /**
+   * Distribute EventParticipation reward tiers for one event instance
+   * (eventId + instanceKey, e.g. a boss life). Idempotent: each row is claimed
+   * with `rewarded=false → true` inside the same transaction that grants the
+   * bundle (XP/honor/season points on User, credits/gems via ledger keys,
+   * items with unique originRef `event:<eventId>:<instance>:<userId>:<i>`).
+   * Crypto eligibility is routed through grantCryptoReward (sourceRef =
+   * `event:<eventId>:<instance>:<userId>`).
+   */
+  async distributeEventRewards(
+    eventId: string,
+    instanceKey: string,
+    def: EventDef | null,
+    opts: { minShare: number; fallbackSource: RewardSource; label: string; mode?: string },
+  ): Promise<EventRewardResult[]> {
+    const rows = await this.db.eventParticipation.findMany({ where: { eventId, instanceKey } });
+    const total = rows.reduce((s, r) => s + Number(r.contribution), 0);
+    const out: EventRewardResult[] = [];
+    for (const row of rows) {
+      if (row.rewarded) continue;
+      const pct = total > 0 ? (Number(row.contribution) / total) * 100 : 0;
+      const eligible = pct >= opts.minShare * 100;
+      const tier = eligible && def ? contributionTier(def, pct) : null;
+      const bundle: RewardBundle = tier?.bundle ?? {};
+      const ref = `event:${eventId}:${instanceKey}:${row.userId}`;
+      const userId = row.userId;
+      const granted = await this.db.$transaction(async (tx) => {
+        const claim = await tx.eventParticipation.updateMany({ where: { id: row.id, rewarded: false }, data: { rewarded: true, rewardTier: tier?.tier ?? (eligible ? "PARTICIPANT" : "NONE") } });
+        if (claim.count !== 1) return false;
+        const xp = Math.floor(bundle.xp ?? 0);
+        const honor = Math.floor(bundle.honor ?? 0);
+        const season = Math.floor(bundle.seasonPoints ?? 0) + honor;
+        if (xp || honor || season) {
+          const u = await tx.user.update({ where: { id: userId }, data: { xp: { increment: BigInt(xp) }, honor: { increment: BigInt(honor) }, seasonScore: { increment: BigInt(season) } }, select: { xp: true, level: true, honor: true } });
+          const level = Math.max(u.level, levelForXp(Number(u.xp), PROGRESSION));
+          if (level !== u.level) await tx.user.update({ where: { id: userId }, data: { level } });
+          if (season) {
+            await tx.leaderboardEntry.upsert({ where: { leaderboardId_userId: { leaderboardId: "season_score", userId } }, create: { leaderboardId: "season_score", userId, score: BigInt(season) }, update: { score: { increment: BigInt(season) } } });
+          }
+          if (honor) {
+            await tx.leaderboardEntry.upsert({ where: { leaderboardId_userId: { leaderboardId: "honor", userId } }, create: { leaderboardId: "honor", userId, score: u.honor }, update: { score: u.honor } });
+          }
+        }
+        let i = 0;
+        for (const it of bundle.items ?? []) {
+          if (!ITEMS_BY_ID.has(it.itemId)) continue;
+          await tx.inventoryItem.create({ data: { userId, itemId: it.itemId, quantity: it.quantity, originRef: `${ref}:${i++}` } });
+        }
+        for (const [asset, amount] of [["CREDITS", bundle.credits ?? 0], ["GEMS", bundle.gems ?? 0]] as const) {
+          if (amount <= 0) continue;
+          await post(tx, {
+            from: system(LedgerAccountType.GAME_ISSUANCE, asset), to: userWallet(userId, asset), amount: BigInt(Math.floor(amount)),
+            type: "GAME_REWARD", reference: ref, idempotencyKey: `${ref}:${asset}`, userId, metadata: { eventId, instanceKey, tier: tier?.tier },
+          });
+        }
+        for (const [resourceId, amount] of Object.entries(bundle.resources ?? {})) {
+          if (!amount || amount <= 0) continue;
+          await tx.playerResource.upsert({ where: { userId_resourceId: { userId, resourceId } }, create: { userId, resourceId, amount: BigInt(amount) }, update: { amount: { increment: BigInt(amount) } } });
+        }
+        return true;
+      });
+      if (!granted) continue;
+      let cryptoStatus: string | null = null;
+      const crypto = bundle.cryptoEligible ?? (eligible && !def ? { source: opts.fallbackSource, weight: Math.max(0.1, Math.min(3, pct / 20)) } : null);
+      if (crypto) {
+        try {
+          const r = await grantCryptoReward(this.db, { userId, source: crypto.source, sourceRef: ref, weight: crypto.weight, reason: `${opts.label} (${pct.toFixed(1)}% contribution)`, mode: opts.mode, seasonId: activeSeasonId() ?? undefined });
+          cryptoStatus = r.status;
+        } catch {
+          cryptoStatus = "ERROR";
+        }
+      }
+      out.push({ userId, tier: tier?.tier ?? null, contributionPct: pct, bundle, cryptoStatus });
+    }
+    return out;
+  }
+
+  /**
+   * Pay out ACTIVE bounties on a PvP victim to the killer (bounty credits are
+   * held in ESCROW:CREDITS by the API). Claim + payout share one transaction;
+   * idempotencyKey `bounty:<bountyId>`. The bounty creator cannot claim it.
+   */
+  async claimBounties(victimId: string, killerId: string): Promise<{ bountyId: string; amount: bigint }[]> {
+    const now = new Date();
+    const open = await this.db.bounty.findMany({ where: { targetId: victimId, status: "ACTIVE", expiresAt: { gt: now } } });
+    const paid: { bountyId: string; amount: bigint }[] = [];
+    for (const b of open) {
+      if (b.creatorId === killerId || b.currency !== "CREDITS" || b.amount <= 0n) continue;
+      await withSerializableTx(this.db, async (tx) => {
+        const claim = await tx.bounty.updateMany({ where: { id: b.id, status: "ACTIVE", expiresAt: { gt: now } }, data: { status: "CLAIMED", claimedBy: killerId } });
+        if (claim.count !== 1) return;
+        await post(tx, {
+          from: system(LedgerAccountType.ESCROW, "CREDITS"), to: userWallet(killerId, "CREDITS"), amount: b.amount,
+          type: "ESCROW", reference: b.id, idempotencyKey: `bounty:${b.id}`, userId: killerId, metadata: { kind: "BOUNTY_CLAIMED", targetId: victimId },
+        });
+        paid.push({ bountyId: b.id, amount: b.amount });
+      });
+    }
+    return paid;
   }
 
   async createMatch(data: { roomId: string; mode: string; mapId: string; metadata?: Record<string, unknown> }): Promise<string> {

@@ -158,6 +158,10 @@ export default async function marketRoutes(app: FastifyInstance): Promise<void> 
         listingId: listing.id, proceeds: proceeds.toString(),
       });
     });
+    app.analytics.track("TRADE", buyerId, {
+      kind: "MARKET", listingId: listing.id, sellerId: listing.sellerId, itemId: listing.itemId, quantity: listing.quantity,
+      price: listing.price.toString(), fee: listing.fee.toString(), currency: listing.currency,
+    });
     return { ok: true, listingId: listing.id, inventoryItemId: listing.inventoryItemId };
   });
 

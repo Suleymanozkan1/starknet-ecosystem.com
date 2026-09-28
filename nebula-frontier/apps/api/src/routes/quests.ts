@@ -121,6 +121,7 @@ export default async function questRoutes(app: FastifyInstance): Promise<void> {
       return { grant, questId: q.id, rowId: row.id };
     });
     await settleCrypto(db, userId, out.grant, `quest:${out.rowId}`, `Quest ${out.questId}`);
+    app.analytics.track("REWARD_CLAIM", userId, { source: "QUEST", questId: out.questId, userQuestId: out.rowId });
     return { ok: true, questId: out.questId, levelBefore: out.grant.levelBefore, levelAfter: out.grant.levelAfter, items: out.grant.items };
   });
 }

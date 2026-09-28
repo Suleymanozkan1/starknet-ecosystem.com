@@ -7,7 +7,7 @@
  * (conditional decrement => can never go negative). Every movement has a ledger idempotency key.
  */
 import type { FastifyInstance } from "fastify";
-import { MAPS, MAPS_BY_ID } from "@nebula/config";
+import { MAPS, MAPS_BY_ID, QUESTS_BY_ID } from "@nebula/config";
 import { canKickClanMember, canSetClanRole, clanRoleAtLeast } from "@nebula/authentication";
 import { post, system, userWallet, withSerializableTx, type Tx } from "@nebula/database";
 import { ClanRole, Currency, LedgerAccountType, LedgerTxType } from "@nebula/shared";
@@ -19,6 +19,7 @@ import { z } from "zod";
 import { badRequest, conflict, forbidden, notFound } from "../errors.js";
 import { asRecord } from "../lib/json.js";
 import { notify } from "../lib/notify.js";
+import { CLAN_MISSIONS, claimMission, missionPeriod, refreshMission, startMission, statMetric } from "../lib/clanMissions.js";
 import { loadRules } from "../lib/rules.js";
 
 const searchQuery = z.object({ search: z.string().max(24).optional(), limit: z.coerce.number().int().min(1).max(100).default(50) });
@@ -361,5 +362,62 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
       return { kind, level: nextLevel, cost: cost.toString() };
     });
     return out;
+  });
+
+  // ---- Clan missions (quests.json type CLAN) ----
+  app.get<{ Params: { id: string } }>("/api/clans/:id/missions", auth, async (req) => {
+    const clanId = app.parse(idSchema, req.params.id);
+    await myMembership(req.user.id, clanId);
+    const active = await db.clanMission.findMany({ where: { clanId, status: "ACTIVE" }, select: { id: true } });
+    for (const m of active) await refreshMission(db, m.id);
+    const rows = await db.clanMission.findMany({ where: { clanId }, orderBy: { startedAt: "desc" } });
+    return {
+      missions: CLAN_MISSIONS.map((q) => {
+        const row = rows.find((r) => r.questId === q.id && r.periodKey === missionPeriod(q)) ?? null;
+        return {
+          questId: q.id, name: q.name, description: q.description, requiredLevel: q.requiredLevel, rewards: q.rewards, repeatable: q.repeatable,
+          objectives: q.objectives.map((o, i) => ({
+            type: o.type, target: o.target ?? null, count: o.count, progress: row?.progress[i] ?? 0,
+            tracking: statMetric(o) ? "MEMBER_STATS" : "GAME_EVENTS",
+          })),
+          mission: row ? { id: row.id, status: row.status, startedAt: row.startedAt.toISOString(), completedAt: row.completedAt?.toISOString() ?? null, claimedAt: row.claimedAt?.toISOString() ?? null } : null,
+        };
+      }),
+    };
+  });
+
+  app.post<{ Params: { id: string; questId: string } }>("/api/clans/:id/missions/:questId/start", auth, async (req, reply) => {
+    const clanId = app.parse(idSchema, req.params.id);
+    const questId = app.parse(idSchema, req.params.questId);
+    const me = await myMembership(req.user.id, clanId);
+    requireRank(me.role, ClanRole.OFFICER);
+    if (!QUESTS_BY_ID.has(questId)) throw notFound("Clan mission");
+    const m = await startMission(db, clanId, questId, req.user.id);
+    return reply.status(201).send({ id: m.id, questId: m.questId, status: m.status, progress: m.progress });
+  });
+
+  app.post<{ Params: { id: string; missionId: string } }>("/api/clans/:id/missions/:missionId/claim", auth, async (req) => {
+    const clanId = app.parse(idSchema, req.params.id);
+    const missionId = app.parse(idSchema, req.params.missionId);
+    const me = await myMembership(req.user.id, clanId);
+    requireRank(me.role, ClanRole.OFFICER);
+    await refreshMission(db, missionId);
+    const out = await claimMission(db, clanId, missionId, req.user.id);
+    app.analytics.track("REWARD_CLAIM", req.user.id, { source: "CLAN_MISSION", clanId, missionId, credits: out.credits });
+    await app.audit(req, { action: "CLAN_MISSION_CLAIM", targetType: "Clan", targetId: clanId, newValue: out });
+    return out;
+  });
+
+  // ---- Territory ----
+  app.get<{ Params: { id: string } }>("/api/clans/:id/territory", async (req) => {
+    const clanId = app.parse(idSchema, req.params.id);
+    if (!(await db.clan.findUnique({ where: { id: clanId }, select: { id: true } }))) throw notFound("Clan");
+    const rows = await db.clanTerritory.findMany({ where: { clanId }, orderBy: { capturedAt: "desc" } });
+    return {
+      territories: rows.map((t) => {
+        const m = MAPS_BY_ID.get(t.mapId);
+        return { mapId: t.mapId, name: m?.name ?? t.mapId, sector: m?.sector ?? null, pvp: m?.pvp ?? null, capturedAt: t.capturedAt.toISOString() };
+      }),
+    };
   });
 }

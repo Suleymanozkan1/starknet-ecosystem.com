@@ -112,7 +112,7 @@ export async function registerCore(app: FastifyInstance, opts: CoreOptions): Pro
     const found = extractToken(req);
     if (!found) return;
     try {
-      req.authClaims = await verifyAccessToken(found.token, env.JWT_SECRET);
+      req.authClaims = await verifyAccessToken(found.token, env.jwtKeys);
       req.authVia = found.via;
     } catch {
       req.authClaims = null;

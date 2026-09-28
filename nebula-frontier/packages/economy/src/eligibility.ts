@@ -1,4 +1,4 @@
-import { RiskLevel } from "@nebula/shared";
+import type { RiskLevel } from "@nebula/shared";
 import type { DbOrTx } from "@nebula/database";
 import type { EconomyConfig } from "./config.js";
 

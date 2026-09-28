@@ -91,7 +91,7 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
         if (!wallet) throw err;
       }
     }
-    const issued = await issueSession(db, env, req, reply, wallet.userId, body.deviceId);
+    const issued = await issueSession(db, env, req, reply, wallet.userId, body.deviceId, "wallet");
     return issued.response;
   });
 
@@ -137,7 +137,7 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
       if ((err as { code?: string }).code === "P2002") throw conflict("ACCOUNT_EXISTS", "Email or username already registered");
       throw err;
     }
-    const issued = await issueSession(db, env, req, reply, userId, body.deviceId);
+    const issued = await issueSession(db, env, req, reply, userId, body.deviceId, "register");
     return reply.status(201).send(issued.response);
   });
 
@@ -163,7 +163,7 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
       throw unauthorized("Invalid email or password", "INVALID_CREDENTIALS");
     }
     await redis.del(`auth:fail:${key}`);
-    const issued = await issueSession(db, env, req, reply, user.id, body.deviceId);
+    const issued = await issueSession(db, env, req, reply, user.id, body.deviceId, "password");
     return issued.response;
   });
 
@@ -209,7 +209,7 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
     await redis.set(`rt:grace:${parsed.hash}`, session.id, "EX", 30);
     const access = await signAccessToken(
       { sub: session.userId, username: session.user.username, roles: session.user.adminUser?.roles ?? [], sid: session.id },
-      env.JWT_SECRET,
+      env.jwtKeys,
       ACCESS_TOKEN_TTL_SEC,
     );
     const csrfToken = setAuthCookies(reply, env, access, next.token, req.cookies?.[COOKIE_CSRF]);
@@ -225,13 +225,18 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
     if (req.authVia !== "bearer") app.checkCsrf(req);
     const raw = req.cookies?.[COOKIE_REFRESH];
     const sid = req.authClaims?.sid ?? (raw ? parseRefreshToken(raw)?.sessionId : undefined);
-    if (sid) await db.session.updateMany({ where: { id: sid, revokedAt: null }, data: { revokedAt: new Date() } });
+    if (sid) {
+      const s = await db.session.findUnique({ where: { id: sid }, select: { userId: true, createdAt: true, revokedAt: true } });
+      const r = await db.session.updateMany({ where: { id: sid, revokedAt: null }, data: { revokedAt: new Date() } });
+      if (s && r.count === 1) app.analytics.track("LOGOUT", s.userId, { sessionId: sid, sessionSeconds: Math.round((Date.now() - s.createdAt.getTime()) / 1000) });
+    }
     clearAuthCookies(reply, env);
     return { ok: true };
   });
 
   app.post("/api/auth/logout-all", { preHandler: app.authenticate }, async (req, reply) => {
     const n = await revokeAllSessions(db, req.user.id);
+    app.analytics.track("LOGOUT", req.user.id, { all: true, revoked: n });
     clearAuthCookies(reply, env);
     return { ok: true, revoked: n };
   });

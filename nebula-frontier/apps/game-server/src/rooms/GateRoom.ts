@@ -29,6 +29,9 @@ export class GateRoom extends BaseGameRoom {
   protected override bossRewardSource(): RewardSource {
     return "GATE";
   }
+  protected override tracksBossParticipation(): boolean {
+    return false;
+  }
   /** Gate kills do not pay tier rewards per boss; the run completion pays. */
   protected override async onBossKilled(_n: NpcActor, _contributors: { p: PlayerActor; dmg: number }[], _total: number): Promise<void> {
     // intentionally no per-boss payout inside a gate; see completeRun()

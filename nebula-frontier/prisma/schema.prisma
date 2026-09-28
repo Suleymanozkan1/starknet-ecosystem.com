@@ -778,6 +778,7 @@ model Clan {
   stations     ClanStation[]
   warsAsA      ClanWar[]       @relation("clanA")
   warsAsB      ClanWar[]       @relation("clanB")
+  missions     ClanMission[]
 
   @@index([score])
 }
@@ -810,6 +811,29 @@ model ClanWar {
   clanB     Clan      @relation("clanB", fields: [clanBId], references: [id], onDelete: Cascade)
 
   @@index([phase, startsAt])
+}
+
+/// Clan mission instance derived from a quests.json CLAN quest. Progress = member PlayerStat deltas
+/// since `baseline` (untargeted objectives) + explicit game-server `contributions` (targeted ones).
+model ClanMission {
+  id            String    @id @default(cuid())
+  clanId        String
+  questId       String
+  periodKey     String    @default("once")
+  status        String    @default("ACTIVE")
+  progress      Int[]     @default([])
+  /// { [userId]: { [metric]: number } } member stat snapshot at mission start / first observation
+  baseline      Json      @default("{}")
+  /// { [objectiveIndex]: number } explicit contributions from the game server
+  contributions Json      @default("{}")
+  startedBy     String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  claimedAt     DateTime?
+  clan          Clan      @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@unique([clanId, questId, periodKey])
+  @@index([status])
 }
 
 model ClanTerritory {

@@ -29,7 +29,7 @@ export default async function gameRoutes(app: FastifyInstance): Promise<void> {
     const mapId = u.lastMapId && MAPS_BY_ID.has(u.lastMapId) ? u.lastMapId : home;
     if (!mapId) throw badRequest("NO_MAP", "No valid map for this pilot");
     const jti = randomUUID();
-    const ticket = await signGameTicket({ sub: req.user.id, username: u.username, mapId, jti }, env.GAME_TICKET_SECRET, TICKET_TTL_SEC);
+    const ticket = await signGameTicket({ sub: req.user.id, username: u.username, mapId, jti }, env.gameTicketKeys, TICKET_TTL_SEC);
     // Recorded so the game server can enforce single use (SET NX on consume).
     await app.redis.set(`gt:${jti}`, req.user.id, "EX", TICKET_TTL_SEC + 5);
     return { ticket, mapId, gameServerUrl: env.PUBLIC_GAME_SERVER_URL, expiresAt: new Date(Date.now() + TICKET_TTL_SEC * 1000).toISOString() };

@@ -1,0 +1,11 @@
+import { chromium } from "@playwright/test";
+const [,, url, out, mode] = process.argv;
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } : undefined, args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const ctx = await browser.newContext({ ignoreHTTPSErrors: true, ...(mode === "mobile" ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : { viewport: { width: 1440, height: 900 } }) });
+const page = await ctx.newPage();
+page.on("console", (m) => { if (m.type() === "error") console.log("console:", m.text().slice(0, 200)); });
+page.on("pageerror", (e) => console.log("pageerror:", e.message));
+await page.goto(url, { waitUntil: "load", timeout: 60000 });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: out });
+await browser.close();

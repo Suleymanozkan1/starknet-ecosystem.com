@@ -65,8 +65,9 @@ async function shipsView(): Promise<void> {
     entity("skin_d", "PLAYER", "ship_cradle", cx + 2.6 * cell, cy + 1.5 * cell, -Math.PI / 2, { cosmetics: "skin_cradle_leviathan_bone" }),
   ];
   ents.push(...skinned);
-  world.camera.follow(cx, cy);
+  world.camera.follow(Number(params.get("x") ?? cx), Number(params.get("y") ?? cy));
   world.camera.setZoom(Number(params.get("zoom") ?? 150));
+  const norm = params.get("norm") === "1";
   world.camera.snap();
   const pos = { x: 0, y: 0 };
   let frames = 0;
@@ -78,6 +79,10 @@ async function shipsView(): Promise<void> {
       e.vy = -12 - (Math.sin(t + e.x) + 1) * 4;
       e.flags = frames % 240 < 120 && e.id.startsWith("ship_k") ? 2 : 0;
       world.syncEntity(e, 1 / 60);
+      if (norm && frames === 0) {
+        const def = SHIPS.find((x) => x.id === e.defId);
+        if (def) world.setDisplayScale(e.id, Math.min(1.6, 7 / def.visual.length));
+      }
     }
     if (frames % 40 === 5) {
       const a = ents[Math.floor(Math.random() * 16)], b = ents[Math.floor(Math.random() * 16)];

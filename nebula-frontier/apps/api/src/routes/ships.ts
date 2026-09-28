@@ -91,6 +91,7 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
     const p = products.find((x) => ((asRecord(x.grants).ships as string[] | undefined) ?? []).includes(body.shipId));
     if (!p) throw badRequest("NOT_PURCHASABLE", "This ship cannot be bought in the shop");
     const res = await purchaseProduct(db, req.user.id, { productId: p.id, quantity: 1, idempotencyKey: body.idempotencyKey });
+    if (!res.duplicate) app.analytics.track("PURCHASE", req.user.id, { purchaseId: res.purchaseId, productId: p.id, quantity: 1, shipId: body.shipId });
     return { ...res, ships: await shipDtos(req.user.id) };
   });
 

@@ -16,7 +16,7 @@
  */
 import { ChainTxState, WithdrawalStatus, CircuitBreakerMode, RiskLevel } from "@nebula/shared";
 import type { Db } from "@nebula/database";
-import { Prisma } from "@nebula/database";
+import type { Prisma } from "@nebula/database";
 import {
   buildAndSendPayout,
   checkSignature,

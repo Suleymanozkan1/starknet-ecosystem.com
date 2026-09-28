@@ -120,7 +120,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     reflector.position.y = -0.02;
     floorGroup.add(reflector);
   }
-  const floorMat = new MeshStandardMaterial({ color: "#0b0e15", roughness: 0.6, metalness: 0.4, envMapIntensity: 0.05, transparent: !!reflector, opacity: reflector ? 0.88 : 1 });
+  const floorMat = new MeshStandardMaterial({ color: "#05070b", roughness: 0.85, metalness: 0.1, envMapIntensity: 0.05, transparent: !!reflector, opacity: reflector ? 0.9 : 1 });
   const floorGeo = new CircleGeometry(60, 64);
   const floor = new Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;

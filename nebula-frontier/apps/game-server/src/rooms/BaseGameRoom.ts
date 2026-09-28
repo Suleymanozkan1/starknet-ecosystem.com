@@ -21,7 +21,7 @@ import {
   buffModifiers, checkDisplacement, computeStats, coolHeat, createAbilityState, createBrain, deathRepairCost, grantXp,
   isDamageImpossible, isPvpAllowedAt, isSafeAt, isWeakPointHit, maxShotDamage, mineStep, nearestPortal, npcStats,
   pickAsteroidResource, pruneBuffs, regenerate, resetBoss, resolveAreaDamage, resolveHit, resourceHardness, rollAffixes, rollLoot,
-  spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable, contributionTier,
+  spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable,
   type AbilitySlotDef, type EffectiveWeapon, type GameplayEvent, type HitResult, type LootDrop, type Rng, type SimTuning,
 } from "@nebula/game-core";
 import {
@@ -77,6 +77,8 @@ const ROOM_FOR_MAP_TYPE: Record<MapDef["roomType"], RoomName> = {
 };
 
 export const CHAT_TOPIC_GLOBAL = "nf:chat:global";
+const PRESENCE_TTL_SEC = 60;
+const PRESENCE_REFRESH_MS = 20_000;
 const chatTopicFaction = (f: string) => `nf:chat:faction:${f}`;
 const chatTopicClan = (c: string) => `nf:chat:clan:${c}`;
 
@@ -238,6 +240,10 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       void this.heartbeat(false);
     }, this.svc.config.flushIntervalMs);
     void this.heartbeat(false);
+    // Online presence for the API (friends list): refresh `presence:<userId>` while connected.
+    this.clock.setInterval(() => {
+      for (const p of this.players.values()) if (p.connected) void this.setPresence(p);
+    }, PRESENCE_REFRESH_MS);
     activeRooms.inc({ room: this.roomKind });
     this.log.info({ mapId, maxClients: this.maxClients }, "room created");
   }
@@ -306,6 +312,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     activePlayers.set({ room: this.roomKind, map: this.map.id }, this.players.size);
     void this.setMatchmaking({ metadata: { ...this.metadata } }).catch(() => undefined);
     this.onPlayerJoined(p);
+    void this.setPresence(p);
     this.log.info({ userId: p.userId, entityId: p.id }, "player joined");
   }
 
@@ -365,6 +372,26 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.log.error({ err, methodName }, "uncaught room exception");
   }
 
+  /** `presence:<userId>` = mapId (TTL 60s, refreshed every 20s) — read by the API for online status. */
+  private async setPresence(p: PlayerActor): Promise<void> {
+    if (!this.svc.redis) return;
+    try {
+      await this.svc.redis.set(`presence:${p.userId}`, this.map.id, "EX", PRESENCE_TTL_SEC);
+    } catch (e) {
+      this.log.debug({ err: e }, "presence set failed");
+    }
+  }
+
+  /** Delete presence only if it still points at this map (a portal jump may already have set the new map). */
+  private async clearPresence(p: PlayerActor): Promise<void> {
+    if (!this.svc.redis) return;
+    try {
+      await this.svc.redis.eval("if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) end return 0", 1, `presence:${p.userId}`, this.map.id);
+    } catch (e) {
+      this.log.debug({ err: e }, "presence clear failed");
+    }
+  }
+
   /** Room registry row (GameRoom) for admin/ops dashboards; never used for game state. */
   private async heartbeat(disposed: boolean): Promise<void> {
     try {
@@ -422,6 +449,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const o of this.players.values()) o.visible.delete(p.id);
     this.sendNear(p.x, p.y, ServerEvent.PLAYER_LEAVE, { entityId: p.id });
     this.svc.risk.drain(p.userId, `game-server:${this.roomKind}`);
+    void this.clearPresence(p);
     this.onPlayerRemoved(p);
     this.state.online = this.players.size;
     activePlayers.set({ room: this.roomKind, map: this.map.id }, this.players.size);
@@ -534,7 +562,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         return;
       }
       case "jump": return void this.onJump(p, (m as ParsedMessages["jump"]).portalId);
-      case "chat": return this.onChat(p, m as ParsedMessages["chat"]);
+      case "chat": return void this.onChat(p, m as ParsedMessages["chat"]);
       case "formation": {
         const f = (m as ParsedMessages["formation"]).formation.toUpperCase();
         if (["STANDARD", "ARROW", "TURTLE", "DIAMOND", "WHEEL"].includes(f)) p.formation = f;
@@ -559,6 +587,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
    */
   protected isAlly(a: PlayerActor, b: PlayerActor): boolean {
     if (this.isTeamRoom()) return a.team === b.team;
+    if (a.profile.squadId && a.profile.squadId === b.profile.squadId) return true;
     if (a.profile.clanId && a.profile.clanId === b.profile.clanId) return true;
     const r = this.svc.config.aoiRadius * 2;
     return !!a.profile.factionId && a.profile.factionId === b.profile.factionId && (a.x - b.x) ** 2 + (a.y - b.y) ** 2 <= r * r;
@@ -826,6 +855,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         if (target.kind === "BOSS") {
           const boss = target as NpcActor;
           p.pending.bossDamage += total;
+          if (this.tracksBossParticipation()) p.pending.addEvent(this.bossEventFor(boss).eventId, boss.uid, total);
           this.questEvent(p, { type: "DAMAGE_BOSS", bossId: boss.def.id, amount: total, mapId: this.map.id });
         }
       }
@@ -1131,11 +1161,12 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.questEvent(p, { type: "KILL", npcId: n.def.id, boss: n.kind === "BOSS", mapId: this.map.id });
   }
 
-  protected giveXp(p: PlayerActor, amount: number): void {
+  /** Add XP in memory (level-up events); `persist=false` when the database was already credited. */
+  protected giveXp(p: PlayerActor, amount: number, persist = true): void {
     if (amount <= 0) return;
     const g = grantXp(p.xp, amount, PROGRESSION);
     p.xp = g.xpAfter;
-    p.pending.xp += amount;
+    if (persist) p.pending.xp += amount;
     if (g.levelsGained.length) {
       p.level = g.levelAfter;
       p.profile.level = g.levelAfter;
@@ -1301,6 +1332,15 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.emitTo(k.client, ServerEvent.REWARD, { xp, honor, credits: 0, seasonPoints: honor, reason: `Defeated ${v.name}`, cryptoEligible: true });
     this.requestFlush(k);
     void this.crypto(k, "PVP", sourceRef, this.rules.pvpCryptoWeight, `PvP victory over ${v.name}`, matchId ?? undefined);
+    void this.svc.persistence.claimBounties(v.userId, k.userId)
+      .then((paid) => {
+        const total = paid.reduce((s, b) => s + b.amount, 0n);
+        if (total > 0n && k.connected) {
+          this.emitTo(k.client, ServerEvent.REWARD, { xp: 0, honor: 0, credits: Number(total), seasonPoints: 0, reason: `Bounty on ${v.name} claimed` });
+          this.broadcast(ServerEvent.KILL_FEED, { killer: k.name, victim: v.name, weapon: "BOUNTY", pvp: true });
+        }
+      })
+      .catch((e: unknown) => this.log.error({ err: e }, "bounty claim failed"));
   }
 
   /** Route an eligible achievement through the economy reward engine (never granted directly). */
@@ -1320,7 +1360,16 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   }
 
   /** Event id that world-boss participation is recorded under. */
+  private bossEventCache = new Map<string, { eventId: string; def: EventDef | null }>();
   protected bossEventFor(n: NpcActor): { eventId: string; def: EventDef | null } {
+    const cached = this.bossEventCache.get(n.uid);
+    if (cached) return cached;
+    const r = this.resolveBossEvent(n);
+    this.bossEventCache.set(n.uid, r);
+    return r;
+  }
+
+  private resolveBossEvent(n: NpcActor): { eventId: string; def: EventDef | null } {
     const active = this.svc.events.activeFor(this.map.id).find((a) => a.def.boss === n.def.id);
     if (active) return { eventId: active.def.id, def: active.def };
     const any = EVENTS.find((e) => e.boss === n.def.id);
@@ -1336,21 +1385,51 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
    * Collective boss contribution: EventParticipation rows (contribution = damage),
    * event reward tiers by contribution %, and crypto eligibility through the reward engine.
    */
-  protected async onBossKilled(n: NpcActor, contributors: { p: PlayerActor; dmg: number }[], totalDmg: number): Promise<void> {
+  /** Whether boss damage is recorded as EventParticipation in this room (gates/raids pay per run instead). */
+  protected tracksBossParticipation(): boolean {
+    return true;
+  }
+
+  /**
+   * Collective boss contribution: boss damage is recorded continuously as
+   * EventParticipation (contribution = damage, instance = boss life). On kill
+   * the tiers are distributed idempotently (see Persistence.distributeEventRewards).
+   */
+  protected async onBossKilled(n: NpcActor, contributors: { p: PlayerActor; dmg: number }[], _totalDmg: number): Promise<void> {
+    await this.distributeBossRewards(n, contributors.map((c) => c.p));
+  }
+
+  protected async distributeBossRewards(n: NpcActor, participants: PlayerActor[]): Promise<void> {
+    if (!this.tracksBossParticipation()) return;
     const { eventId, def } = this.bossEventFor(n);
-    for (const c of contributors) {
-      const pct = totalDmg > 0 ? (c.dmg / totalDmg) * 100 : 0;
-      c.p.pending.addEvent(eventId, n.uid, c.dmg);
-      if (pct < this.rules.bossMinContribution * 100) continue;
-      const tier = def ? contributionTier(def, pct) : null;
-      if (tier) {
-        await this.grantBundle(c.p, tier.bundle, 1, `boss:${n.uid}:${c.p.userId}`, `${def?.name ?? n.name} — ${tier.tier}`, def?.type === "GLOBAL_RIFT" ? "EVENT" : this.bossRewardSource());
-      } else {
-        // No event tier: eligible for a crypto reward weighted by contribution share.
-        void this.crypto(c.p, this.bossRewardSource(), `boss:${n.uid}:${c.p.userId}`, Math.max(0.1, Math.min(3, pct / 20)), `${n.name} destroyed (${pct.toFixed(1)}% contribution)`);
+    // Make sure every contribution is in the database before computing shares.
+    await Promise.all(participants.map((p) => this.flushPlayer(p, false, true)));
+    try {
+      const results = await this.svc.persistence.distributeEventRewards(eventId, n.uid, def, {
+        minShare: this.rules.bossMinContribution,
+        fallbackSource: def?.type === "GLOBAL_RIFT" ? "EVENT" : this.bossRewardSource(),
+        label: def?.name ?? `${n.name} destroyed`,
+        mode: this.matchMode(),
+      });
+      for (const r of results) {
+        const p = this.getPlayerByUser(r.userId);
+        if (!p || !p.connected) continue;
+        const xp = Math.floor(r.bundle.xp ?? 0);
+        if (xp > 0) this.giveXp(p, xp, false);
+        const honor = Math.floor(r.bundle.honor ?? 0);
+        p.honor += honor;
+        this.emitTo(p.client, ServerEvent.REWARD, {
+          xp, honor, credits: r.bundle.credits ?? 0, seasonPoints: (r.bundle.seasonPoints ?? 0) + honor,
+          reason: `${def?.name ?? n.name}${r.tier ? ` — ${r.tier}` : ""} (${r.contributionPct.toFixed(1)}%)`,
+          cryptoEligible: r.cryptoStatus === "GRANTED" || r.cryptoStatus === "PENDING_REVIEW",
+        });
       }
+    } catch (e) {
+      errorsTotal.inc({ component: "persistence", code: "event_rewards" });
+      this.log.error({ err: e, eventId, instance: n.uid }, "event reward distribution failed");
     }
   }
+
 
   /**
    * Grant a RewardBundle: XP/honor/season points (batched), credits/gems/items/resources
@@ -1670,11 +1749,21 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     await this.presence.subscribe(topic, cb);
   }
 
-  private onChat(p: PlayerActor, m: ParsedMessages["chat"]): void {
-    if ((p.profile.mutedUntil && p.profile.mutedUntil.getTime() > Date.now()) || p.profile.restrictions.includes("CHAT_MUTED")) {
-      return this.error(p, "MUTED", "You are muted");
+  /** Mutes: User.mutedUntil / CHAT_MUTED restriction (loaded at join) and Redis `mute:<userId>` (set live by admins). */
+  private async isMuted(p: PlayerActor): Promise<boolean> {
+    if ((p.profile.mutedUntil && p.profile.mutedUntil.getTime() > Date.now()) || p.profile.restrictions.includes("CHAT_MUTED")) return true;
+    if (!this.svc.redis) return false;
+    try {
+      return (await this.svc.redis.exists(`mute:${p.userId}`)) === 1;
+    } catch {
+      return false;
     }
+  }
+
+  private async onChat(p: PlayerActor, m: ParsedMessages["chat"]): Promise<void> {
     if (!p.chat.take(Date.now())) return this.error(p, "CHAT_RATE_LIMIT", "Slow down");
+    if (await this.isMuted(p)) return this.error(p, "MUTED", "You are muted");
+    if (!p.connected) return;
     const text = sanitizeChat(m.text);
     if (!text) return;
     const evt: ChatEvent = { channel: m.channel, from: p.name, fromId: p.userId, text, at: Date.now(), faction: p.profile.factionId ?? undefined };
@@ -1703,8 +1792,11 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         break;
       }
       case "SQUAD":
-        key = `team:${p.team}`;
-        for (const o of this.players.values()) if (o.team === p.team && o.faction === p.faction) this.emitTo(o.client, ServerEvent.CHAT, evt);
+        key = p.profile.squadId ?? `team:${p.team}`;
+        for (const o of this.players.values()) {
+          const same = p.profile.squadId ? o.profile.squadId === p.profile.squadId : this.isTeamRoom() && o.team === p.team;
+          if (o.connected && (same || o === p)) this.emitTo(o.client, ServerEvent.CHAT, evt);
+        }
         break;
     }
     this.chatBuffer.push({ channel: m.channel, channelKey: key, senderId: p.userId, text });
@@ -1790,6 +1882,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const rp of [...this.riftPortals.values()]) if (rp.eventId === a.def.id && rp.windowStart === a.window.start) this.closeRiftPortal(rp);
     for (const n of [...this.npcs.values()]) {
       if (n.tag === `event:${a.def.id}:${a.window.start}` && !n.dead) {
+        // Boss survived the event window: participants are still paid by contribution tier.
+        const participants = [...n.damageBy.keys()].map((id) => this.players.get(id)).filter((p): p is PlayerActor => !!p);
+        void this.distributeBossRewards(n, participants);
         this.broadcast(ServerEvent.NOTICE, { level: "info", text: `${n.name} retreated into the rift` });
         this.removeNpc(n);
       }
@@ -1854,13 +1949,13 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     await this.flushChat();
   }
 
-  protected async flushPlayer(p: PlayerActor, final: boolean): Promise<void> {
+  protected async flushPlayer(p: PlayerActor, final: boolean, waitInFlight = final): Promise<void> {
     this.accruePlaytime(p);
     if (final && !p.pending.position) p.pending.position = p.jumpedTo ?? this.exitPosition(p);
     const hasQuestChanges = [...p.profile.quests.values()].some((q) => q.dirty);
     if (p.pending.isEmpty() && !hasQuestChanges && !final) return;
     if (p.flushing) {
-      if (final) {
+      if (waitInFlight) {
         // wait for the in-flight flush then flush the rest
         for (let i = 0; i < 100 && p.flushing; i++) await new Promise((r) => setTimeout(r, 50));
       } else return;

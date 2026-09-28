@@ -71,6 +71,7 @@ export default async function progressRoutes(app: FastifyInstance): Promise<void
       return grantBundle(tx, userId, def.rewards, `ach:${userId}:${achievementId}`, `achievement:${achievementId}`);
     });
     await settleCrypto(db, userId, grant, `ach:${achievementId}`, `Achievement ${def.name}`);
+    app.analytics.track("REWARD_CLAIM", userId, { source: "ACHIEVEMENT", achievementId });
     return { ok: true, items: grant.items };
   });
 

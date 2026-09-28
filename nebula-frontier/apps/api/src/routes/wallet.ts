@@ -6,7 +6,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
-  base58SignatureSchema,
   depositPrepareSchema,
   depositVerifySchema,
   idSchema,
@@ -14,7 +13,7 @@ import {
   withdrawQuoteSchema,
   withdrawRequestSchema
 } from "@nebula/validation";
-import { ChainTxState, Currency, type DepositDto, type DepositPrepareResponse, type WalletResponse, type WithdrawalDto, type WithdrawalLimitsDto, type WithdrawQuoteDto } from "@nebula/shared";
+import { Currency, type ChainTxState, type DepositDto, type DepositPrepareResponse, type WalletResponse, type WithdrawalDto, type WithdrawalLimitsDto, type WithdrawQuoteDto } from "@nebula/shared";
 import {
   createRpcFromEnv,
   explorerUrl,
@@ -22,7 +21,6 @@ import {
   getSolanaNetwork,
   getTreasuryAddress,
   verifyDepositTransaction,
-  verifyWalletSignature,
   DepositRejection,
   type SolanaRpcClient
 } from "@nebula/blockchain";
@@ -44,7 +42,7 @@ import {
   type EconomyConfig
 } from "@nebula/economy";
 import type { Db } from "@nebula/database";
-import { ApiHttpError, badRequest, conflict, notFound, unauthorized, unavailable } from "../errors.js";
+import { ApiHttpError, badRequest, conflict, notFound, unavailable } from "../errors.js";
 import { balancesDto } from "../lib/balances.js";
 import { notify } from "../lib/notify.js";
 
@@ -124,7 +122,6 @@ async function defaultNotify(withdrawalId: string): Promise<void> {
   if (!res.ok) throw new Error(`blockchain-service responded ${res.status}`);
 }
 
-const connectSchema = linkWalletSchema.extend({ signature: base58SignatureSchema });
 const historyQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) });
 
 const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
@@ -162,41 +159,28 @@ const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
   }
 
   // ---------------------------------------------------------------- link an additional wallet
-  app.post("/api/wallet/connect", { preHandler: [app.authenticate, app.rateLimitStrict], config: { rateLimit: app.rateLimits.wallet } }, async (req) => {
-    const body = app.parse(connectSchema, req.body);
-    const row = await db.walletNonce.findUnique({ where: { nonce: body.nonce } });
-    if (!row || row.address !== body.address || row.purpose !== "LINK_WALLET" || row.userId !== req.user.id) throw unauthorized("Invalid nonce", "INVALID_NONCE");
-    if (row.usedAt) throw unauthorized("Nonce already used", "NONCE_USED");
-    if (row.expiresAt.getTime() <= Date.now()) throw unauthorized("Nonce expired", "NONCE_EXPIRED");
-    const consumed = await db.walletNonce.updateMany({ where: { id: row.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } });
-    if (consumed.count !== 1) throw unauthorized("Nonce already used", "NONCE_USED");
-    if (!(await verifyWalletSignature(body.address, row.message, body.signature))) throw unauthorized("Invalid wallet signature", "INVALID_SIGNATURE");
-
-    const existing = await db.wallet.findUnique({ where: { address: body.address } });
-    if (existing && existing.userId !== req.user.id) throw conflict("WALLET_IN_USE", "Wallet is linked to another account");
-    if (!existing || existing.unlinkedAt) {
-      const hasPrimary = await db.wallet.count({ where: { userId: req.user.id, primary: true, unlinkedAt: null } });
-      await db.$transaction(async (tx) => {
-        if (existing) await tx.wallet.update({ where: { id: existing.id }, data: { unlinkedAt: null, verifiedAt: new Date(), primary: hasPrimary === 0 } });
-        else await tx.wallet.create({ data: { userId: req.user.id, address: body.address, primary: hasPrimary === 0 } });
-        const cfg = await loadEconomyConfig(tx);
-        await notify(tx, req.user.id, "SECURITY_WALLET_LINKED", "New wallet linked",
-          `A new wallet was linked. Withdrawals are locked for ${cfg.withdrawal.walletChangeLockHours}h as a security measure.`, { address: body.address });
-        await app.audit(req, { action: "WALLET_LINK", targetType: "Wallet", targetId: body.address }, tx);
-      });
-      await recordRiskSignal(db, { userId: req.user.id, type: "WALLET_CHANGE", score: 1, details: { address: body.address }, source: "wallet.connect" }).catch(() => undefined);
+  // Single implementation: delegates to POST /api/auth/link-wallet (nonce purpose LINK_WALLET,
+  // signature check, audit, notification, WALLET_CHANGE risk signal). The 48h withdrawal lock is
+  // derived from Wallet.verifiedAt in checkWithdrawal(), so it applies to either entry point.
+  app.post("/api/wallet/connect", { preHandler: [app.authenticate, app.requireFeature("wallet")], config: { rateLimit: app.rateLimits.wallet } }, async (req, reply) => {
+    const headers: Record<string, string> = {};
+    for (const h of ["cookie", "authorization", "x-nf-csrf", "origin", "user-agent", "x-correlation-id"]) {
+      const v = req.headers[h];
+      if (typeof v === "string") headers[h] = v;
     }
+    const res = await app.inject({ method: "POST", url: "/api/auth/link-wallet", headers, payload: (req.body ?? {}) as object, remoteAddress: req.ip });
+    if (res.statusCode >= 400) return reply.code(res.statusCode).send(res.json());
     return walletResponse(req.user.id);
   });
 
   // ---------------------------------------------------------------- overview
-  app.get("/api/wallet", { preHandler: app.authenticate }, async (req) => {
+  app.get("/api/wallet", { preHandler: [app.authenticate, app.requireFeature("wallet")] }, async (req) => {
     const q = app.parse(historyQuery, req.query);
     return walletResponse(req.user.id, q.limit);
   });
 
   // ---------------------------------------------------------------- deposits
-  app.post("/api/wallet/deposit/prepare", { preHandler: [app.authenticate, app.rateLimitStrict], config: { rateLimit: app.rateLimits.wallet } }, async (req): Promise<DepositPrepareResponse> => {
+  app.post("/api/wallet/deposit/prepare", { preHandler: [app.authenticate, app.requireFeature("deposit"), app.rateLimitStrict], config: { rateLimit: app.rateLimits.wallet } }, async (req): Promise<DepositPrepareResponse> => {
     const body = app.parse(depositPrepareSchema, req.body);
     const recipient = treasuryOr503();
     try {
@@ -217,7 +201,7 @@ const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
     }
   });
 
-  app.post("/api/wallet/deposit/verify", { preHandler: [app.authenticate, app.rateLimitStrict], config: { rateLimit: app.rateLimits.wallet } }, async (req, reply) => {
+  app.post("/api/wallet/deposit/verify", { preHandler: [app.authenticate, app.requireFeature("deposit"), app.rateLimitStrict], config: { rateLimit: app.rateLimits.wallet } }, async (req, reply) => {
     const body = app.parse(depositVerifySchema, req.body);
     const d = await db.deposit.findUnique({ where: { id: body.depositId } });
     if (!d || d.userId !== req.user.id) throw notFound("Deposit");
@@ -266,7 +250,7 @@ const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
   });
 
   // ---------------------------------------------------------------- withdrawals
-  app.get("/api/wallet/withdraw/quote", { preHandler: app.authenticate }, async (req): Promise<WithdrawQuoteDto & { limits: WithdrawalLimitsDto }> => {
+  app.get("/api/wallet/withdraw/quote", { preHandler: [app.authenticate, app.requireFeature("withdraw")] }, async (req): Promise<WithdrawQuoteDto & { limits: WithdrawalLimitsDto }> => {
     const q = app.parse(withdrawQuoteSchema, req.query);
     const cfg = await loadEconomyConfig(db);
     try {
@@ -279,7 +263,7 @@ const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
 
   app.post(
     "/api/wallet/withdraw",
-    { preHandler: [app.authenticate, app.rateLimitWithdrawal], config: { rateLimit: app.rateLimits.withdrawal } },
+    { preHandler: [app.authenticate, app.requireFeature("withdraw"), app.rateLimitWithdrawal], config: { rateLimit: app.rateLimits.withdrawal } },
     async (req, reply): Promise<WithdrawalDto> => {
       const body = app.parse(withdrawRequestSchema, req.body);
       const { mint } = getRewardMint();
@@ -304,14 +288,14 @@ const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
     }
   );
 
-  app.get("/api/wallet/withdrawals/:id", { preHandler: app.authenticate }, async (req): Promise<WithdrawalDto & { chainState: string }> => {
+  app.get("/api/wallet/withdrawals/:id", { preHandler: [app.authenticate, app.requireFeature("withdraw")] }, async (req): Promise<WithdrawalDto & { chainState: string }> => {
     const { id } = app.parse(z.object({ id: idSchema }), req.params);
     const w = await db.withdrawal.findUnique({ where: { id } });
     if (!w || w.userId !== req.user.id) throw notFound("Withdrawal");
     return { ...withdrawalDto(w), chainState: w.chainState as ChainTxState };
   });
 
-  app.get("/api/wallet/withdraw/check", { preHandler: app.authenticate }, async (req) => {
+  app.get("/api/wallet/withdraw/check", { preHandler: [app.authenticate, app.requireFeature("withdraw")] }, async (req) => {
     const q = app.parse(z.object({ amount: withdrawQuoteSchema.shape.amount, address: linkWalletSchema.shape.address }), req.query);
     const r = await checkWithdrawal(db, { userId: req.user.id, amount: q.amount, address: q.address });
     return { ok: r.ok, errors: r.errors, reviewRequired: r.reviewFlags.length > 0, quote: r.quote ? quoteToDto(r.quote) : null, asset: Currency.NEBX };

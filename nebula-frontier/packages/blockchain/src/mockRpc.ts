@@ -54,7 +54,11 @@ function bigintJson(v: unknown): unknown {
   return JSON.parse(JSON.stringify(v, (_k, x: unknown) => (typeof x === "bigint" ? Number(x) : x)));
 }
 
-export function createMockSolanaRpc(init: { genesisHash?: string; balances?: Record<string, bigint> } = {}): { rpc: SolanaRpcClient; state: MockChainState } {
+export function createMockSolanaRpc(init: { genesisHash?: string; balances?: Record<string, bigint> } = {}): {
+  rpc: SolanaRpcClient;
+  state: MockChainState;
+  handle: (payload: unknown) => Promise<unknown>;
+} {
   const state: MockChainState = {
     genesisHash: init.genesisHash ?? GENESIS_HASHES.devnet,
     slot: 1000,
@@ -158,7 +162,7 @@ export function createMockSolanaRpc(init: { genesisHash?: string; balances?: Rec
     };
   }
 
-  const transport = (async ({ payload }: { payload: unknown }) => {
+  const handle = async (payload: unknown): Promise<unknown> => {
     const p = payload as { id: number | string; method: string; params?: unknown[] };
     state.calls.push(p.method);
     const params = p.params ?? [];
@@ -230,7 +234,38 @@ export function createMockSolanaRpc(init: { genesisHash?: string; balances?: Rec
       default:
         return { jsonrpc: "2.0", id: p.id, error: { code: -32601, message: `Mock RPC: method ${p.method} not implemented` } };
     }
-  }) as unknown as RpcTransport;
+  };
+  const transport = (async ({ payload }: { payload: unknown }) => handle(payload)) as unknown as RpcTransport;
 
-  return { rpc: createSolanaRpcFromTransport(transport) as unknown as SolanaRpcClient, state };
+  return { rpc: createSolanaRpcFromTransport(transport) as unknown as SolanaRpcClient, state, handle };
+}
+
+/**
+ * Serves the mock chain over real HTTP JSON-RPC (127.0.0.1, random port) so processes that build
+ * their RPC from SOLANA_RPC_URL (e.g. the API) can be integration-tested end-to-end.
+ */
+export async function startMockRpcServer(init: Parameters<typeof createMockSolanaRpc>[0] = {}): Promise<{ url: string; state: MockChainState; rpc: SolanaRpcClient; close: () => Promise<void> }> {
+  const { createServer } = await import("node:http");
+  const mock = createMockSolanaRpc(init);
+  const server = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      void (async () => {
+        try {
+          const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+          const out = Array.isArray(body) ? await Promise.all(body.map((b) => mock.handle(b))) : await mock.handle(body);
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify(out));
+        } catch (err) {
+          res.writeHead(400, { "content-type": "application/json" });
+          res.end(JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: (err as Error).message } }));
+        }
+      })();
+    });
+  });
+  await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+  const addr = server.address();
+  const port = typeof addr === "object" && addr ? addr.port : 0;
+  return { url: `http://127.0.0.1:${port}`, state: mock.state, rpc: mock.rpc, close: () => new Promise<void>((r) => server.close(() => r())) };
 }

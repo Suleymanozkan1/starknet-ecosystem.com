@@ -81,6 +81,7 @@ export async function issueSession(
   reply: FastifyReply,
   userId: string,
   deviceId?: string,
+  method: "wallet" | "password" | "register" = "password",
 ): Promise<IssuedSession> {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -105,9 +106,10 @@ export async function issueSession(
     },
   });
   await db.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
+  req.server.analytics.track("LOGIN", userId, { method, sessionId }, platformOf(req));
   const access = await signAccessToken(
     { sub: userId, username: user.username, roles: user.adminUser?.roles ?? [], sid: sessionId },
-    env.JWT_SECRET,
+    env.jwtKeys,
     ACCESS_TOKEN_TTL_SEC,
   );
   // Always mint a fresh CSRF token at login (never trust a pre-login cookie: cookie tossing).

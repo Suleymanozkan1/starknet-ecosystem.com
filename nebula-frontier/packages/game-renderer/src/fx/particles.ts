@@ -49,8 +49,7 @@ varying float vT;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = length(c) * 2.0;
-  float n = sin(c.x * 13.0 + vT * 4.0) * sin(c.y * 11.0 - vT * 3.0) * 0.12;
-  float a = smoothstep(1.0, 0.2, d + n);
+  float a = pow(smoothstep(1.0, 0.0, d), 1.6);
   float fade = smoothstep(0.0, 0.12, vT) * (1.0 - vT);
   gl_FragColor = vec4(vColor, a * fade * 0.55);
 }`;

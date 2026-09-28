@@ -56,7 +56,7 @@ export function rewardRules(cfg: EconomyConfig): string[] {
     `Rewards are funded from a fixed share (${Math.round(cfg.rewardBudgetRatio * 100)}%) of real game revenue and a funded reward pool — the pool is finite and rewards stop when it is spent.`,
     `Unclaimed rewards expire after ${cfg.rewardExpiryDays} days. Claims have a ${e.claimCooldownMinutes}-minute cooldown.`,
     "Reward rates adjust automatically with treasury health and can be paused during abnormal activity.",
-    "Rewards are not an investment and carry no promise of value. There is no interest, yield or guaranteed return. Devnet tokens have no monetary value.",
+    "Rewards are earned through gameplay only and carry no promise of any value. Devnet tokens have no monetary value.",
     `Withdrawals: minimum ${sol(cfg.withdrawal.min)}, service fee ${(cfg.fees.withdrawalServicePercent * 100).toFixed(1)}% + ${sol(cfg.fees.withdrawalFlat)}, only to your verified wallet, locked ${cfg.withdrawal.walletChangeLockHours}h after a wallet change.`
   ];
 }

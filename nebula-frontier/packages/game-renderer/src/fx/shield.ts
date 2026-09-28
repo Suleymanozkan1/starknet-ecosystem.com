@@ -46,7 +46,7 @@ void main() {
   }
   float hex = uHex > 0.5 ? hexGrid(vec2(atan(vLocal.z, vLocal.x), vLocal.y * 1.6)) * (0.25 + ripple) : 0.0;
   float shimmer = 0.9 + 0.1 * sin(uTime * 3.0 + vLocal.y * 12.0);
-  float a = (fres * 0.75 * shimmer + ripple + hex * 0.6) * uOpacity;
+  float a = (fres * 0.5 * shimmer + ripple + hex * 0.6) * uOpacity;
   gl_FragColor = vec4(uColor * (1.2 + ripple), clamp(a, 0.0, 1.0));
 }`;
 

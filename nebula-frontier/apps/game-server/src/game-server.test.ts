@@ -7,10 +7,10 @@ import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { matchMaker } from "@colyseus/core";
 import { Client as SdkClient } from "@colyseus/sdk";
-import { NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
-import { createDb, getBalance, userWallet, type Db } from "@nebula/database";
-import { isPvpAllowedAt, type LootDrop } from "@nebula/game-core";
-import { RoomName, type MapDef } from "@nebula/shared";
+import { EVENTS_BY_ID, NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
+import { createDb, getBalance, post, system, userWallet, type Db } from "@nebula/database";
+import { STARTER_AMMO, isPvpAllowedAt, starterAmmoOriginRef, type HitResult, type LootDrop } from "@nebula/game-core";
+import { LedgerAccountType, RoomName, type MapDef } from "@nebula/shared";
 
 import { loadConfig } from "./config.js";
 import { buildServices } from "./bootstrap.js";
@@ -35,6 +35,10 @@ interface Internals {
   getPlayerByUser(id: string): PlayerActor | undefined;
   rules: GameRules;
   kill(target: NpcActor | PlayerActor, killer: PlayerActor | null): void;
+  applyHit(src: PlayerActor | null, target: NpcActor | PlayerActor, res: HitResult, weaponType: string): void;
+  getRiftPortals(): { id: string; x: number; y: number; windowStart: number; eventId: string }[];
+  getNpcs(): NpcActor[];
+  clanWarId?: string | null;
 }
 const I = (room: unknown) => room as Internals;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -56,10 +60,11 @@ beforeAll(async () => {
   shieldTestIpcFromPm2();
   process.env.GAME_TICK_RATE = "20";
   process.env.LOG_LEVEL = "warn";
-  const config = { ...loadConfig(), redisUrl: null };
+  // Redis is used for ticket jti / presence / mutes (as in production); matchmaking stays in-process.
+  const config = loadConfig();
   secret = config.gameTicketSecret;
   db = createDb();
-  svc = buildServices(config, { db, useRedis: false, logLevel: "warn", rngSeed: 1234 });
+  svc = buildServices(config, { db, useRedis: true, logLevel: "warn", rngSeed: 1234 });
   await ensureCatalog(db);
   const server = createGameServer({ redisUrl: null, gracefullyShutdown: false });
   await server.listen(2568);
@@ -94,6 +99,12 @@ describe("auth", () => {
     expect(actor.stats.weapons.length).toBeGreaterThan(0);
     const ship = await db.shipInstance.findFirst({ where: { userId: user.id } });
     expect(ship?.shipId).toBe("ship_aurora_lumen");
+    // Starter missile ammo from factions.json (shared STARTER_AMMO source of truth).
+    const ammo = await db.inventoryItem.findFirst({ where: { userId: user.id, originRef: starterAmmoOriginRef(user.id, "item_ammo_hornet") } });
+    expect(ammo?.quantity).toBe(STARTER_AMMO.get("aurora")?.[0]?.quantity);
+    expect(actor.profile.ammo.get("item_ammo_hornet")?.[0]?.quantity).toBe(ammo?.quantity);
+    // Online presence for the API.
+    expect(await svc.redis!.get(`presence:${user.id}`)).toBe("map_aurora_prime");
     await client.leave();
   });
 
@@ -374,5 +385,169 @@ describe("gate run", () => {
     // Completion credits (× HARD reward multiplier) arrive through the ledger exactly once.
     await until(async () => (await getBalance(db, userWallet(u.id, "CREDITS"))) > 30_000n);
     await c.leave().catch(() => undefined);
+  });
+});
+
+async function pvpSpot(map: MapDef): Promise<{ x: number; y: number }> {
+  for (let i = 0; i < 200; i++) {
+    const x = 50 + ((i * 37) % Math.max(1, map.width - 100));
+    const y = 50 + ((i * 53) % Math.max(1, map.height - 100));
+    if (isPvpAllowedAt(map, x, y)) return { x, y };
+  }
+  throw new Error("no pvp spot");
+}
+
+function bigHit(target: { shield: number; hull: number }): HitResult {
+  return { hit: true, crit: false, weakPoint: false, element: "THERMAL", raw: target.shield + target.hull, shieldDamage: target.shield, armorDamage: 0, hullDamage: target.hull, shieldAfter: 0, hullAfter: 0, killed: true };
+}
+
+describe("presence & mutes", () => {
+  it("clears presence on leave and blocks chat when muted in Redis", async () => {
+    const { client, user } = await joinSector("map_aurora_prime");
+    const errors: string[] = [];
+    client.onMessage("error", (e: { code: string }) => errors.push(e.code));
+    await svc.redis!.set(`mute:${user.id}`, "1", "PX", 60_000);
+    client.send("chat", { channel: "LOCAL", text: "hello" });
+    await until(() => errors.includes("MUTED"));
+    await client.leave();
+    await until(async () => (await svc.redis!.get(`presence:${user.id}`)) === null);
+  });
+});
+
+describe("markers", () => {
+  it("relays tactical markers to allies only", async () => {
+    const a = await joinSector("map_aurora_prime", { faction: "aurora" });
+    const b = await joinSector("map_aurora_prime", { faction: "aurora" });
+    const c = await joinSector("map_aurora_prime", { faction: "nova" });
+    const gotB = new Promise<{ fromName: string; kind: string }>((r) => b.client.onMessage("marker", r));
+    let cGot = false;
+    c.client.onMessage("marker", () => { cGot = true; });
+    a.client.send("marker", { x: 100, y: 100, kind: "ATTACK" });
+    const m = await gotB;
+    expect(m).toMatchObject({ fromName: a.user.username, kind: "ATTACK", x: 100, y: 100 });
+    await sleep(200);
+    expect(cGot).toBe(false);
+    await Promise.all([a.client.leave(), b.client.leave(), c.client.leave()]);
+  });
+});
+
+describe("void rift", () => {
+  it("opens an EVENT_GATE portal on the rift maps that leads into the event room and closes at event end", async () => {
+    const { client, room, actor } = await joinSector("map_vanta_rift", { level: 20 });
+    const notices: { eventId: string; mapIds: string[] }[] = [];
+    client.onMessage("event_started", (e: { eventId: string; mapIds: string[] }) => notices.push(e));
+    const t0 = Date.now();
+    svc.events.trigger("evt_void_rift", 0.05); // 3 seconds
+    await until(() => I(room).getRiftPortals().some((p) => p.windowStart >= t0));
+    const portal = I(room).getRiftPortals().find((p) => p.windowStart >= t0)!;
+    await until(() => notices.some((n) => n.eventId === "evt_void_rift" && n.mapIds.includes("map_vanta_rift")));
+    await until(() => (client.state as unknown as { entities: Map<string, { kind: string; defId: string }> }).entities.get(portal.id)?.defId === "EVENT_GATE");
+    actor.x = portal.x;
+    actor.y = portal.y;
+    actor.lastDamagedAt = 0;
+    const jump = new Promise<{ roomName: string; mapId: string; reservation?: { roomId?: string } }>((r) => client.onMessage("jump", r));
+    client.send("jump", { portalId: portal.id });
+    const ev = await jump;
+    expect(ev.roomName).toBe(RoomName.EVENT);
+    expect(ev.reservation?.roomId).toBeTruthy();
+    await sleep(3200);
+    svc.events.evaluate(Date.now());
+    await until(() => !I(room).getRiftPortals().some((p) => p.id === portal.id));
+    await client.leave();
+  });
+});
+
+describe("event rewards", () => {
+  it("distributes EventParticipation tiers once when the event boss dies", async () => {
+    svc.events.trigger("evt_void_rift", 5);
+    const u = await createPlayerUser(db, { faction: "aurora", level: 40 });
+    const mapId = "map_astra_graveyard";
+    const instanceKey = `test-rift-${Date.now()}`;
+    const c = await colyseus.sdk.joinOrCreate(RoomName.EVENT, { ticket: await ticketFor(secret, u, mapId), mapId, instanceKey });
+    const room = matchMaker.getLocalRoomById(c.roomId);
+    await until(() => I(room).getNpcs().some((n) => n.def.id === "boss_void_herald" && !n.dead));
+    const boss = I(room).getNpcs().find((n) => n.def.id === "boss_void_herald")!;
+    const me = I(room).getPlayerByUser(u.id)!;
+    const rewards: { reason: string }[] = [];
+    c.onMessage("reward", (r: { reason: string }) => rewards.push(r));
+    I(room).applyHit(me, boss, bigHit(boss), "LASER");
+    expect(boss.dead).toBe(true);
+    await until(async () => (await db.eventParticipation.findFirst({ where: { userId: u.id, instanceKey: boss.uid } }))?.rewarded === true);
+    const row = await db.eventParticipation.findFirstOrThrow({ where: { userId: u.id, instanceKey: boss.uid } });
+    expect(row.rewardTier).toBe("GOLD");
+    const gold = EVENTS_BY_ID.get("evt_void_rift")!.rewards.find((r) => r.tier === "GOLD")!;
+    // Kill credits (NpcDef.credits, flushed) + GOLD tier credits (event bundle).
+    const expected = BigInt((gold.bundle.credits ?? 0) + boss.def.credits);
+    await until(async () => (await getBalance(db, userWallet(u.id, "CREDITS"))) === expected);
+    const items = await db.inventoryItem.findMany({ where: { userId: u.id, originRef: { startsWith: `event:evt_void_rift:${boss.uid}:${u.id}` } } });
+    expect(items.map((i) => i.itemId)).toEqual((gold.bundle.items ?? []).map((i) => i.itemId));
+    await until(() => rewards.some((r) => r.reason.includes("GOLD")));
+    // Idempotent: a second distribution pays nothing.
+    const again = await svc.persistence.distributeEventRewards("evt_void_rift", boss.uid, EVENTS_BY_ID.get("evt_void_rift")!, { minShare: 0, fallbackSource: "EVENT", label: "x" });
+    expect(again).toEqual([]);
+    expect(await getBalance(db, userWallet(u.id, "CREDITS"))).toBe(expected);
+    await c.leave();
+  });
+});
+
+describe("bounties", () => {
+  it("pays escrowed bounty credits to the PvP killer exactly once", async () => {
+    const map = MAPS_BY_ID.get("map_vanta_rift")!;
+    const a = await joinSector(map.id, { faction: "aurora", level: 20 });
+    const b = await joinSector(map.id, { faction: "vortex", level: 20 });
+    const creator = await createPlayerUser(db, { faction: "nova", credits: 20_000 });
+    const bounty = await db.$transaction(async (tx) => {
+      const bt = await tx.bounty.create({ data: { targetId: b.user.id, creatorId: creator.id, amount: 15_000n, expiresAt: new Date(Date.now() + 3_600_000) } });
+      await post(tx, { from: userWallet(creator.id, "CREDITS"), to: system(LedgerAccountType.ESCROW, "CREDITS"), amount: 15_000n, type: "ESCROW", reference: bt.id, idempotencyKey: `bounty:test:${bt.id}`, userId: creator.id });
+      return bt;
+    });
+    const spot = await pvpSpot(map);
+    Object.assign(a.actor, { x: spot.x, y: spot.y, invulnerableUntil: 0 });
+    Object.assign(b.actor, { x: spot.x + 1, y: spot.y, invulnerableUntil: 0 });
+    I(a.room).applyHit(a.actor, b.actor, bigHit(b.actor), "LASER");
+    await until(async () => (await db.bounty.findUnique({ where: { id: bounty.id } }))?.status === "CLAIMED");
+    const claimed = await db.bounty.findUniqueOrThrow({ where: { id: bounty.id } });
+    expect(claimed.claimedBy).toBe(a.user.id);
+    expect(await getBalance(db, userWallet(a.user.id, "CREDITS"))).toBe(15_000n);
+    expect(await svc.persistence.claimBounties(b.user.id, a.user.id)).toEqual([]);
+    expect(await getBalance(db, userWallet(a.user.id, "CREDITS"))).toBe(15_000n);
+    await Promise.all([a.client.leave(), b.client.leave()]);
+  });
+});
+
+describe("clan war", () => {
+  it("updates the ClanWar row and clan scores with the match result", async () => {
+    const mk = async (tag: string) => db.clan.create({ data: { name: `Clan ${tag}`, tag } });
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const clanA = await mk(`A${suffix}`);
+    const clanB = await mk(`B${suffix}`);
+    const war = await db.clanWar.create({ data: { clanAId: clanA.id, clanBId: clanB.id, phase: "BATTLE", mapId: "map_eclipse_arena", startsAt: new Date(), endsAt: new Date(Date.now() + 3_600_000) } });
+    const ua = await createPlayerUser(db, { faction: "aurora", level: 15 });
+    const ub = await createPlayerUser(db, { faction: "vortex", level: 15 });
+    await db.clanMember.create({ data: { userId: ua.id, clanId: clanA.id, role: "LEADER" } });
+    await db.clanMember.create({ data: { userId: ub.id, clanId: clanB.id, role: "LEADER" } });
+    const mapId = "map_eclipse_arena";
+    const ca = await colyseus.sdk.joinOrCreate(RoomName.CLAN_WAR, { ticket: await ticketFor(secret, ua, mapId), mapId, instanceKey: war.id });
+    const room = matchMaker.getLocalRoomById(ca.roomId);
+    I(room).rules = { ...I(room).rules, arenaCountdownMs: 100, arenaScoreToWin: 1 };
+    const started = new Promise((r) => ca.onMessage("match_start", r));
+    const ended = new Promise((r) => ca.onMessage("match_end", r));
+    const cb = await colyseus.sdk.joinOrCreate(RoomName.CLAN_WAR, { ticket: await ticketFor(secret, ub, mapId), mapId, instanceKey: war.id });
+    await started;
+    const a = I(room).getPlayerByUser(ua.id)!;
+    const b = I(room).getPlayerByUser(ub.id)!;
+    b.invulnerableUntil = 0;
+    I(room).applyHit(a, b, bigHit(b), "LASER");
+    await ended;
+    await until(async () => (await db.clanWar.findUnique({ where: { id: war.id } }))?.phase === "REWARDED");
+    const w = await db.clanWar.findUniqueOrThrow({ where: { id: war.id } });
+    expect(w.winnerId).toBe(clanA.id);
+    expect(w.scoreA).toBe(1);
+    expect(w.scoreB).toBe(0);
+    const [sa, sb] = await Promise.all([db.clan.findUniqueOrThrow({ where: { id: clanA.id } }), db.clan.findUniqueOrThrow({ where: { id: clanB.id } })]);
+    expect(Number(sa.score)).toBe(I(room).rules.clanWarKillScore + I(room).rules.clanWarWinScore);
+    expect(Number(sb.score)).toBe(0);
+    await ca.leave().catch(() => undefined);
+    await cb.leave().catch(() => undefined);
   });
 });
