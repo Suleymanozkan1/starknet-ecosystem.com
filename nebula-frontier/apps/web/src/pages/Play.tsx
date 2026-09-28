@@ -163,11 +163,13 @@ export default function PlayPage() {
           </div>
           {/* The radar/minimap is drawn by the game client's Phaser overlay in the top-right corner
               (≤210px wide desktop, ≤130px touch). Shell controls sit to its left; panels flow below it. */}
-          <div className="absolute top-[calc(12px+var(--safe-top))] flex gap-2" style={{ right: mobile ? 164 : 250 }}>
+          {/* Touch: stack the shell controls under the radar so they never overlap the ship status block on
+              narrow screens; desktop keeps them in a row left of the radar. */}
+          <div className={mobile ? "absolute right-3 flex flex-col gap-2" : "absolute top-[calc(12px+var(--safe-top))] flex gap-2"} style={mobile ? { top: "calc(146px + var(--safe-top))" } : { right: 250 }}>
             <button type="button" className="nf-iconbtn" aria-label="Chat" onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
             <button type="button" className="nf-iconbtn" aria-label="Leave to command deck" onClick={exit}><Icon name="logout" size={18} /></button>
           </div>
-          <div className="absolute right-3 grid justify-items-end gap-2" style={{ top: mobile ? 150 : 214 }}>
+          <div className="absolute grid justify-items-end gap-2" style={{ top: mobile ? 250 : 214, right: mobile ? 64 : 12 }}>
             <TargetPanel hud={hud} onClear={() => actions.target("CLEAR")} />
             {!mobile && <QuestTracker hud={hud} />}
             <KillFeed feed={killFeed.feed} />
