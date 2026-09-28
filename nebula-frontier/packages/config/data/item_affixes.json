@@ -1,0 +1,110 @@
+[
+  {
+    "id": "affix_damage",
+    "stat": "damage",
+    "min": 3,
+    "max": 8,
+    "cap": 15,
+    "weight": 100,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_shield_damage",
+    "stat": "shieldDamage",
+    "min": 3,
+    "max": 10,
+    "cap": 20,
+    "weight": 70,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_hull_damage",
+    "stat": "hullDamage",
+    "min": 3,
+    "max": 10,
+    "cap": 20,
+    "weight": 70,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_crit_chance",
+    "stat": "critChance",
+    "min": 1,
+    "max": 4,
+    "cap": 10,
+    "weight": 50,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_crit_damage",
+    "stat": "critDamage",
+    "min": 5,
+    "max": 15,
+    "cap": 30,
+    "weight": 40,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_range",
+    "stat": "range",
+    "min": 2,
+    "max": 6,
+    "cap": 12,
+    "weight": 60,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_energy_cost",
+    "stat": "energyCost",
+    "min": -8,
+    "max": -3,
+    "cap": -15,
+    "weight": 60,
+    "pvpNormalized": false
+  },
+  {
+    "id": "affix_pve_damage",
+    "stat": "pveDamage",
+    "min": 4,
+    "max": 12,
+    "cap": 25,
+    "weight": 80,
+    "pvpNormalized": false
+  },
+  {
+    "id": "affix_pvp_damage",
+    "stat": "pvpDamage",
+    "min": 2,
+    "max": 5,
+    "cap": 8,
+    "weight": 30,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_fire_rate",
+    "stat": "fireRate",
+    "min": 2,
+    "max": 6,
+    "cap": 12,
+    "weight": 45,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_shield",
+    "stat": "shield",
+    "min": 2,
+    "max": 6,
+    "cap": 12,
+    "weight": 70,
+    "pvpNormalized": true
+  },
+  {
+    "id": "affix_mining_speed",
+    "stat": "miningSpeed",
+    "min": 5,
+    "max": 15,
+    "cap": 30,
+    "weight": 40,
+    "pvpNormalized": false
+  }
+]

@@ -1,0 +1,133 @@
+[
+  {
+    "id": "drone_striker",
+    "name": "Striker Drone",
+    "type": "COMBAT",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 1,
+    "maxLevel": 16,
+    "passivePerLevel": {
+      "damage": 0.4
+    },
+    "damagePerLevel": 12,
+    "hull": 400,
+    "visual": {
+      "shape": "dart",
+      "color": "#ff595e"
+    },
+    "tradeable": false
+  },
+  {
+    "id": "drone_bulwark",
+    "name": "Bulwark Drone",
+    "type": "DEFENSE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 6,
+    "maxLevel": 16,
+    "passivePerLevel": {
+      "shield": 0.6,
+      "armor": 0.3
+    },
+    "damagePerLevel": 0,
+    "hull": 700,
+    "visual": {
+      "shape": "ring",
+      "color": "#1982c4"
+    },
+    "tradeable": true
+  },
+  {
+    "id": "drone_mender",
+    "name": "Mender Drone",
+    "type": "REPAIR",
+    "rarity": "RARE",
+    "requiredLevel": 12,
+    "maxLevel": 16,
+    "passivePerLevel": {
+      "shieldRegen": 0.8
+    },
+    "damagePerLevel": 0,
+    "hull": 500,
+    "visual": {
+      "shape": "orb",
+      "color": "#8ac926"
+    },
+    "tradeable": true
+  },
+  {
+    "id": "drone_harvester",
+    "name": "Harvester Drone",
+    "type": "MINING",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 5,
+    "maxLevel": 16,
+    "passivePerLevel": {
+      "miningSpeed": 0.8,
+      "cargo": 0.5
+    },
+    "damagePerLevel": 0,
+    "hull": 450,
+    "visual": {
+      "shape": "claw",
+      "color": "#ffca3a"
+    },
+    "tradeable": true
+  },
+  {
+    "id": "drone_relay",
+    "name": "Relay Drone",
+    "type": "UTILITY",
+    "rarity": "RARE",
+    "requiredLevel": 14,
+    "maxLevel": 16,
+    "passivePerLevel": {
+      "energyRegen": 0.6,
+      "cooldownReduction": 0.25
+    },
+    "damagePerLevel": 0,
+    "hull": 450,
+    "visual": {
+      "shape": "prism",
+      "color": "#6a4c93"
+    },
+    "tradeable": true
+  },
+  {
+    "id": "drone_seer",
+    "name": "Seer Drone",
+    "type": "RECON",
+    "rarity": "RARE",
+    "requiredLevel": 16,
+    "maxLevel": 16,
+    "passivePerLevel": {
+      "range": 0.3,
+      "critChance": 0.15
+    },
+    "damagePerLevel": 0,
+    "hull": 380,
+    "visual": {
+      "shape": "orb",
+      "color": "#00f5d4"
+    },
+    "tradeable": true
+  },
+  {
+    "id": "drone_warden_elite",
+    "name": "Warden Prime Drone",
+    "type": "COMBAT",
+    "rarity": "LEGENDARY",
+    "requiredLevel": 32,
+    "maxLevel": 20,
+    "passivePerLevel": {
+      "damage": 0.6,
+      "shieldDamage": 0.3
+    },
+    "damagePerLevel": 22,
+    "hull": 900,
+    "visual": {
+      "shape": "prism",
+      "color": "#f15bb5"
+    },
+    "tradeable": true
+  }
+]
