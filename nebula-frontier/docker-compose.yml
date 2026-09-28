@@ -1,0 +1,55 @@
+# Local development stack: PostgreSQL, Redis, API, Game Server, Blockchain Service, Web (nginx).
+# Secrets come from .env (never committed). Blockchain is DEVNET only.
+name: nebula-frontier
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: nebula, POSTGRES_PASSWORD: nebula, POSTGRES_DB: nebula }
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U nebula"], interval: 5s, retries: 20 }
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redisdata:/data]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 20 }
+  migrate:
+    build: { context: ., dockerfile: docker/node.Dockerfile, target: build, args: { APP: api } }
+    command: ["sh", "-c", "pnpm prisma migrate deploy && pnpm db:seed"]
+    env_file: .env
+    environment: { DATABASE_URL: postgresql://nebula:nebula@postgres:5432/nebula }
+    depends_on: { postgres: { condition: service_healthy } }
+  api:
+    build: { context: ., dockerfile: docker/node.Dockerfile, args: { APP: api } }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://nebula:nebula@postgres:5432/nebula
+      REDIS_URL: redis://redis:6379
+      BLOCKCHAIN_SERVICE_URL: http://blockchain-service:8090
+      PORT_HEALTH: "8080"
+    ports: ["8080:8080"]
+    depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_healthy } }
+  game-server:
+    build: { context: ., dockerfile: docker/node.Dockerfile, args: { APP: game-server } }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://nebula:nebula@postgres:5432/nebula
+      REDIS_URL: redis://redis:6379
+      PORT_HEALTH: "2567"
+    ports: ["2567:2567"]
+    depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_healthy } }
+  blockchain-service:
+    build: { context: ., dockerfile: docker/node.Dockerfile, args: { APP: blockchain-service } }
+    env_file: .env
+    environment:
+      SERVICE_ROLE: blockchain
+      DATABASE_URL: postgresql://nebula:nebula@postgres:5432/nebula
+      REDIS_URL: redis://redis:6379
+      PORT_HEALTH: "8090"
+    depends_on: { migrate: { condition: service_completed_successfully }, redis: { condition: service_healthy } }
+  web:
+    build: { context: ., dockerfile: docker/web.Dockerfile }
+    ports: ["8088:80"]
+    depends_on: [api, game-server]
+volumes: { pgdata: {}, redisdata: {} }
