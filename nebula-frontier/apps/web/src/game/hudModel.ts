@@ -55,7 +55,6 @@ export interface HudView {
 }
 
 export type HudEvent =
-  | { type: "damage"; x: number; y: number; amount: number; crit: boolean; shield: boolean; incoming: boolean }
   | { type: "killfeed"; killer: string; victim: string; weapon: string; pvp: boolean }
   | { type: "levelup"; level: number }
   | { type: "loot"; label: string; rarity: string; credits: number }
@@ -63,7 +62,7 @@ export type HudEvent =
   | { type: "notice"; level: "info" | "warn" | "error" | "success"; text: string }
   | { type: "chat"; channel: string; from: string; text: string; at: number }
   | { type: "jump"; mapId: string; phase: "start" | "end" }
-  | { type: "hit" }
+  | { type: "hit"; incoming: boolean; crit: boolean }
   | { type: "boss_phase"; name: string; phase: number };
 
 export const EMPTY_HUD: HudView = {

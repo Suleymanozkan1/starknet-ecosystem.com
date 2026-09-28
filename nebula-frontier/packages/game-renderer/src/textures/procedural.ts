@@ -68,7 +68,7 @@ export function createPanelTextures(size: number, seed = 1337): PanelTextureSet 
 
   const seam = Math.max(1, Math.round(n / 128));
   const bevel = Math.max(2, Math.round(n / 64));
-  rects.forEach((r, id) => {
+  rects.forEach((r) => {
     const inset = rng() < 0.22 ? -0.18 : rng() < 0.15 ? 0.08 : 0;
     const pr = 0.3 + rng() * 0.35;
     const pm = 0.55 + rng() * 0.4;

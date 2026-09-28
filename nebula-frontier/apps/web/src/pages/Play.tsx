@@ -9,7 +9,7 @@ import { EMPTY_HUD } from "../game/hudModel.js";
 import type { HudEvent, HudView } from "../game/hudModel.js";
 import { startGame } from "../game/adapter.js";
 import type { GameActions } from "../game/adapter.js";
-import { BossBar, DamageLayer, DeathScreen, KillFeed, MapStrip, QuestTracker, ShipStatus, SkillBar, SquadFrames, StationPanel, TargetPanel, useHudEventLayers } from "../game/Hud.js";
+import { BossBar, DeathScreen, KillFeed, MapStrip, QuestTracker, ShipStatus, SkillBar, SquadFrames, StationPanel, TargetPanel, useKillFeed } from "../game/Hud.js";
 import { MobileControls } from "../game/MobileControls.js";
 import { LoadingScreen } from "../components/LoadingScreen.js";
 import { MapTransition } from "../components/MapTransition.js";
@@ -44,20 +44,17 @@ export default function PlayPage() {
   const [warp, setWarp] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const layers = useHudEventLayers();
+  const killFeed = useKillFeed();
   const setSendChat = useGameLink((s) => s.setSendChat);
 
   const onEvent = useCallback((e: HudEvent) => {
     switch (e.type) {
-      case "damage":
-        layers.push(e);
-        if (e.incoming) haptic(e.crit ? "heavy" : "light");
-        break;
       case "hit":
-        haptic("light");
+        if (e.incoming) haptic(e.crit ? "heavy" : "medium");
+        else if (e.crit) haptic("light");
         break;
       case "killfeed":
-        layers.push(e);
+        killFeed.push(e);
         break;
       case "levelup":
         haptic("success");
@@ -86,7 +83,7 @@ export default function PlayPage() {
         void qc.invalidateQueries({ queryKey: ["chat"] });
         break;
     }
-  }, [layers, qc]);
+  }, [killFeed, qc]);
 
   // Values read once at boot; later changes are applied live through the actions API.
   const boot = useRef({ mobile, settings, onEvent });
@@ -146,7 +143,9 @@ export default function PlayPage() {
   }, [chatOpen]);
 
   const actions = actionsRef.current;
-  const exit = (): void => navigate("/home");
+  const exit = (): void => {
+    void navigate("/home");
+  };
 
   return (
     <div className="nf-game-root">
@@ -155,22 +154,23 @@ export default function PlayPage() {
         <div className="nf-hud">
           <div className="absolute left-3 top-[calc(12px+var(--safe-top))] grid gap-2">
             <ShipStatus hud={hud} compact={mobile} />
+            {mobile && <MapStrip hud={hud} />}
             {!mobile && <SquadFrames hud={hud} />}
           </div>
-          <div className="absolute left-1/2 top-[calc(12px+var(--safe-top))] grid -translate-x-1/2 justify-items-center gap-2">
-            <MapStrip hud={hud} />
+          <div className="absolute left-1/2 grid -translate-x-1/2 justify-items-center gap-2" style={{ top: mobile ? 170 : 12 }}>
+            {!mobile && <MapStrip hud={hud} />}
             <BossBar hud={hud} />
           </div>
-          <div className="absolute right-3 top-[calc(12px+var(--safe-top))] grid justify-items-end gap-2">
-            <div className="flex gap-2">
-              <button type="button" className="nf-iconbtn" aria-label="Chat" onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
-              <button type="button" className="nf-iconbtn" aria-label="Leave to command deck" onClick={exit}><Icon name="logout" size={18} /></button>
-            </div>
-            {/* The radar/minimap is rendered by the game client (Phaser layer) into this corner; HUD panels flow below it. */}
-            <div className="h-[168px] w-[168px]" aria-hidden />
+          {/* The radar/minimap is drawn by the game client's Phaser overlay in the top-right corner
+              (≤210px wide desktop, ≤130px touch). Shell controls sit to its left; panels flow below it. */}
+          <div className="absolute top-[calc(12px+var(--safe-top))] flex gap-2" style={{ right: mobile ? 164 : 250 }}>
+            <button type="button" className="nf-iconbtn" aria-label="Chat" onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
+            <button type="button" className="nf-iconbtn" aria-label="Leave to command deck" onClick={exit}><Icon name="logout" size={18} /></button>
+          </div>
+          <div className="absolute right-3 grid justify-items-end gap-2" style={{ top: mobile ? 150 : 214 }}>
             <TargetPanel hud={hud} onClear={() => actions.target("CLEAR")} />
             {!mobile && <QuestTracker hud={hud} />}
-            <KillFeed feed={layers.feed} />
+            <KillFeed feed={killFeed.feed} />
           </div>
           {!mobile && (
             <div className="absolute bottom-[calc(14px+var(--safe-bottom))] left-1/2 grid -translate-x-1/2 justify-items-center gap-2">
@@ -184,7 +184,6 @@ export default function PlayPage() {
               {!hud.dead && !hud.docked && <MobileControls hud={hud} actions={actions} />}
             </>
           )}
-          <DamageLayer floats={layers.floats} />
           <StationPanel hud={hud} actions={actions} />
           <DeathScreen hud={hud} actions={actions} />
           {chatOpen && (

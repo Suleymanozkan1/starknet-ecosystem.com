@@ -21,7 +21,7 @@ import { BossVisual, type BossLayer } from "./npc/BossVisual.js";
 import { DroneFactory } from "./npc/drones.js";
 import { SpaceBackground } from "./world/background.js";
 import { AsteroidLayer, RESOURCE_COLORS } from "./world/asteroids.js";
-import { LootLayer, RARITY_COLORS } from "./world/loot.js";
+import { LootLayer } from "./world/loot.js";
 import { PortalVisual } from "./world/portal.js";
 import { StationVisual } from "./world/station.js";
 import { buildMapDecor, type DecorItem } from "./world/decor.js";

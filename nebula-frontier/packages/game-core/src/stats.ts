@@ -302,7 +302,8 @@ export function computeStats(input: LoadoutInput, tuning: SimTuning = DEFAULT_TU
     moduleActives,
     gearScore: 0,
   };
-  out.gearScore = gearScore(input);
+  // Score exactly what is equipped (slot-limited, slot-type filtered, clamped upgrade level).
+  out.gearScore = gearScore({ ...input, shipUpgradeLevel: shipLevel, lasers, missiles, generators, modules, drones });
   return out;
 }
 

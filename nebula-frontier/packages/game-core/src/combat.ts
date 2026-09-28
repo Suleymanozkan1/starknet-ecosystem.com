@@ -206,10 +206,12 @@ export function tryFire(
   if (weapon.ammo && !hasAmmo) return { ok: false, reason: "NO_AMMO" };
   const newHeat = heat.heat + weapon.heat;
   const overheated = heatCapacity > 0 && newHeat >= heatCapacity;
-  // Schedule next shot relative to the previous slot when firing continuously to avoid drift,
-  // but never earlier than one full interval from now minus one tick of slack.
+  // Continuous fire chains from the previous slot (`readyAt`) so tick quantization does not
+  // lower the effective fire rate; after idling for at least one interval the schedule restarts
+  // from `now`, so idle time can never be "banked" into a burst.
   const interval = fireIntervalMs(weapon);
-  const next = Math.max(now, rt.readyAt) + interval;
+  const continuous = Number.isFinite(interval) && rt.readyAt > 0 && now - rt.readyAt < interval;
+  const next = (continuous ? rt.readyAt : now) + interval;
   return {
     ok: true,
     rt: { readyAt: next },

@@ -1,5 +1,6 @@
+import type { BufferGeometry, InterleavedBufferAttribute } from "three";
 import {
-  BoxGeometry, BufferAttribute, BufferGeometry, CylinderGeometry, ExtrudeGeometry, LatheGeometry, Matrix4,
+  BoxGeometry, BufferAttribute, CylinderGeometry, ExtrudeGeometry, LatheGeometry, Matrix4,
   Quaternion, Shape, SphereGeometry, TorusGeometry, Vector2, Vector3, Euler, OctahedronGeometry,
 } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
@@ -231,7 +232,7 @@ export function mirrorX(geo: BufferGeometry): BufferGeometry {
   return geo;
 }
 
-function swapVert(attr: BufferAttribute | import("three").InterleavedBufferAttribute, a: number, b: number): void {
+function swapVert(attr: BufferAttribute | InterleavedBufferAttribute, a: number, b: number): void {
   const ax = attr.getX(a), ay = attr.getY(a), az = attr.getZ(a);
   attr.setXYZ(a, attr.getX(b), attr.getY(b), attr.getZ(b));
   attr.setXYZ(b, ax, ay, az);

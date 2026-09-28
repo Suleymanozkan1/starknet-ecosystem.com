@@ -90,25 +90,28 @@ function spreadFor(t: QueueTicket, now: number, rules: MatchRules): number {
  */
 export function formMatches(tickets: QueueTicket[], now: number, rules: MatchRules = DEFAULT_MATCH_RULES): { matches: FormedMatch[]; remaining: QueueTicket[] } {
   const need = rules.teamSize * rules.teams;
-  const byRegion = new Map<string, QueueTicket[]>();
+  // 1) Build units (parties or solos) BEFORE any filtering so a party is never split.
+  const allUnits = new Map<string, QueueTicket[]>();
   for (const t of tickets) {
-    if (t.latencyMs > rules.maxLatencyMs) continue;
-    const arr = byRegion.get(String(t.region)) ?? [];
-    arr.push(t);
-    byRegion.set(String(t.region), arr);
+    const key = t.partyId ? `party:${t.partyId}` : `solo:${t.userId}`;
+    const u = allUnits.get(key) ?? [];
+    u.push(t);
+    allUnits.set(key, u);
+  }
+  // 2) A unit is rejected as a whole if any member exceeds the latency limit; it is matched in
+  //    ONE region (the party leader's = first ticket's region), so members cannot be split.
+  const byRegion = new Map<string, QueueTicket[][]>();
+  for (const u of allUnits.values()) {
+    if (u.some((m) => m.latencyMs > rules.maxLatencyMs)) continue;
+    const region = String(u[0]?.region ?? "");
+    const arr = byRegion.get(region) ?? [];
+    arr.push(u);
+    byRegion.set(region, arr);
   }
   const used = new Set<string>();
   const matches: FormedMatch[] = [];
-  for (const [region, list] of byRegion) {
-    // Build units (parties or solos).
-    const units = new Map<string, QueueTicket[]>();
-    for (const t of list) {
-      const key = t.partyId ? `party:${t.partyId}` : `solo:${t.userId}`;
-      const u = units.get(key) ?? [];
-      u.push(t);
-      units.set(key, u);
-    }
-    const unitList = [...units.values()].filter((u) => u.length <= rules.teamSize)
+  for (const [region, units] of byRegion) {
+    const unitList = units.filter((u) => u.length <= rules.teamSize)
       .map((u) => ({ members: u, rating: u.reduce((s, p) => s + p.rating, 0) / u.length, enq: Math.min(...u.map((p) => p.enqueuedAt)) }))
       .sort((a, b) => a.rating - b.rating);
     let i = 0;

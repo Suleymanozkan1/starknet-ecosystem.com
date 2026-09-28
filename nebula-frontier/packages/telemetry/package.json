@@ -5,10 +5,19 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run --root ../.. packages/telemetry"
   },
-  "dependencies": {"pino": "^10.0.0", "prom-client": "^15.1.3"}
+  "dependencies": {
+    "pino": "^10.0.0",
+    "prom-client": "^15.1.3"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.7"
+  }
 }

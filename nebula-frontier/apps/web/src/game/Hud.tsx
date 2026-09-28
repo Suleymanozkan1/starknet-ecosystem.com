@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { MAPS_BY_ID } from "@nebula/config";
@@ -6,7 +6,6 @@ import { Icon, NeonButton, StatBar, STAT_COLORS } from "@nebula/game-ui";
 import type { IconName } from "@nebula/game-ui";
 import type { HudEvent, HudSkill, HudView } from "./hudModel.js";
 import type { GameActions } from "./adapter.js";
-import { useSettings } from "../store/settings.js";
 import { ZONE_META, humanize } from "../lib/gameMeta.js";
 
 /* ------------------------------------------------------------------ top-left: own ship */
@@ -118,36 +117,18 @@ export function SquadFrames({ hud }: { hud: HudView }) {
 }
 
 /* ------------------------------------------------------------------ transient layers */
-interface Floating { id: number; x: number; y: number; text: string; crit: boolean; color: string }
 interface FeedItem { id: number; text: string; pvp: boolean }
 
-export function useHudEventLayers() {
-  const [floats, setFloats] = useState<Floating[]>([]);
+/** Kill feed buffer (damage numbers are drawn by the game client's Phaser overlay). */
+export function useKillFeed() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const nextId = useRef(1);
-  const push = (e: HudEvent): void => {
-    if (e.type === "damage") {
-      const id = nextId.current++;
-      const color = e.incoming ? "#fb7185" : e.shield ? "#93c5fd" : "#fef3c7";
-      setFloats((f) => [...f.slice(-40), { id, x: e.x, y: e.y, text: `${Math.round(e.amount)}`, crit: e.crit, color }]);
-      window.setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 950);
-    } else if (e.type === "killfeed") {
-      const id = nextId.current++;
-      setFeed((f) => [...f.slice(-4), { id, text: `${e.killer} ⟶ ${e.victim}`, pvp: e.pvp }]);
-      window.setTimeout(() => setFeed((f) => f.filter((x) => x.id !== id)), 6000);
-    }
-  };
-  return { floats, feed, push };
-}
-
-export function DamageLayer({ floats }: { floats: Floating[] }) {
-  const show = useSettings((s) => s.showDamageNumbers);
-  if (!show) return null;
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {floats.map((f) => <span key={f.id} className={`nf-dmg${f.crit ? " nf-dmg--crit" : ""}`} style={{ left: f.x, top: f.y, color: f.crit ? undefined : f.color }}>{f.text}{f.crit ? "!" : ""}</span>)}
-    </div>
-  );
+  const push = useCallback((e: Extract<HudEvent, { type: "killfeed" }>): void => {
+    const id = nextId.current++;
+    setFeed((f) => [...f.slice(-4), { id, text: `${e.killer} ⟶ ${e.victim}`, pvp: e.pvp }]);
+    window.setTimeout(() => setFeed((f) => f.filter((x) => x.id !== id)), 6000);
+  }, []);
+  return { feed, push };
 }
 
 export function KillFeed({ feed }: { feed: FeedItem[] }) {
@@ -179,11 +160,6 @@ export function StationPanel({ hud, actions }: { hud: HudView; actions: GameActi
         <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-accent">Docked</div>
         <div className="nf-display mb-4 text-[24px] font-bold tracking-[0.08em]">{d.name}</div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {services.includes("REPAIR") && (
-            <button type="button" className="nf-panel nf-panel--interactive grid justify-items-center gap-1.5 p-4" onClick={() => actions.repair()}>
-              <Icon name="repair" size={24} /><span className="text-[13px] font-bold uppercase tracking-[0.12em]">Repair</span>
-            </button>
-          )}
           {services.map((s) => SERVICE_ROUTES[s]).filter((x): x is NonNullable<typeof x> => Boolean(x)).map((s) => (
             <button key={s.to} type="button" className="nf-panel nf-panel--interactive grid justify-items-center gap-1.5 p-4" onClick={() => navigate(s.to)}>
               <Icon name={s.icon} size={24} /><span className="text-[13px] font-bold uppercase tracking-[0.12em]">{s.label}</span>

@@ -1,5 +1,6 @@
+import type { BufferGeometry, DataTexture } from "three";
 import {
-  AdditiveBlending, BoxGeometry, Box3, BufferGeometry, Color, CylinderGeometry, DataTexture, Group, InstancedMesh,
+  AdditiveBlending, BoxGeometry, Box3, Color, CylinderGeometry, Group, InstancedMesh,
   LOD, Matrix4, Mesh, type Material, type Object3D, Quaternion, ShaderMaterial, Sphere, Sprite, SpriteMaterial,
   Vector3, Euler,
 } from "three";
@@ -12,7 +13,8 @@ import {
   buildAntenna, buildArmor, buildCargo, buildCockpit, buildDroneDock, buildEngines, buildHardpoints, buildReactor,
   buildWings, type Sockets,
 } from "./parts.js";
-import { MATERIAL_SLOTS, MaterialLibrary, type MaterialSlot, type ShipPalette, type SlotMaterials } from "./materials.js";
+import type { MaterialLibrary } from "./materials.js";
+import { MATERIAL_SLOTS, type MaterialSlot, type ShipPalette, type SlotMaterials } from "./materials.js";
 import { resolveLook, type ResolvedLook } from "./cosmetics.js";
 
 /** Geometry-affecting fields of a ship visual → stable cache key. Colors are NOT part of the key. */

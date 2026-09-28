@@ -29,11 +29,15 @@ export function isSafeAt(map: Pick<MapDef, "zones" | "pvp">, x: number, y: numbe
   return zoneTypeAt(map, x, y) === "SAFE";
 }
 
-/** Player-vs-player damage allowed at this point? (map must be pvp OR the point in a PVP/HIGH_RISK zone, and not SAFE). */
+/**
+ * Player-vs-player damage allowed at this point? Never in SAFE zones; otherwise
+ * only on PvP maps or inside explicit PVP / HIGH_RISK zones. PIRATE zones mark
+ * NPC-pirate territory and do NOT enable PvP on a non-PvP map by themselves.
+ */
 export function isPvpAllowedAt(map: Pick<MapDef, "zones" | "pvp">, x: number, y: number): boolean {
   const t = zoneTypeAt(map, x, y);
   if (t === "SAFE") return false;
-  return map.pvp || t === "PVP" || t === "HIGH_RISK" || t === "PIRATE";
+  return map.pvp || t === "PVP" || t === "HIGH_RISK";
 }
 
 export function nearestPortal(map: Pick<MapDef, "portals">, x: number, y: number, maxDist: number): PortalDef | null {

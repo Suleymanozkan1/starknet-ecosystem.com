@@ -348,6 +348,9 @@ importers:
       '@colyseus/testing':
         specifier: ^0.18.6
         version: 0.18.6(@colyseus/core@0.18.17)(@colyseus/sdk@0.18.4(@colyseus/core@0.18.17)(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5))(@colyseus/tools@0.18.4(@colyseus/core@0.18.17)(@colyseus/ws-transport@0.18.4))
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15)
 
   apps/mobile:
     dependencies:
@@ -611,6 +614,13 @@ importers:
       '@nebula/shared':
         specifier: workspace:*
         version: link:../shared
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15)
 
   packages/game-network:
     dependencies:
@@ -672,6 +682,10 @@ importers:
       prom-client:
         specifier: ^15.1.3
         version: 15.1.3
+    devDependencies:
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.15)
 
   packages/validation:
     dependencies:

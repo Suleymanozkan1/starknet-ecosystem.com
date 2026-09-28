@@ -8,6 +8,8 @@
  * optional override so ops can tune without code changes (the server reads
  * `EconomyConfig` key `game.tuning` when present).
  */
+import { z } from "zod";
+
 export interface SimTuning {
   /** Max-speed multiplier while boosting. */
   boostMultiplier: number;
@@ -87,14 +89,66 @@ export const DEFAULT_TUNING: SimTuning = {
   },
 };
 
-export function mergeTuning(override?: Partial<SimTuning>): SimTuning {
-  if (!override) return DEFAULT_TUNING;
-  return {
-    ...DEFAULT_TUNING,
-    ...override,
-    caps: { ...DEFAULT_TUNING.caps, ...(override.caps ?? {}) },
-    pvpCaps: { ...DEFAULT_TUNING.pvpCaps, ...(override.pvpCaps ?? {}) },
-  };
+const CAP_KEYS = [
+  "damage", "shieldDamage", "hullDamage", "pveDamage", "pvpDamage", "range", "critChance", "critDamage",
+  "energyCost", "fireRate", "cooldownReduction", "evasion", "miningSpeed",
+] as const;
+const finite = z.number().refine((n) => Number.isFinite(n), "must be finite");
+const nonNeg = finite.refine((n) => n >= 0, "must be >= 0");
+const positive = finite.refine((n) => n > 0, "must be > 0");
+const fraction = finite.refine((n) => n >= 0 && n <= 1, "must be within 0..1");
+const capsSchema = z.object(Object.fromEntries(CAP_KEYS.map((k) => [k, finite.optional()])) as Record<(typeof CAP_KEYS)[number], z.ZodOptional<typeof finite>>).strict();
+
+/** Strict schema for (partial) tuning overrides; unknown keys — including unknown cap keys — are rejected. */
+export const SimTuningOverrideSchema = z.object({
+  boostMultiplier: finite.refine((n) => n >= 1 && n <= 5, "must be within 1..5").optional(),
+  boostEnergyPerSec: nonNeg.optional(),
+  brakeFactor: positive.optional(),
+  arriveRadius: nonNeg.optional(),
+  armorK: positive.optional(),
+  heatDissipationPerSec: nonNeg.optional(),
+  overheatRecoverFraction: fraction.optional(),
+  minHitChance: fraction.optional(),
+  maxHitChance: fraction.optional(),
+  minResist: finite.refine((n) => n >= -1 && n <= 0, "must be within -1..0").optional(),
+  maxResist: finite.refine((n) => n >= 0 && n < 1, "must be within 0..1").optional(),
+  shieldRegenDelaySec: nonNeg.optional(),
+  bossEnrageAfterMs: positive.optional(),
+  bossEnrageDamageMultiplier: positive.optional(),
+  npcLeashFactor: positive.optional(),
+  caps: capsSchema.optional(),
+  pvpCaps: capsSchema.optional(),
+}).strict().refine((t) => t.minHitChance === undefined || t.maxHitChance === undefined || t.minHitChance <= t.maxHitChance, "minHitChance must be <= maxHitChance");
+export type SimTuningOverride = z.infer<typeof SimTuningOverrideSchema>;
+
+function cloneTuning(t: SimTuning): SimTuning {
+  return { ...t, caps: { ...t.caps }, pvpCaps: { ...t.pvpCaps } };
+}
+
+/** Validate an untrusted override (e.g. EconomyConfig `game.tuning`). */
+export function parseTuningOverride(raw: unknown): { ok: true; value: SimTuningOverride } | { ok: false; error: string } {
+  const r = SimTuningOverrideSchema.safeParse(raw);
+  return r.success ? { ok: true, value: r.data } : { ok: false, error: r.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ") };
+}
+
+/**
+ * Merge a tuning override onto the defaults. Always returns a fresh object
+ * (callers can never mutate DEFAULT_TUNING). Invalid overrides are ignored
+ * entirely (defaults are returned); use `parseTuningOverride` to get the error.
+ */
+export function mergeTuning(override?: unknown): SimTuning {
+  if (override === undefined || override === null) return cloneTuning(DEFAULT_TUNING);
+  const parsed = parseTuningOverride(override);
+  if (!parsed.ok) return cloneTuning(DEFAULT_TUNING);
+  const o = parsed.value;
+  const merged = cloneTuning(DEFAULT_TUNING);
+  for (const [k, v] of Object.entries(o)) {
+    if (k === "caps" || k === "pvpCaps" || v === undefined) continue;
+    (merged as unknown as Record<string, unknown>)[k] = v;
+  }
+  merged.caps = { ...merged.caps, ...(o.caps ?? {}) };
+  merged.pvpCaps = { ...merged.pvpCaps, ...(o.pvpCaps ?? {}) };
+  return merged;
 }
 
 /** Injected randomness (server: seeded from crypto; tests: mulberry32). Returns [0,1). */

@@ -1,5 +1,6 @@
+import type { BufferGeometry } from "three";
 import {
-  AdditiveBlending, BufferGeometry, Color, DoubleSide, Group, Mesh, PlaneGeometry, ShaderMaterial, type Vector3,
+  AdditiveBlending, Color, DoubleSide, Group, Mesh, PlaneGeometry, ShaderMaterial, type Vector3,
 } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { ObjectPool } from "../core/pool.js";

@@ -1,13 +1,14 @@
 /**
  * Bridge between the React shell and @nebula/game-client (`createGame(opts): Promise<GameHandle>`).
- * The game client owns rendering (Three.js world + Phaser radar/minimap) and the Colyseus connection;
- * this module lazy-loads it (code-split) and maps its HudState / GameUiEvent callbacks onto the HUD view model.
+ * The game client owns rendering (Three.js world + Phaser radar/minimap/damage numbers) and the Colyseus
+ * connection; this module lazy-loads it (code-split) and maps HudState / GameUiEvent onto the HUD view model.
  */
+import { api } from "../lib/api.js";
 import type { GameTicketResponse } from "../lib/dto.js";
 import type { GraphicsSetting } from "../store/settings.js";
 import type { GameChatChannel } from "../store/gameLink.js";
 import type { HudEvent, HudView } from "./hudModel.js";
-import { mapEvent, mapHud } from "./mapping.js";
+import { mapEvent, mapHud, newSessionFacts } from "./mapping.js";
 
 export type TargetMode = "NEAREST_ENEMY" | "NEAREST_PLAYER" | "NEAREST_OBJECTIVE" | "CLEAR";
 
@@ -17,11 +18,12 @@ export interface GameActions {
   setFiring(on: boolean): void;
   useSkill(slot: number): void;
   target(mode: TargetMode): void;
+  /** Hard-lock the current target (or release the lock). */
   toggleManualLock(): void;
   dash(): void;
+  /** Dock at the nearby station / undock when docked (same intent on the game client). */
   dock(): void;
   undock(): void;
-  repair(): void;
   respawn(): void;
   sendChat(channel: GameChatChannel, text: string): void;
   setPaused(paused: boolean): void;
@@ -42,41 +44,57 @@ export interface StartOptions {
 export async function startGame(container: HTMLElement, o: StartOptions): Promise<GameActions> {
   o.onProgress(0.1, "Loading engine");
   const { createGame } = await import("@nebula/game-client");
-  o.onProgress(0.25, "Connecting to sector");
+  o.onProgress(0.35, "Connecting to sector");
+  const facts = newSessionFacts();
+  let firstTicket: GameTicketResponse | null = o.ticket;
   const handle = await createGame({
     container,
-    ticket: o.ticket.ticket,
-    mapId: o.ticket.mapId,
-    gameServerUrl: o.ticket.gameServerUrl,
-    tier: o.tier,
-    touch: o.touch,
-    onHud: (s) => o.onHud(mapHud(s)),
+    serverUrl: o.ticket.gameServerUrl,
+    initialMapId: o.ticket.mapId,
+    // The first join uses the ticket fetched by the Play page; portal jumps / reconnects fetch fresh ones.
+    getTicket: async () => {
+      const t = firstTicket ?? (await api.game.ticket());
+      firstTicket = null;
+      return { ticket: t.ticket, mapId: t.mapId };
+    },
+    graphics: o.tier,
+    isMobile: o.touch,
+    volume: { master: o.audio.master, music: o.audio.music, sfx: o.audio.sfx },
+    onHud: (s) => o.onHud(mapHud(s, facts)),
     onEvent: (e) => {
-      const m = mapEvent(e);
+      const m = mapEvent(e, facts);
       if (m) o.onEvent(m);
     },
-    onProgress: (p: number, label?: string) => o.onProgress(0.25 + p * 0.75, label ?? "Loading sector"),
   });
-  handle.setVolume?.(o.audio.master);
+  o.onProgress(1, "Ready");
 
-  let manualLock = false;
+  let hardLock = false;
   return {
     setJoystick: (x, y) => handle.setJoystick(x, y),
-    setFiring: (on) => handle.setFiring(on),
-    useSkill: (slot) => handle.useSkill(slot),
-    target: (mode) => handle.target(mode),
+    setFiring: (on) => handle.toggleFire(on),
+    useSkill: (slot) => handle.useAbility(slot),
+    target: (mode) => {
+      hardLock = false;
+      handle.target(mode);
+    },
     toggleManualLock: () => {
-      manualLock = !manualLock;
-      handle.setManualLock?.(manualLock);
+      const t = handle.getHud().target;
+      if (!t) {
+        o.onEvent({ type: "notice", level: "info", text: "Tap a ship to select it, then lock." });
+        return;
+      }
+      hardLock = !hardLock;
+      handle.target({ entityId: t.id, lock: hardLock ? "HARD" : "SOFT" });
     },
     dash: () => handle.dash(),
     dock: () => handle.dock(),
-    undock: () => handle.undock(),
-    repair: () => handle.repair?.(),
+    undock: () => {
+      if (handle.getHud().docked) handle.dock();
+    },
     respawn: () => handle.respawn(),
-    sendChat: (channel, text) => handle.sendChat(channel, text),
+    sendChat: (channel, text) => handle.send("chat", { channel, text }),
     setPaused: (p) => handle.setPaused(p),
-    setAudio: (v) => handle.setVolume?.(v.master),
+    setAudio: (v) => handle.setVolume({ master: v.master, music: v.music, sfx: v.sfx }),
     dispose: () => handle.dispose(),
   };
 }

@@ -67,6 +67,7 @@ export class Game {
   private readonly tmpMap = { x: 0, y: 0 };
   private readonly relCtx: RelationContext = { selfId: "", faction: "", clanTag: "", pvp: false, scanned: new Set<string>() };
   private map: MapDef | null = null;
+  private lastFps = 0;
 
   constructor(opts: GameClientOptions) {
     this.opts = opts;
@@ -715,7 +716,7 @@ export class Game {
       if (boss && !boss.dead && Math.hypot(boss.x - this.localPose.x, boss.y - this.localPose.y) < 160) cam.setBoss(boss.x, boss.y, 25);
       else cam.setBoss(null);
     }
-    this.world.frame(now);
+    this.lastFps = this.world.frame(now).fps;
 
     // 4) overlay, audio, hud
     this.updateOverlay(me);
@@ -777,10 +778,10 @@ export class Game {
         slot.id = e.id; slot.x = r.x; slot.y = r.y; slot.rel = rel; slot.heading = r.heading;
       }
       if ((e.kind === "PLAYER" || e.kind === "NPC" || e.kind === "BOSS") && (e.flags & EntityFlag.DOCKED) === 0) {
-        const size = e.kind === "BOSS" ? 20 : 3;
-        if (this.world.mapToScreen(r.x, r.y + size * 0.9, this.tmpScreen, 0.5)) {
+        const size = e.kind === "BOSS" ? 22 : e.kind === "PLAYER" ? 3.2 : 2.6;
+        if (this.world.mapToScreen(r.x, r.y - size, this.tmpScreen, 0.5)) {
           const p = m.plateSlot(pi++);
-          p.id = e.id; p.sx = this.tmpScreen.x; p.sy = this.tmpScreen.y + 22 / Math.max(0.5, upp * 4);
+          p.id = e.id; p.sx = this.tmpScreen.x; p.sy = this.tmpScreen.y;
           p.name = e.clanTag ? `[${e.clanTag}] ${e.name}` : e.name;
           p.level = e.level;
           p.hull = e.maxHull > 0 ? e.hull / e.maxHull : 0;
@@ -949,24 +950,10 @@ export class Game {
       event,
       match,
       ping: this.session.ping.ping,
-      fps: Math.round(this.world ? this.fpsEstimate() : 0),
+      fps: Math.round(this.lastFps),
       graphics: this.tier,
       minimap: { width: map?.width ?? 0, height: map?.height ?? 0, x: this.localPose.x, y: this.localPose.y, heading: this.localPose.heading, entities: minimapEntities },
     };
-  }
-
-  private fps = 0;
-  private fpsFrames = 0;
-  private fpsT = 0;
-  private fpsEstimate(): number {
-    const t = performance.now();
-    this.fpsFrames++;
-    if (t - this.fpsT > 500) {
-      this.fps = (this.fpsFrames * 1000) / Math.max(1, t - this.fpsT);
-      this.fpsFrames = 0;
-      this.fpsT = t;
-    }
-    return this.fps;
   }
 
   // ------------------------------------------------------------------------------------------ lifecycle

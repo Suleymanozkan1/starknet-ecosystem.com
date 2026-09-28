@@ -1,4 +1,4 @@
-import type { Object3D, WebGLRenderer } from "three";
+import type { Mesh, Object3D, WebGLRenderer } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
@@ -50,7 +50,7 @@ export class GlbLibrary {
     try {
       const obj = await this.load(url);
       obj.traverse((o) => {
-        const m = o as import("three").Mesh;
+        const m = o as Mesh;
         if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; }
       });
       model.attachGlb(obj, mode);

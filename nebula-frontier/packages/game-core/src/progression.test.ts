@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mulberry32 } from "@nebula/shared";
 import { LOOT_TABLES_BY_ID, ITEM_AFFIXES, ITEMS, PROGRESSION } from "@nebula/config";
+import { toMoney } from "./money.js";
 import { deathRepairCost, grantXp, levelForXp, levelProgress, rankFor, rollUpgrade, upgradeCost, xpForLevel, applyPrestige } from "./progression.js";
 import { clampAffixes, rollAffixes, rollLoot } from "./loot.js";
 
@@ -45,13 +46,22 @@ describe("upgrades & repair", () => {
     const c10 = upgradeCost(10, PROGRESSION);
     expect(c10.credits).toBeGreaterThan(c0.credits);
     expect(c10.successChance).toBeLessThan(c0.successChance);
-    expect(c0.gems).toBe(0);
-    expect(upgradeCost(PROGRESSION.upgrade.gemsFromLevel - 1, PROGRESSION).gems).toBe(PROGRESSION.upgrade.gemsPerLevel);
+    expect(c0.gems).toBe(0n);
+    expect(typeof c0.credits).toBe("bigint");
+    expect(upgradeCost(PROGRESSION.upgrade.gemsFromLevel - 1, PROGRESSION).gems).toBe(BigInt(PROGRESSION.upgrade.gemsPerLevel));
     expect(() => upgradeCost(PROGRESSION.upgrade.maxLevel, PROGRESSION)).toThrow();
     expect(rollUpgrade(0, PROGRESSION, () => 0.5).success).toBe(true);
   });
   it("death repair", () => {
-    expect(deathRepairCost(1000, PROGRESSION)).toBe(Math.round(1000 * PROGRESSION.repair.deathRepairPercent * PROGRESSION.repair.creditsPerHullPoint));
+    expect(deathRepairCost(1000, PROGRESSION)).toBe(BigInt(Math.round(1000 * PROGRESSION.repair.deathRepairPercent * PROGRESSION.repair.creditsPerHullPoint)));
+  });
+  it("toMoney: one rounding rule, rejects invalid amounts", () => {
+    expect(toMoney(1.5)).toBe(2n);
+    expect(toMoney(1.49)).toBe(1n);
+    expect(toMoney(0)).toBe(0n);
+    expect(() => toMoney(Number.NaN)).toThrow();
+    expect(() => toMoney(Infinity)).toThrow();
+    expect(() => toMoney(-1)).toThrow();
   });
 });
 

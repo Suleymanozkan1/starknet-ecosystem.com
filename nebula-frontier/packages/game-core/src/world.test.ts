@@ -141,9 +141,9 @@ describe("events, zones, crafting, mining, spatial", () => {
   it("crafting validation", () => {
     const bp = BLUEPRINTS[0]!;
     const cost = craftCost(bp, 2);
-    expect(cost.credits).toBe(bp.credits * 2);
-    expect(validateCraft(bp, { level: 1, credits: 0, resources: {}, items: {} }, 1).ok).toBe(false);
-    expect(validateCraft(bp, { level: 99, credits: 1e9, resources: Object.fromEntries(Object.entries(bp.resources).map(([k, v]) => [k, (v ?? 0) * 10])), items: Object.fromEntries((bp.items ?? []).map((i) => [i.itemId, 99])) }, 1).ok).toBe(true);
+    expect(cost.credits).toBe(BigInt(bp.credits) * 2n);
+    expect(validateCraft(bp, { level: 1, credits: 0n, resources: {}, items: {} }, 1).ok).toBe(false);
+    expect(validateCraft(bp, { level: 99, credits: 1_000_000_000n, resources: Object.fromEntries(Object.entries(bp.resources).map(([k, v]) => [k, (v ?? 0) * 10])), items: Object.fromEntries((bp.items ?? []).map((i) => [i.itemId, 99])) }, 1).ok).toBe(true);
   });
   it("mining yield bounded by asteroid and cargo", () => {
     let a: AsteroidState = { resource: "TITANIUM", amount: 10, progress: 0 };

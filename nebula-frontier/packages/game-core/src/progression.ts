@@ -3,6 +3,7 @@
  * all driven by `progression.json` (ProgressionConfig).
  */
 import { FACTIONS } from "@nebula/config";
+import { toMoney } from "./money.js";
 import type { FactionDef, ProgressionConfig, ResourceId } from "@nebula/shared";
 import type { Rng } from "./tuning.js";
 
@@ -80,8 +81,10 @@ export function applyPrestige(p: { level: number; xp: number; prestige: number }
 export interface UpgradeCost {
   fromLevel: number;
   toLevel: number;
-  credits: number;
-  gems: number;
+  /** Integer base units. */
+  credits: bigint;
+  /** Integer base units. */
+  gems: bigint;
   resources: Partial<Record<ResourceId, number>>;
   successChance: number;
 }
@@ -90,13 +93,13 @@ export interface UpgradeCost {
 export function upgradeCost(level: number, cfg: ProgressionConfig): UpgradeCost {
   const u = cfg.upgrade;
   if (level < 0 || level >= u.maxLevel) throw new Error(`Cannot upgrade from +${level} (max +${u.maxLevel})`);
-  const credits = Math.round(u.creditsBase * Math.pow(u.creditsGrowth, level));
+  const credits = toMoney(u.creditsBase * Math.pow(u.creditsGrowth, level));
   const resources: Partial<Record<ResourceId, number>> = {};
   for (const [res, base] of Object.entries(u.resourceBase)) {
     if (typeof base === "number") resources[res as ResourceId] = Math.ceil(base * Math.pow(u.resourceGrowth, level));
   }
   const toLevel = level + 1;
-  const gems = toLevel >= u.gemsFromLevel ? u.gemsPerLevel * (toLevel - u.gemsFromLevel + 1) : 0;
+  const gems = toLevel >= u.gemsFromLevel ? toMoney(u.gemsPerLevel * (toLevel - u.gemsFromLevel + 1)) : 0n;
   const successChance = Math.max(0.05, Math.min(1, u.successChanceBase - u.successChanceDecay * level));
   return { fromLevel: level, toLevel, credits, gems, resources, successChance };
 }
@@ -108,13 +111,13 @@ export function rollUpgrade(level: number, cfg: ProgressionConfig, rng: Rng): { 
 }
 
 /** Death repair cost in credits. */
-export function deathRepairCost(maxHull: number, cfg: ProgressionConfig): number {
-  return Math.max(0, Math.round(maxHull * cfg.repair.deathRepairPercent * cfg.repair.creditsPerHullPoint));
+export function deathRepairCost(maxHull: number, cfg: ProgressionConfig): bigint {
+  return toMoney(Math.max(0, maxHull * cfg.repair.deathRepairPercent * cfg.repair.creditsPerHullPoint));
 }
 
 /** Repair cost for current hull damage (station repair). */
-export function repairCost(missingHull: number, cfg: ProgressionConfig): number {
-  return Math.max(0, Math.ceil(missingHull * cfg.repair.creditsPerHullPoint));
+export function repairCost(missingHull: number, cfg: ProgressionConfig): bigint {
+  return toMoney(Math.max(0, missingHull * cfg.repair.creditsPerHullPoint));
 }
 
 /**
