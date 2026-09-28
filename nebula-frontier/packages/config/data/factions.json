@@ -30,7 +30,8 @@
           "itemId": "item_ammo_hornet",
           "quantity": 200
         }
-      ]
+      ],
+      "pet": "pet_glimmer"
     },
     "bonus": {
       "shieldRegen": 3,
@@ -68,7 +69,8 @@
           "itemId": "item_ammo_hornet",
           "quantity": 200
         }
-      ]
+      ],
+      "pet": "pet_glimmer"
     },
     "bonus": {
       "hull": 3,
@@ -106,7 +108,8 @@
           "itemId": "item_ammo_hornet",
           "quantity": 200
         }
-      ]
+      ],
+      "pet": "pet_glimmer"
     },
     "bonus": {
       "damage": 2,

@@ -107,5 +107,28 @@
     "upgradeLevel": 0.5,
     "rarity": 2,
     "affix": 0.3
+  },
+  "reputation": {
+    "friendlyKarma": 50,
+    "hostileKarma": -30,
+    "outlawKarma": -100,
+    "minKarma": -500,
+    "maxKarma": 500,
+    "unprovokedAttackPenalty": 5,
+    "unprovokedAttackWindowSec": 60,
+    "unprovokedKillPenalty": 25,
+    "outlawKillReward": 15,
+    "decayPerHour": 10,
+    "selfDefenseWindowSec": 30,
+    "outlawLosesSafeZone": true,
+    "outlawSystemBountyCredits": 5000,
+    "systemBountyHours": 72
+  },
+  "factionWar": {
+    "npcKillPoints": 1,
+    "pvpKillPoints": 10,
+    "resourcePointsPer100": 1,
+    "bossKillPoints": 250,
+    "territoryPoints": 500
   }
 }

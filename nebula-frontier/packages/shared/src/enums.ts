@@ -167,6 +167,7 @@ export const EntityKind = {
   STATION: "STATION",
   PROJECTILE: "PROJECTILE",
   DRONE: "DRONE",
+  PET: "PET",
 } as const;
 export type EntityKind = (typeof EntityKind)[keyof typeof EntityKind];
 

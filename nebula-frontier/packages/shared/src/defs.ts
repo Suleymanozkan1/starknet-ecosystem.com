@@ -180,6 +180,10 @@ export interface PetDef {
   repairPerSecond: number;
   radarBonus: number;
   buff: Partial<Record<StatKey, number>>;
+  /** Pet XP per level (linear curve; level = 1 + floor(xp / xpPerLevel), capped at maxLevel). */
+  xpPerLevel?: number;
+  /** Ability strength scaling per level above 1 (e.g. 0.05 = +5% per level). */
+  levelScalePerLevel?: number;
 }
 
 export interface NpcFactionDef {
@@ -330,7 +334,7 @@ export interface FactionDef {
   homeMap: string;
   starterShip: string;
   /** `ammo` (optional): starter consumable stacks granted with the starter ship (e.g. missile ammo). */
-  starterLoadout: { weapons: string[]; modules: string[]; drones: string[]; ammo?: { itemId: string; quantity: number }[] };
+  starterLoadout: { weapons: string[]; modules: string[]; drones: string[]; ammo?: { itemId: string; quantity: number }[]; pet?: string };
   bonus: Partial<Record<StatKey, number>>;
 }
 
@@ -534,6 +538,36 @@ export interface ProgressionConfig {
   repair: { creditsPerHullPoint: number; deathRepairPercent: number };
   respawnMs: number;
   gearScoreWeights: Record<string, number>;
+  /** Karma / reputation rules (§ reputation). */
+  reputation?: ReputationConfig;
+  /** Faction war scoring weights. */
+  factionWar?: FactionWarConfig;
+}
+
+export interface ReputationConfig {
+  friendlyKarma: number;
+  hostileKarma: number;
+  outlawKarma: number;
+  minKarma: number;
+  maxKarma: number;
+  unprovokedAttackPenalty: number;
+  unprovokedAttackWindowSec: number;
+  unprovokedKillPenalty: number;
+  outlawKillReward: number;
+  decayPerHour: number;
+  selfDefenseWindowSec: number;
+  outlawLosesSafeZone: boolean;
+  /** System-funded bounty placed when a pilot turns OUTLAW (0 disables). */
+  outlawSystemBountyCredits: number;
+  systemBountyHours: number;
+}
+
+export interface FactionWarConfig {
+  npcKillPoints: number;
+  pvpKillPoints: number;
+  resourcePointsPer100: number;
+  bossKillPoints: number;
+  territoryPoints: number;
 }
 
 export interface EconomyConfigDoc {

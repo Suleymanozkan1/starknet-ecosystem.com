@@ -4,7 +4,7 @@
  */
 import type {
   AdminRole, CircuitBreakerMode, ClanRole, Currency, DepositStatus, ItemCategory, PremiumTier, Rarity,
-  ResourceId, RewardSource, RewardStatus, RiskLevel, TreasuryHealth, WithdrawalStatus,
+  Reputation, ResourceId, RewardSource, RewardStatus, RiskLevel, TreasuryHealth, WithdrawalStatus,
 } from "./enums.js";
 
 export interface ApiError { error: { code: string; message: string; details?: unknown; requestId?: string } }
@@ -67,6 +67,9 @@ export interface ProfileResponse {
   clan: { name: string; tag: string } | null;
   ship: { defId: string; name: string } | null;
   gearScore: number;
+  /** Reputation status (Reputation enum) and karma. */
+  reputation: Reputation;
+  karma: number;
   pvp: { kills: number; deaths: number; wins: number; rating: number };
   pve: { npcKills: number; bossKills: number; gatesCompleted: number };
   achievements: { id: string; name: string; unlockedAt: string }[];
@@ -276,3 +279,30 @@ export interface AdminEconomyResponse {
 export interface EconomyConfigUpdateRequest { key: string; value: unknown; reason: string }
 export interface CircuitBreakerRequest { mode: CircuitBreakerMode; active: boolean; reason: string }
 export interface RewardRateRequest { rate: number; reason: string }
+
+// ---------------- Pets / faction war ----------------
+export interface PetDto {
+  id: string;
+  petId: string;
+  name: string;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  active: boolean;
+  abilities: string[];
+}
+export interface PetsResponse { pets: PetDto[] }
+
+export interface FactionWarStanding {
+  factionId: string;
+  name: string;
+  tag: string;
+  color: string;
+  score: string;
+  kills: string;
+  pvpScore: string;
+  resources: string;
+  bossKills: number;
+  territory: number;
+}
+export interface FactionWarResponse { seasonId: string | null; season: FactionWarStanding[]; allTime: FactionWarStanding[]; weights: Record<string, number> }

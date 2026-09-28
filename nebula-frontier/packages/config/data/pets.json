@@ -13,7 +13,9 @@
     "radarBonus": 0.15,
     "buff": {
       "miningSpeed": 3
-    }
+    },
+    "xpPerLevel": 400,
+    "levelScalePerLevel": 0.05
   },
   {
     "id": "pet_ferrox",
@@ -31,6 +33,8 @@
     "buff": {
       "damage": 2,
       "armor": 2
-    }
+    },
+    "xpPerLevel": 400,
+    "levelScalePerLevel": 0.05
   }
 ]

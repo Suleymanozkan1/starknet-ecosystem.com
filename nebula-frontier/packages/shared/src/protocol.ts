@@ -54,6 +54,8 @@ export const ClientMsg = {
   RESPAWN: "respawn",
   PING: "ping",
   MARKER: "marker",
+  PET: "pet",
+  REPUTATION: "reputation",
 } as const;
 export type ClientMsg = (typeof ClientMsg)[keyof typeof ClientMsg];
 
@@ -141,6 +143,8 @@ export const ServerEvent = {
   WAVE: "wave",
   KILL_FEED: "kill_feed",
   MARKER: "marker",
+  PET: "pet",
+  REPUTATION: "reputation",
   ERROR: "error",
 } as const;
 export type ServerEvent = (typeof ServerEvent)[keyof typeof ServerEvent];
@@ -222,6 +226,20 @@ export interface SelfJoinInfo {
   modules: { slot: number; id: string; name: string; cooldownMs: number; energyCost: number }[];
 }
 export interface MarkerEvent { x: number; y: number; kind: "ATTACK" | "DEFEND" | "MOVE"; fromId: string; fromName: string }
+/** Companion status for its owner (sent on join, level-up and when the resource hint changes). */
+export interface PetEvent {
+  entityId: string;
+  petId: string;
+  name: string;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  abilities: string[];
+  /** RESOURCE_DETECTION: nearest minable asteroid within radar range. */
+  hint?: { asteroidId: string; resource: string; x: number; y: number; distance: number } | null;
+}
+/** Owner's karma / reputation after a change. */
+export interface ReputationEvent { karma: number; reputation: string; outlaw: boolean; bountyTarget: boolean; reason: string }
 export interface KillFeedEvent { killer: string; victim: string; weapon: string; pvp: boolean }
 
 export interface ServerEvents {
@@ -252,6 +270,8 @@ export interface ServerEvents {
   wave: WaveEvent;
   kill_feed: KillFeedEvent;
   marker: MarkerEvent;
+  pet: PetEvent;
+  reputation: ReputationEvent;
   error: { code: string; message: string };
 }
 
