@@ -105,7 +105,23 @@ export function shiftY(geo: BufferGeometry, fn: (x: number, z: number) => number
 
 /** Lathe around the Z axis (forward). Profile points are [radius, z]. */
 export function latheZ(profile: readonly V2[], segments: number, phiStart = 0, phiLength = Math.PI * 2): BufferGeometry {
-  const pts = profile.map(([r, z]) => new Vector2(Math.max(0.0001, r), z));
+  let prof = profile;
+  const f = profile[0], l = profile[profile.length - 1];
+  if (f && l) {
+    const closed = Math.abs(f[0] - l[0]) < 1e-6 && Math.abs(f[1] - l[1]) < 1e-6;
+    if (closed) {
+      // outward normals need a counter-clockwise loop in (r, z)
+      let area = 0;
+      for (let i = 0; i < profile.length - 1; i++) {
+        const a = profile[i], b = profile[i + 1];
+        if (a && b) area += a[0] * b[1] - b[0] * a[1];
+      }
+      if (area < 0) prof = [...profile].reverse();
+    } else if (f[1] > l[1]) {
+      prof = [...profile].reverse();
+    }
+  }
+  const pts = prof.map(([r, z]) => new Vector2(Math.max(0.0001, r), z));
   const geo = new LatheGeometry(pts, segments, phiStart, phiLength);
   geo.rotateX(Math.PI / 2); // lathe axis Y → Z
   // After rotateX(+90°) original +y maps to +z; profile z is along lathe axis.
