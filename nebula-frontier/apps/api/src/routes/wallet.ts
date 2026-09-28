@@ -34,7 +34,6 @@ import {
   prepareDeposit,
   quoteToDto,
   recordRiskSignal,
-  rejectDeposit,
   walletChangeLockUntil,
   withdrawalDailyUsed,
   withdrawalQuote,
@@ -45,6 +44,7 @@ import type { Db } from "@nebula/database";
 import { ApiHttpError, badRequest, conflict, notFound, unavailable } from "../errors.js";
 import { balancesDto } from "../lib/balances.js";
 import { notify } from "../lib/notify.js";
+import { notifyBlockchainServiceEnqueue } from "../lib/blockchainService.js";
 
 export interface WalletRoutesOptions {
   /** Injected in tests (mock RPC); defaults to SOLANA_RPC_URL. */
@@ -111,24 +111,13 @@ function treasuryOr503(): string {
   }
 }
 
-async function defaultNotify(withdrawalId: string): Promise<void> {
-  const base = process.env.BLOCKCHAIN_SERVICE_URL ?? `http://127.0.0.1:${process.env.BLOCKCHAIN_SERVICE_PORT ?? 8090}`;
-  const token = process.env.INTERNAL_SERVICE_TOKEN ?? "";
-  const res = await fetch(`${base}/internal/withdrawals/${encodeURIComponent(withdrawalId)}/enqueue`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(3000)
-  });
-  if (!res.ok) throw new Error(`blockchain-service responded ${res.status}`);
-}
-
 const historyQuery = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) });
 
 const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
   const db = app.db;
   let rpc: SolanaRpcClient | undefined = opts.rpc;
   const getRpc = () => (rpc ??= createRpcFromEnv());
-  const notifyService = opts.notifyBlockchainService ?? defaultNotify;
+  const notifyService = opts.notifyBlockchainService ?? notifyBlockchainServiceEnqueue;
 
   async function walletResponse(userId: string, limit = 20): Promise<WalletResponse> {
     const cfg = await loadEconomyConfig(db);
@@ -232,7 +221,16 @@ const plugin: FastifyPluginAsync<WalletRoutesOptions> = async (app, opts) => {
         await db.deposit.updateMany({ where: { id: d.id, status: "PREPARED" }, data: { status: "SUBMITTED" } });
         return reply.code(202).send({ error: { code: result.reason, message: result.message, retryable: true, requestId: req.id } });
       }
-      await rejectDeposit(db, d.id, req.user.id, `${result.reason}: ${result.message}`, SUSPICIOUS.includes(result.reason));
+      // The failure belongs to the submitted signature, not to the memo-bound deposit: a wrong or
+      // failed transaction must not strand a later genuine payment carrying the right memo. Record
+      // the attempt (and score it when suspicious) but leave the deposit creditable.
+      await db.deposit.updateMany({
+        where: { id: d.id, userId: req.user.id, status: { in: ["PREPARED", "SUBMITTED"] } },
+        data: { failureReason: `${result.reason}: ${result.message}`.slice(0, 500) }
+      });
+      if (SUSPICIOUS.includes(result.reason)) {
+        await recordRiskSignal(db, { userId: req.user.id, type: "FAKE_TRANSACTION", score: 10, details: { depositId: d.id, reason: result.reason, signature: body.signature }, source: "deposit" }).catch(() => undefined);
+      }
       throw badRequest(result.reason, result.message);
     }
     try {

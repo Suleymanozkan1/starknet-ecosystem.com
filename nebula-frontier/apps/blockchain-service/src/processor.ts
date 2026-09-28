@@ -11,6 +11,9 @@
  *  - A tx is only rebuilt when the previous one provably cannot land any more (blockhash expired and
  *    signature unknown, or it landed with an error), and only after searching the treasury history
  *    for the withdrawal memo.
+ *  - A memo match is only adopted after verifying it is a genuine payout (treasury fee payer + signer,
+ *    exact w.final transfer treasury → w.address with the configured mint and memo). The memo is
+ *    derivable from the withdrawal id, so anyone could send the treasury a spoof tx carrying it.
  *  - COMPLETED + ledger settlement happen only after an on-chain confirmation.
  *  - Row updates are conditional (optimistic concurrency) so two workers can't double-submit.
  */
@@ -20,12 +23,13 @@ import type { Prisma } from "@nebula/database";
 import {
   buildAndSendPayout,
   checkSignature,
-  findPayoutByMemo,
+  findPayoutsByMemo,
+  verifyPayoutTransaction,
   type ConfirmationOutcome,
   type SolanaRpcClient,
   type SolanaRpcSubscriptionsClient
 } from "@nebula/blockchain";
-import { isBreakerActive, loadEconomyConfig, refundWithdrawalLedger, riskAtMost, settleWithdrawalLedger, withdrawalMemo } from "@nebula/economy";
+import { isBreakerActive, loadEconomyConfig, recordRiskSignal, refundWithdrawalLedger, riskAtMost, settleWithdrawalLedger, withdrawalMemo } from "@nebula/economy";
 import type { TransactionSigner } from "@solana/kit";
 import type { Metrics } from "./metrics.js";
 import { log } from "./logger.js";
@@ -119,18 +123,52 @@ async function preflightGate(deps: ProcessorDeps, w: WithdrawalRow): Promise<Ste
   return { done: true, status: WithdrawalStatus.PENDING_REVIEW };
 }
 
+/**
+ * Looks up treasury transactions carrying this withdrawal's memo and returns the first one that is a
+ * verified genuine payout. "retry" = lookup/verification could not complete (never resubmit then);
+ * null = no genuine payout. Spoofed memo matches are logged + risk-scored and ignored.
+ */
+async function findGenuinePayout(deps: ProcessorDeps, w: WithdrawalRow, exclude: string | null = null): Promise<{ signature: string } | "retry" | null> {
+  const memo = withdrawalMemo(w.id);
+  let candidates: Awaited<ReturnType<typeof findPayoutsByMemo>>;
+  try {
+    candidates = await findPayoutsByMemo(deps.rpc, deps.treasuryAddress, memo);
+  } catch (err) {
+    log.warn("memo lookup failed", { withdrawalId: w.id, error: (err as Error).message });
+    return "retry";
+  }
+  let pending = false;
+  for (const c of candidates) {
+    if (c.err || c.signature === exclude) continue;
+    const v = await verifyPayoutTransaction(deps.rpc, { signature: c.signature, treasury: deps.treasuryAddress, destination: w.address, amount: w.final, mint: deps.mint, memo });
+    if (v.ok) return { signature: c.signature };
+    if (v.retryable) {
+      pending = true;
+      continue;
+    }
+    log.warn("memo-matched transaction is not a genuine payout; ignoring it", { withdrawalId: w.id, signature: c.signature, reason: v.reason });
+    deps.metrics?.inc("withdrawal_spoofed_memo_total");
+    await recordRiskSignal(deps.db, {
+      userId: w.userId,
+      type: "FAKE_TRANSACTION",
+      score: 10,
+      details: { withdrawalId: w.id, signature: c.signature, reason: v.reason, message: v.message },
+      source: "withdrawal"
+    }).catch(() => undefined);
+  }
+  return pending ? "retry" : null;
+}
+
 async function submit(deps: ProcessorDeps, w: WithdrawalRow): Promise<StepResult> {
   const { db } = deps;
   const memo = withdrawalMemo(w.id);
-  // Idempotency: never pay twice — look for an earlier payout carrying this memo first.
-  let existing: Awaited<ReturnType<typeof findPayoutByMemo>>;
-  try {
-    existing = await findPayoutByMemo(deps.rpc, deps.treasuryAddress, memo);
-  } catch (err) {
-    log.warn("memo lookup failed; will retry before submitting", { withdrawalId: w.id, error: (err as Error).message });
+  // Idempotency: never pay twice — look for an earlier (verified) payout carrying this memo first.
+  const existing = await findGenuinePayout(deps, w);
+  if (existing === "retry") {
+    log.warn("memo lookup/verification incomplete; will retry before submitting", { withdrawalId: w.id });
     return { done: false, retryInMs: deps.confirmPollMs, status: w.chainState };
   }
-  if (existing && !existing.err) {
+  if (existing) {
     log.warn("found existing on-chain payout for withdrawal; adopting it", { withdrawalId: w.id, signature: existing.signature });
     await db.$transaction([
       db.withdrawal.update({ where: { id: w.id }, data: { signature: existing.signature, chainState: ChainTxState.CONFIRMING } }),
@@ -206,9 +244,9 @@ async function checkInFlight(deps: ProcessorDeps, w: WithdrawalRow): Promise<Ste
   }
   if (outcome.status === "EXPIRED") {
     // One more history lookup: an earlier attempt with the same memo may have landed.
-    const found = await findPayoutByMemo(deps.rpc, deps.treasuryAddress, withdrawalMemo(w.id)).catch(() => undefined);
-    if (found === undefined) return { done: false, retryInMs: deps.confirmPollMs, status: w.chainState };
-    if (found && !found.err && found.signature !== w.signature) {
+    const found = await findGenuinePayout(deps, w, w.signature);
+    if (found === "retry") return { done: false, retryInMs: deps.confirmPollMs, status: w.chainState };
+    if (found) {
       await deps.db.withdrawal.update({ where: { id: w.id }, data: { signature: found.signature } });
       await deps.db.chainTransaction.updateMany({ where: { referenceId: w.id }, data: { signature: found.signature } });
       const fresh = await deps.db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });

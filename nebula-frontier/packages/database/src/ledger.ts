@@ -13,7 +13,7 @@
  * - Rows are never updated/deleted; corrections are compensating postings (`reverse`).
  */
 import { LedgerAccountType, type Currency, type LedgerTxType } from "@nebula/shared";
-import type { DbOrTx, Tx } from "./client.js";
+import { isRootClient, type DbOrTx, type Tx } from "./client.js";
 
 export class LedgerError extends Error {
   code: string;
@@ -47,23 +47,16 @@ export async function ensureAccount(tx: DbOrTx, ref: AccountRef): Promise<{ id: 
   const key = accountKey(ref);
   const existing = await tx.balanceAccount.findUnique({ where: { key }, select: { id: true, key: true } });
   if (existing) return existing;
-  try {
-    return await tx.balanceAccount.create({
-      data: {
-        key,
-        type: ref.type,
-        asset: ref.asset,
-        userId: ref.userId ?? null,
-        allowNegative: NEGATIVE_ALLOWED.has(ref.type),
-      },
-      select: { id: true, key: true },
-    });
-  } catch {
-    // Concurrent creation: unique(key) — read the winner.
-    const row = await tx.balanceAccount.findUnique({ where: { key }, select: { id: true, key: true } });
-    if (!row) throw new LedgerError("ACCOUNT_CREATE_FAILED", `Could not create account ${key}`);
-    return row;
-  }
+  // INSERT ... ON CONFLICT DO NOTHING: a concurrent creator never raises a unique violation, so an
+  // enclosing transaction is not aborted. Any other error (incl. serialization failures, which
+  // withSerializableTx retries) propagates unchanged.
+  await tx.balanceAccount.createMany({
+    data: [{ key, type: ref.type, asset: ref.asset, userId: ref.userId ?? null, allowNegative: NEGATIVE_ALLOWED.has(ref.type) }],
+    skipDuplicates: true,
+  });
+  const row = await tx.balanceAccount.findUnique({ where: { key }, select: { id: true, key: true } });
+  if (!row) throw new LedgerError("ACCOUNT_CREATE_FAILED", `Could not create account ${key}`);
+  return row;
 }
 
 export interface PostingInput {
@@ -83,8 +76,12 @@ export interface PostingResult {
   duplicate: boolean;
 }
 
-/** Post one transfer. Must run inside a transaction when combined with other writes. */
-export async function post(tx: Tx | DbOrTx, input: PostingInput): Promise<PostingResult> {
+/**
+ * Post one transfer. Must run inside an interactive transaction (the decrement, increment and
+ * journal insert are only atomic together); passing the root client is rejected at runtime.
+ */
+export async function post(tx: Tx, input: PostingInput): Promise<PostingResult> {
+  if (isRootClient(tx)) throw new LedgerError("TX_REQUIRED", "post() must run inside a transaction");
   if (input.amount <= 0n) throw new LedgerError("INVALID_AMOUNT", "Amount must be positive");
   if (input.from.asset !== input.to.asset) throw new LedgerError("ASSET_MISMATCH", "Cross-asset postings are not allowed");
 
@@ -109,8 +106,10 @@ export async function post(tx: Tx | DbOrTx, input: PostingInput): Promise<Postin
     data: { balance: { increment: input.amount }, version: { increment: 1 } },
   });
 
-  const row = await tx.balanceLedger.create({
-    data: {
+  // ON CONFLICT DO NOTHING on idempotencyKey: a concurrent replay that committed after our dup check
+  // must not abort the caller's transaction with a unique violation.
+  const inserted = await tx.balanceLedger.createManyAndReturn({
+    data: [{
       debitAccountId: from.id,
       creditAccountId: to.id,
       userId: input.userId ?? input.from.userId ?? input.to.userId ?? null,
@@ -121,10 +120,20 @@ export async function post(tx: Tx | DbOrTx, input: PostingInput): Promise<Postin
       idempotencyKey: input.idempotencyKey,
       metadata: (input.metadata ?? {}) as object,
       correlationId: input.correlationId ?? null,
-    },
+    }],
+    skipDuplicates: true,
     select: { id: true },
   });
-  return { id: row.id, duplicate: false };
+  const row = inserted[0];
+  if (row) return { id: row.id, duplicate: false };
+
+  // Lost the race: the other posting already moved the funds. Undo this transaction's balance moves
+  // (same transaction, so nothing is ever visible) and report the winner as a duplicate.
+  await tx.balanceAccount.update({ where: { id: from.id }, data: { balance: { increment: input.amount }, version: { increment: 1 } } });
+  await tx.balanceAccount.update({ where: { id: to.id }, data: { balance: { decrement: input.amount }, version: { increment: 1 } } });
+  const winner = await tx.balanceLedger.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: { id: true } });
+  if (!winner) throw new LedgerError("IDEMPOTENCY_CONFLICT", `Posting ${input.idempotencyKey} conflicted but no winner is visible`);
+  return { id: winner.id, duplicate: true };
 }
 
 /** Post several legs atomically (caller provides the transaction). */
@@ -134,20 +143,25 @@ export async function postMany(tx: Tx, legs: PostingInput[]): Promise<PostingRes
   return out;
 }
 
-/** Compensating entry: moves the same amount back. Original row is left untouched. */
-export async function reverse(tx: Tx, ledgerId: string, reason: string, idempotencyKey = `reverse:${ledgerId}`): Promise<PostingResult> {
+/**
+ * Compensating entry: moves the same amount back. Original row is left untouched. The idempotency
+ * key is fixed per original entry, so an entry can be reversed at most once; compensation entries
+ * themselves cannot be reversed.
+ */
+export async function reverse(tx: Tx, ledgerId: string, reason: string): Promise<PostingResult> {
   const orig = await tx.balanceLedger.findUnique({
     where: { id: ledgerId },
     include: { debitAccount: true, creditAccount: true },
   });
   if (!orig) throw new LedgerError("NOT_FOUND", "Ledger entry not found");
+  if (orig.type === "COMPENSATION") throw new LedgerError("NOT_REVERSIBLE", "Compensation entries cannot be reversed");
   return post(tx, {
     from: { type: orig.creditAccount.type as LedgerAccountType, asset: orig.asset as Currency, userId: orig.creditAccount.userId },
     to: { type: orig.debitAccount.type as LedgerAccountType, asset: orig.asset as Currency, userId: orig.debitAccount.userId },
     amount: orig.amount,
     type: "COMPENSATION",
     reference: orig.id,
-    idempotencyKey,
+    idempotencyKey: `reverse:${orig.id}`,
     userId: orig.userId,
     metadata: { reason, reverses: orig.id },
   });
@@ -165,11 +179,40 @@ export async function getUserBalances(db: DbOrTx, userId: string): Promise<Recor
   return out;
 }
 
-/** Returns per-asset sum of all balances; must be 0 for every asset. */
-export async function verifyLedgerIntegrity(db: DbOrTx): Promise<{ asset: string; sum: bigint; ok: boolean }[]> {
+export interface LedgerIntegrityRow {
+  asset: string;
+  /** Sum of all account balances for the asset (double entry ⇒ must be 0). */
+  sum: bigint;
+  /** Accounts whose stored balance differs from the balance replayed from the journal. */
+  mismatchedAccounts: number;
+  ok: boolean;
+}
+
+/**
+ * Per asset: (1) the sum of all balances must be 0, and (2) every account's stored balance must
+ * equal its journal replay (credits − debits), checked with one aggregate query. (1) alone cannot
+ * detect drift because every posting changes two balances by equal and opposite amounts.
+ */
+export async function verifyLedgerIntegrity(db: DbOrTx): Promise<LedgerIntegrityRow[]> {
   const rows = await db.balanceAccount.groupBy({ by: ["asset"], _sum: { balance: true } });
-  const accountSums = rows.map((r) => ({ asset: r.asset, sum: r._sum.balance ?? 0n, ok: (r._sum.balance ?? 0n) === 0n }));
-  return accountSums;
+  const drift = await db.$queryRaw<{ asset: string; mismatched: number }[]>`
+    WITH net AS (
+      SELECT j.id, SUM(j.delta) AS net FROM (
+        SELECT "creditAccountId" AS id, "amount" AS delta FROM "BalanceLedger"
+        UNION ALL
+        SELECT "debitAccountId" AS id, -"amount" AS delta FROM "BalanceLedger"
+      ) j GROUP BY j.id
+    )
+    SELECT a."asset" AS asset, COUNT(*)::int AS mismatched
+    FROM "BalanceAccount" a LEFT JOIN net n ON n.id = a."id"
+    WHERE a."balance" <> COALESCE(n.net, 0)
+    GROUP BY a."asset"`;
+  const mismatchedByAsset = new Map(drift.map((d) => [d.asset, Number(d.mismatched)]));
+  return rows.map((r) => {
+    const sum = r._sum.balance ?? 0n;
+    const mismatchedAccounts = mismatchedByAsset.get(r.asset) ?? 0;
+    return { asset: r.asset, sum, mismatchedAccounts, ok: sum === 0n && mismatchedAccounts === 0 };
+  });
 }
 
 /** Recompute an account's balance from the journal (audit / reconciliation). */

@@ -13,6 +13,12 @@ export interface BootstrapInput {
   /** Lamports kept unallocated for transaction fees. */
   feeBuffer?: bigint;
   actorId?: string | null;
+  /**
+   * SPL reward-mint mode (REWARD_MINT set): the treasury's reward-token balance in base units.
+   * NEBX is then reconciled ONLY against this balance, and `onChainBalance` (lamports) only backs SOL.
+   * Omit in native mode (devnet default), where NEBX is paid as lamports from the same wallet.
+   */
+  rewardTokenBalance?: bigint;
 }
 
 export interface BootstrapResult {
@@ -55,15 +61,31 @@ export async function bootstrapTreasury(db: Db, input: BootstrapInput): Promise<
   }
 
   return withSerializableTx(db, async (tx) => {
-    // Funds the ledger believes are on chain: NEBX funding + SOL deposits, minus payouts.
     const extNebx = await getBalance(tx, system(LedgerAccountType.EXTERNAL_CHAIN, Currency.NEBX));
     const extSol = await getBalance(tx, system(LedgerAccountType.EXTERNAL_CHAIN, Currency.SOL));
-    const accounted = -extNebx - extSol;
     const buffer = input.feeBuffer ?? 10_000_000n;
-    const delta = input.onChainBalance - buffer - accounted;
+    let accounted: bigint;
+    let delta: bigint;
+    if (input.rewardTokenBalance !== undefined) {
+      // SPL mode: separate assets. NEBX backing = reward-token balance only; SOL is checked on its own
+      // (it pays fees, so the fee buffer applies to lamports, not tokens). Neither can offset the other.
+      accounted = -extNebx;
+      delta = input.rewardTokenBalance - accounted;
+      if (input.onChainBalance < -extSol + buffer) {
+        warnings.push(`SOL: ledger owes ${-extSol} lamports of deposits but the treasury holds ${input.onChainBalance} (fee buffer ${buffer}).`);
+      }
+    } else {
+      // Native mode: NEBX is settled as lamports from the SAME treasury wallet (docs/ECONOMY.md), so
+      // `onChainBalance` backs both ledger assets and both claims are subtracted before any surplus is
+      // booked as NEBX funding. SOL deposits are therefore never counted as NEBX backing.
+      accounted = -extNebx - extSol;
+      delta = input.onChainBalance - buffer - accounted;
+    }
     const allocation: Record<string, bigint> = {};
     if (delta <= 0n) {
-      if (delta < -buffer) warnings.push(`Ledger accounts for ${accounted} lamports but chain holds ${input.onChainBalance}; NOT funding. Investigate (network fees / manual transfers).`);
+      const spl = input.rewardTokenBalance !== undefined;
+      const held = spl ? input.rewardTokenBalance : input.onChainBalance;
+      if (spl ? delta < 0n : delta < -buffer) warnings.push(`Ledger accounts for ${accounted} ${spl ? "reward-token base units" : "lamports"} but chain holds ${held}; NOT funding. Investigate (network fees / manual transfers).`);
       return { accounted, delta, funded: 0n, allocation, seasonId, warnings };
     }
     const key = `bootstrap:${input.treasuryAddress}:${input.slot}`;

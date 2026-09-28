@@ -21,6 +21,10 @@ import {
   validateEconomyConfig,
   withdrawalQuote,
   FeeError,
+  isKnownConfigKey,
+  averageDailyMax,
+  mulRatioCeil,
+  mulRatioFloor,
   riskLevelForScore,
   intervalRegularity
 } from "./index.js";
@@ -154,6 +158,47 @@ describe("config", () => {
     expect(c.caps.daily).toBe(1);
     expect(c.caps.weekly).toBe(2);
     expect(c.caps.season).toBe(cfg.caps.season);
+  });
+  it("rejects prototype-reaching config keys and never pollutes Object.prototype", () => {
+    expect(isKnownConfigKey("caps.daily")).toBe(true);
+    for (const k of ["constructor", "constructor.name", "__proto__", "__proto__.toString", "caps.constructor", "caps.prototype", "caps.hasOwnProperty"]) {
+      expect(isKnownConfigKey(k), k).toBe(false);
+    }
+    const c = applyOverrides([
+      { key: "__proto__.polluted", value: 1 },
+      { key: "caps.constructor.prototype.polluted", value: 1 },
+      { key: "caps", value: JSON.parse('{"__proto__":{"polluted":1},"weekly":3}') as unknown }
+    ]);
+    expect(c.caps.weekly).toBe(3);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.getPrototypeOf(c.caps)).toBe(Object.prototype);
+  });
+});
+
+describe("controller DAU baseline", () => {
+  it("averages the per-day maximum of snapshot DAU; empty history is 0", () => {
+    expect(averageDailyMax([])).toBe(0);
+    const at = (iso: string) => new Date(iso);
+    expect(
+      averageDailyMax([
+        { takenAt: at("2026-09-20T01:00:00Z"), dau: 80 },
+        { takenAt: at("2026-09-20T13:00:00Z"), dau: 100 },
+        { takenAt: at("2026-09-21T13:00:00Z"), dau: 120 },
+        { takenAt: at("2026-09-22T00:00:00Z"), dau: 110 }
+      ])
+    ).toBe(110);
+  });
+});
+
+describe("ratio helpers", () => {
+  it("mulRatioCeil returns 0 for non-positive ratios and rejects non-finite ones", () => {
+    expect(mulRatioCeil(1000n, 0.0015)).toBe(2n);
+    expect(mulRatioCeil(1000n, 0)).toBe(0n);
+    expect(mulRatioCeil(1000n, -0.5)).toBe(0n);
+    for (const r of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(() => mulRatioCeil(1000n, r)).toThrow(RangeError);
+      expect(() => mulRatioFloor(1000n, r)).toThrow(RangeError);
+    }
   });
 });
 

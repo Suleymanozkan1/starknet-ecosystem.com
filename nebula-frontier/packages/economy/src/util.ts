@@ -26,15 +26,22 @@ export function maxBig(...v: bigint[]): bigint {
   return v.reduce((a, b) => (b > a ? b : a));
 }
 
-/** ceil(amount * ratio) with 1e6 precision. */
+function assertFiniteRatio(ratio: number): void {
+  if (!Number.isFinite(ratio)) throw new RangeError(`ratio must be a finite number (got ${ratio})`);
+}
+
+/** ceil(amount * ratio) with 1e6 precision; 0 for ratio <= 0; throws on a non-finite ratio. */
 export function mulRatioCeil(amount: bigint, ratio: number): bigint {
+  assertFiniteRatio(ratio);
+  if (ratio <= 0) return 0n;
   const scaled = BigInt(Math.round(ratio * 1_000_000));
   const num = amount * scaled;
   return num % 1_000_000n === 0n ? num / 1_000_000n : num / 1_000_000n + 1n;
 }
 
-/** floor(amount * ratio) with 1e6 precision. */
+/** floor(amount * ratio) with 1e6 precision; 0 for ratio <= 0; throws on a non-finite ratio. */
 export function mulRatioFloor(amount: bigint, ratio: number): bigint {
+  assertFiniteRatio(ratio);
   if (ratio <= 0) return 0n;
   const scaled = BigInt(Math.round(ratio * 1_000_000));
   return (amount * scaled) / 1_000_000n;

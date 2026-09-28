@@ -7,7 +7,7 @@
 | Static | `apps/web`, `apps/admin` bundles (nginx or Cloudflare Pages / R2) | CDN | Admin additionally behind Cloudflare Access / IP allowlist. |
 | API | `apps/api` | stateless, N replicas behind LB | Needs `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `GAME_TICKET_SECRET`, `INTERNAL_SERVICE_TOKEN`. |
 | Game | `apps/game-server` | horizontal, per region (EU/NA/ASIA) | Redis presence + driver for matchmaking across processes; sticky WebSocket routing (`ip_hash` or Colyseus proxy). |
-| Worker | `apps/blockchain-service` | single active (leader) + warm standby | The only process with `TREASURY_SECRET`. Separate network segment, no public ingress. |
+| Worker | `apps/blockchain-service` | single active (leader) + warm standby | The only process with `TREASURY_SECRET` (or a `TREASURY_SECRET_FILE` mounted secret). Separate network segment, no public ingress. |
 | Data | PostgreSQL 16 (managed, PITR) | primary + replica | Source of truth. |
 | Cache/Queue | Redis 7 (AOF) | primary + replica | Non-critical state only. |
 

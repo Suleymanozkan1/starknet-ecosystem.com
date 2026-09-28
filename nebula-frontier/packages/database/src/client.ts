@@ -8,11 +8,24 @@ export type DbOrTx = Db | Tx;
 
 let singleton: Db | undefined;
 
+export const DEFAULT_DB_POOL_SIZE = 10;
+
+/** Parses DB_POOL_SIZE: unset/blank → default; anything but a positive integer is a configuration error. */
+export function parsePoolSize(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === "") return DEFAULT_DB_POOL_SIZE;
+  const trimmed = raw.trim();
+  const n = Number(trimmed);
+  if (!/^\d+$/.test(trimmed) || !Number.isSafeInteger(n) || n < 1) {
+    throw new Error(`DB_POOL_SIZE must be a positive integer (got "${raw}")`);
+  }
+  return n;
+}
+
 /** Create a Prisma client backed by the pg driver adapter (Prisma 7 requires an adapter). */
 export function createDb(url = process.env.DATABASE_URL, opts: { schema?: string } = {}): Db {
   if (!url) throw new Error("DATABASE_URL is not set");
   // `schema` (optional) targets a non-public schema, e.g. isolated test sandboxes.
-  const adapter = new PrismaPg({ connectionString: url, max: Number(process.env.DB_POOL_SIZE ?? 10) }, opts.schema ? { schema: opts.schema } : undefined);
+  const adapter = new PrismaPg({ connectionString: url, max: parsePoolSize(process.env.DB_POOL_SIZE) }, opts.schema ? { schema: opts.schema } : undefined);
   return new PrismaClient({ adapter });
 }
 
@@ -42,4 +55,17 @@ export async function withSerializableTx<T>(db: Db, fn: (tx: Tx) => Promise<T>, 
     }
   }
   throw lastErr;
+}
+
+/**
+ * True for the root client (it owns the connection pool); false for an interactive transaction
+ * client. Prisma's transaction client does not expose `$disconnect`.
+ */
+export function isRootClient(c: DbOrTx): c is Db {
+  return typeof (c as { $disconnect?: unknown }).$disconnect === "function";
+}
+
+/** Runs fn in the caller's transaction, or opens a SERIALIZABLE one (with retries) when given the root client. */
+export async function inSerializableTx<T>(c: DbOrTx, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return isRootClient(c) ? withSerializableTx(c, fn) : fn(c);
 }

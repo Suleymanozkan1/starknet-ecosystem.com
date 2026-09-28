@@ -28,10 +28,11 @@ function arg(name: string): string | undefined {
 export async function main(): Promise<void> {
   if (!isNftMintingEnabled()) throw new Error("NFT minting is disabled. Set NFT_MINTING_ENABLED=true (devnet only).");
   const itemId = arg("item");
-  const ship = SHIPS.find((s) => s.id === itemId) ?? SHIPS.find((s) => s.nftEligible);
-  const item = ITEMS.find((i) => i.id === itemId) ?? null;
+  // Fall back to the first NFT-eligible ship only when --item is absent; never mint a substitute.
+  const ship = itemId !== undefined ? SHIPS.find((s) => s.id === itemId) : SHIPS.find((s) => s.nftEligible);
+  const item = itemId !== undefined ? (ITEMS.find((i) => i.id === itemId) ?? null) : null;
   const def = item ?? ship;
-  if (!def) throw new Error("No NFT-eligible item found");
+  if (!def) throw new Error(itemId !== undefined ? `Unknown item ${itemId}` : "No NFT-eligible item found");
   assertNftEligible({ id: def.id, name: def.name, nftEligible: def.nftEligible });
   const signer = await loadTreasurySigner();
   const owner = arg("owner") ?? signer.address;

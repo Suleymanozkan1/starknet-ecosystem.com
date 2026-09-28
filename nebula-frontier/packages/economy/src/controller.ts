@@ -72,6 +72,19 @@ export async function storedSupply(db: DbOrTx, asset: string): Promise<bigint> {
 }
 
 /** Net inflation of player-held supply over a window: (issued - burned - spent) / stored at window start. */
+/** Average over UTC days of the highest `dau` seen that day (snapshots may run several times a day). 0 when empty. */
+export function averageDailyMax(rows: { takenAt: Date; dau: number }[]): number {
+  const perDay = new Map<string, number>();
+  for (const r of rows) {
+    const day = r.takenAt.toISOString().slice(0, 10);
+    perDay.set(day, Math.max(perDay.get(day) ?? 0, r.dau));
+  }
+  if (perDay.size === 0) return 0;
+  let total = 0;
+  for (const v of perDay.values()) total += v;
+  return total / perDay.size;
+}
+
 export function inflationRate(flows: FlowTotals, storedNow: bigint, minBase = 1n): number {
   const net = flows.issued - flows.burned - flows.spent;
   const delta = flows.issued + flows.deposited - flows.burned - flows.spent - flows.withdrawn;
@@ -241,7 +254,11 @@ export class EconomyController {
       : 0;
     const dup = await db.riskSignal.count({ where: { type: CheatType.DUPLICATE_REWARD, createdAt: { gte: new Date(now.getTime() - 3_600_000) } } });
     const dauRows = await db.session.findMany({ where: { lastUsedAt: { gte: d1 } }, select: { userId: true }, distinct: ["userId"] });
-    const dau7 = await db.session.findMany({ where: { lastUsedAt: { gte: d7, lt: d1 } }, select: { userId: true }, distinct: ["userId"] });
+    // 7-day baseline from persisted history: Session.lastUsedAt only holds the latest use, so it cannot
+    // reconstruct past daily activity. Every snapshot stores the DAU at that time; take the max per UTC
+    // day over the prior 7 days and average those days. No history → 0 (activity multiplier stays 1).
+    const dauSnaps = await db.economySnapshot.findMany({ where: { asset: Currency.NEBX, takenAt: { gte: d7, lt: d1 } }, select: { takenAt: true, dau: true } });
+    const dauAvg7d = averageDailyMax(dauSnaps);
 
     return {
       at: now,
@@ -264,7 +281,7 @@ export class EconomyController {
       riskyRewardUsers24h: risky,
       duplicateClaimSignals1h: dup,
       dau: dauRows.length,
-      dauAvg7d: dau7.length / 6
+      dauAvg7d
     };
   }
 

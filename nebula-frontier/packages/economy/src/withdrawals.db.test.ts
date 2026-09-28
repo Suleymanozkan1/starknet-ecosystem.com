@@ -118,4 +118,23 @@ describe("deposits (ledger side)", () => {
     expect(await getBalance(db, userWallet(u.id, Currency.SOL))).toBe(0n);
     expect(await getBalance(db, system(LedgerAccountType.PREMIUM_REVENUE, Currency.SOL))).toBeGreaterThanOrEqual(50_000_000n);
   });
+
+  it("credits the gem grant locked at prepare time even if the shop changes after payment", async () => {
+    const u = await createTestUser(db, { wallet: addr() });
+    const recipient = "Treasury1111111111111111111111111111111111";
+    const d = await prepareDeposit(db, { userId: u.id, amount: 50_000_000n, purpose: "GEMS", idempotencyKey: "dep-locked", recipient });
+    expect(d.gems).toBe(100);
+    // Admin reprices: a DB pack at the same price now grants far more gems (DB rows override shop.json).
+    const id = "test-gems-reprice";
+    await db.shopProduct.create({
+      data: { id, sku: id, name: "Repriced", category: "GEMS", description: "test", currency: Currency.SOL, price: 50_000_000n, grants: { gems: 999 } }
+    });
+    try {
+      const r = await creditDeposit(db, d.id, u.id, { signature: "6".repeat(88), amount: 50_000_000n, sender: u.wallet as string, slot: 2n });
+      expect(r.gems).toBe(100);
+      expect(await getBalance(db, userWallet(u.id, Currency.GEMS))).toBe(100n);
+    } finally {
+      await db.shopProduct.delete({ where: { id } });
+    }
+  });
 });

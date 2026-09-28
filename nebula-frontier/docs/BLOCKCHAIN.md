@@ -32,9 +32,9 @@ NEBULA FRONTIER uses Solana **devnet only**. `SOLANA_NETWORK` accepts `devnet` /
 
 ## Treasury key
 
-- Loaded **only** from `TREASURY_SECRET` (64‑byte JSON array as written by `solana-keygen` / `scripts/devnet-setup.ts`, or base58) by `loadTreasurySigner()`, which throws unless `SERVICE_ROLE=blockchain` (set by the blockchain-service npm scripts). API and game server only know `TREASURY_PUBLIC_KEY`.
+- Loaded **only** from `TREASURY_SECRET` or, when unset, the file named by `TREASURY_SECRET_FILE` (64‑byte JSON array as written by `solana-keygen` / `scripts/devnet-setup.ts`, or base58) by `loadTreasurySigner()`, which throws unless `SERVICE_ROLE=blockchain` (set by the blockchain-service npm scripts). API and game server only know `TREASURY_PUBLIC_KEY`.
 - The signer uses a non-extractable WebCrypto key; the byte buffer is zeroed after import; the secret never appears in logs or error messages (the service logger additionally redacts `secret|private|token|seed|keypair` keys). If `TREASURY_PUBLIC_KEY` is set, the loaded key must match it.
-- Devnet: `scripts/devnet-setup.ts` generates the key with `generateKeyPairSigner(true)`, writes `.secrets/treasury-devnet.json` (mode 600, gitignored) and upserts `TREASURY_PUBLIC_KEY` / `TREASURY_SECRET` into the gitignored `.env`.
+- Devnet: `scripts/devnet-setup.ts` generates the key with `generateKeyPairSigner(true)`, writes `.secrets/treasury-devnet.json` (mode 600, gitignored) and upserts `TREASURY_PUBLIC_KEY` / `TREASURY_SECRET_FILE` (the path, never the secret) into the gitignored shared `.env`, removing any legacy `TREASURY_SECRET` line (the API and game server load that `.env` too).
 - Production path: KMS/HSM-backed signer (see SECURITY.md / DEPLOYMENT.md). The `TransactionSigner` abstraction in `buildAndSendPayout` accepts any kit signer, so a KMS signer drops in without touching the pipeline.
 
 ## Deposit flow (devnet SOL)
@@ -166,4 +166,4 @@ The path forward: deploy to devnet behind a feature flag, have blockchain-servic
 
 ## Environment variables
 
-`SOLANA_NETWORK`, `SOLANA_RPC_URL`, `SOLANA_WS_URL`, `SOLANA_COMMITMENT`, `TREASURY_PUBLIC_KEY`, `TREASURY_SECRET` (blockchain-service only), `SERVICE_ROLE=blockchain` (blockchain-service only), `REWARD_MINT`, `REWARD_MINT_DECIMALS`, `BLOCKCHAIN_SERVICE_PORT`, `BLOCKCHAIN_SERVICE_HOST`, `BLOCKCHAIN_SERVICE_URL`, `INTERNAL_SERVICE_TOKEN`, `REDIS_URL`, `DATABASE_URL`, `WITHDRAWAL_MAX_ATTEMPTS` (5), `WITHDRAWAL_BACKOFF_MS` (15000), `WITHDRAWAL_CONFIRM_POLL_MS` (4000), `WITHDRAWAL_CONCURRENCY` (2), `ECONOMY_CONTROLLER_INTERVAL_MS` (300000), `CHAIN_SWEEP_INTERVAL_MS` (60000), `NFT_MINTING_ENABLED`.
+`SOLANA_NETWORK`, `SOLANA_RPC_URL`, `SOLANA_WS_URL`, `SOLANA_COMMITMENT`, `TREASURY_PUBLIC_KEY`, `TREASURY_SECRET` / `TREASURY_SECRET_FILE` (blockchain-service only), `SERVICE_ROLE=blockchain` (blockchain-service only), `REWARD_MINT`, `REWARD_MINT_DECIMALS`, `BLOCKCHAIN_SERVICE_PORT`, `BLOCKCHAIN_SERVICE_HOST`, `BLOCKCHAIN_SERVICE_URL`, `INTERNAL_SERVICE_TOKEN`, `REDIS_URL`, `DATABASE_URL`, `WITHDRAWAL_MAX_ATTEMPTS` (5), `WITHDRAWAL_BACKOFF_MS` (15000), `WITHDRAWAL_CONFIRM_POLL_MS` (4000), `WITHDRAWAL_CONCURRENCY` (2), `ECONOMY_CONTROLLER_INTERVAL_MS` (300000), `CHAIN_SWEEP_INTERVAL_MS` (60000), `NFT_MINTING_ENABLED`.

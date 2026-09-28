@@ -99,6 +99,43 @@ describe("double-entry ledger", () => {
     const comp = await db.balanceLedger.findUnique({ where: { idempotencyKey: `reverse:${id}` } });
     expect(comp?.type).toBe("COMPENSATION");
     expect(comp?.reference).toBe(id);
+    // A second reversal (the key is fixed per entry) is a duplicate, never a second compensation.
+    const again = await withSerializableTx(db, (tx) => reverse(tx, id, "again"));
+    expect(again.duplicate).toBe(true);
+    expect(await getBalance(db, userWallet(userA, "CREDITS"))).toBe(before - 50n);
+    // Compensation entries themselves cannot be reversed.
+    await expect(withSerializableTx(db, (tx) => reverse(tx, comp!.id, "reverse the reversal"))).rejects.toMatchObject({ code: "NOT_REVERSIBLE" });
+  });
+
+  it("post() refuses the root (non-transactional) client", async () => {
+    await expect(
+      post(db, { from: system("GAME_ISSUANCE", "CREDITS"), to: userWallet(userA, "CREDITS"), amount: 1n, type: "GAME_ISSUANCE", reference: "x", idempotencyKey: `t7:${run}` }),
+    ).rejects.toMatchObject({ code: "TX_REQUIRED" });
+    expect(await db.balanceLedger.findUnique({ where: { idempotencyKey: `t7:${run}` } })).toBeNull();
+  });
+
+  it("concurrent replays of one key under READ COMMITTED: one posting, the rest report duplicate", async () => {
+    const u = await db.user.create({ data: { username: `ledger_replay_${run}` } });
+    const key = `t8:${run}`;
+    const results = await Promise.all(
+      Array.from({ length: 6 }, () =>
+        db.$transaction((tx) => post(tx, { from: system("GAME_ISSUANCE", "CREDITS"), to: userWallet(u.id, "CREDITS"), amount: 40n, type: "GAME_ISSUANCE", reference: key, idempotencyKey: key })),
+      ),
+    );
+    expect(results.filter((r) => !r.duplicate)).toHaveLength(1);
+    expect(new Set(results.map((r) => r.id)).size).toBe(1);
+    expect(await getBalance(db, userWallet(u.id, "CREDITS"))).toBe(40n);
+  });
+
+  it("concurrent first use of an account inside transactions creates it once without aborting", async () => {
+    const u = await db.user.create({ data: { username: `ledger_acct_${run}` } });
+    const results = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        db.$transaction((tx) => post(tx, { from: system("GAME_ISSUANCE", "GEMS"), to: userWallet(u.id, "GEMS"), amount: 1n, type: "GAME_ISSUANCE", reference: "acct", idempotencyKey: `t9:${run}:${i}` })),
+      ),
+    );
+    expect(results.every((r) => !r.duplicate)).toBe(true);
+    expect(await getBalance(db, userWallet(u.id, "GEMS"))).toBe(5n);
   });
 
   it("integrity: balances equal the journal replay and every asset sums to zero", async () => {
@@ -107,5 +144,24 @@ describe("double-entry ledger", () => {
     expect(await replayBalance(db, acct!.id)).toBe(acct!.balance);
     const sums = await verifyLedgerIntegrity(db);
     for (const s of sums) expect({ asset: s.asset, ok: s.ok }).toEqual({ asset: s.asset, ok: true });
+  });
+
+  it("integrity: detects an account balance that drifted from the journal even when sums still net to zero", async () => {
+    const a = accountKey(userWallet(userA, "CREDITS"));
+    const b = accountKey(userWallet(userB, "CREDITS"));
+    const rollback = new Error("rollback");
+    const seen = await db
+      .$transaction(async (tx) => {
+        // Equal and opposite tampering keeps the per-asset sum at zero.
+        await tx.balanceAccount.update({ where: { key: a }, data: { balance: { increment: 7n } } });
+        await tx.balanceAccount.update({ where: { key: b }, data: { balance: { decrement: 7n } } });
+        const rows = await verifyLedgerIntegrity(tx);
+        throw Object.assign(rollback, { rows });
+      })
+      .catch((e: unknown) => (e === rollback ? (e as Error & { rows: Awaited<ReturnType<typeof verifyLedgerIntegrity>> }).rows : Promise.reject(e)));
+    const credits = seen.find((r) => r.asset === "CREDITS");
+    expect(credits?.sum).toBe(0n);
+    expect(credits?.mismatchedAccounts).toBe(2);
+    expect(credits?.ok).toBe(false);
   });
 });

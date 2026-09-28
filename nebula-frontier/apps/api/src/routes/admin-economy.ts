@@ -28,6 +28,7 @@ import {
 } from "@nebula/economy";
 import { verifyLedgerIntegrity } from "@nebula/database";
 import { badRequest } from "../errors.js";
+import { notifyBlockchainServiceEnqueue } from "../lib/blockchainService.js";
 import { withdrawalDto } from "./wallet.js";
 import { rewardDto } from "./economy.js";
 
@@ -52,16 +53,7 @@ const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) 
   const getRpc = () => (rpc ??= createRpcFromEnv());
   const guard = [app.authenticate, app.requireRole(AdminRole.SUPER_ADMIN, AdminRole.ECONOMY_MANAGER, AdminRole.ADMIN)];
   const cfgGuard = [app.authenticate, app.requireRole(AdminRole.SUPER_ADMIN, AdminRole.ECONOMY_MANAGER)];
-  const notifyService =
-    opts.notifyBlockchainService ??
-    (async (id: string) => {
-      const base = process.env.BLOCKCHAIN_SERVICE_URL ?? "http://127.0.0.1:8090";
-      await fetch(`${base}/internal/withdrawals/${encodeURIComponent(id)}/enqueue`, {
-        method: "POST",
-        headers: { authorization: `Bearer ${process.env.INTERNAL_SERVICE_TOKEN ?? ""}` },
-        signal: AbortSignal.timeout(3000)
-      });
-    });
+  const notifyService = opts.notifyBlockchainService ?? notifyBlockchainServiceEnqueue;
 
   const cfgError = (err: unknown): never => {
     if (err instanceof EconomyConfigError) throw badRequest("INVALID_ECONOMY_CONFIG", err.message, err.errors);

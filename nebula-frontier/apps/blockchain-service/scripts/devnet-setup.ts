@@ -1,7 +1,9 @@
 /**
  * Devnet bootstrap: generates (or reuses) the devnet treasury keypair and a test "player" wallet,
- * stores them under .secrets/ (gitignored, mode 600), writes TREASURY_PUBLIC_KEY/TREASURY_SECRET to
- * the local .env (gitignored) and requests faucet airdrops with retries.
+ * stores them under .secrets/ (gitignored, mode 600), writes TREASURY_PUBLIC_KEY and
+ * TREASURY_SECRET_FILE (a path, not the secret) to the shared local .env (gitignored), removes any
+ * legacy TREASURY_SECRET line from it, and requests faucet airdrops with retries. The shared .env is
+ * loaded by the API and game server too, so the secret itself must never be written there.
  *
  *   pnpm --filter @nebula/blockchain-service devnet:setup
  *   (or: npx tsx scripts/devnet-setup.ts from repo root)
@@ -30,17 +32,22 @@ export async function loadOrCreateKeypair(file: string): Promise<{ address: Addr
   return { address: signer.address, bytes, created: true };
 }
 
-export function upsertEnv(vars: Record<string, string>, file = ENV_FILE): void {
+/** Sets (string) or removes (null) keys in a dotenv file, keeping it mode 0600. */
+export function upsertEnv(vars: Record<string, string | null>, file = ENV_FILE): void {
   const lines = existsSync(file) ? readFileSync(file, "utf8").split("\n") : [];
   for (const [k, v] of Object.entries(vars)) {
     const idx = lines.findIndex((l) => l.startsWith(`${k}=`));
-    if (idx >= 0) lines[idx] = `${k}=${v}`;
+    if (v === null) {
+      if (idx >= 0) lines.splice(idx, 1);
+    } else if (idx >= 0) lines[idx] = `${k}=${v}`;
     else {
       if (lines.length && lines[lines.length - 1] === "") lines.pop();
       lines.push(`${k}=${v}`, "");
     }
   }
   writeFileSync(file, lines.join("\n"), { mode: 0o600 });
+  // `mode` only applies when the file is created; tighten a pre-existing (e.g. 0644) .env too.
+  chmodSync(file, 0o600);
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -74,14 +81,16 @@ export async function main(): Promise<void> {
   const network = getSolanaNetwork();
   if (network !== "devnet" && network !== "localnet") throw new Error("devnet-setup only runs on devnet/localnet");
   const rpc = createRpcFromEnv();
-  const treasury = await loadOrCreateKeypair(resolve(SECRETS, "treasury-devnet.json"));
+  const treasuryFile = resolve(SECRETS, "treasury-devnet.json");
+  const treasury = await loadOrCreateKeypair(treasuryFile);
   const player = await loadOrCreateKeypair(resolve(SECRETS, "player-devnet.json"));
   console.info(`Treasury public key: ${treasury.address}${treasury.created ? " (new)" : " (existing)"}`);
   console.info(`Test player wallet:  ${player.address}${player.created ? " (new)" : " (existing)"}`);
 
-  // Secret goes to the gitignored .env only — never printed.
-  upsertEnv({ TREASURY_PUBLIC_KEY: treasury.address, TREASURY_SECRET: JSON.stringify(Array.from(treasury.bytes)) });
-  console.info(".env updated with TREASURY_PUBLIC_KEY and TREASURY_SECRET (value not shown)");
+  // The secret stays in the 0600 .secrets/ file (read only by blockchain-service via
+  // TREASURY_SECRET_FILE); the shared .env gets the public key and the path, and loses any legacy secret.
+  upsertEnv({ TREASURY_PUBLIC_KEY: treasury.address, TREASURY_SECRET_FILE: treasuryFile, TREASURY_SECRET: null });
+  console.info(".env updated with TREASURY_PUBLIC_KEY and TREASURY_SECRET_FILE (secret not written to .env)");
 
   const t = await airdropWithRetry(rpc, treasury.address, 1_000_000_000n);
   console.info(`Treasury balance: ${t.balance} lamports; airdrops: ${t.signatures.length}; errors: ${t.errors.length}`);

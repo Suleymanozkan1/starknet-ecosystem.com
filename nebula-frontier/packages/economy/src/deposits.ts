@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { SHOP } from "@nebula/config";
 import { Currency, DepositStatus, LedgerAccountType, CheatType } from "@nebula/shared";
-import { post, system, userWallet, withSerializableTx, type Db, type DbOrTx } from "@nebula/database";
+import { post, system, userWallet, withSerializableTx, type Db, type DbOrTx, type Tx } from "@nebula/database";
 import { getActiveSeason } from "./rewardBudget.js";
 import { recordRiskSignal } from "./risk.js";
 
@@ -65,7 +65,9 @@ export async function prepareDeposit(db: Db, input: PrepareDepositInput) {
   if (existing) return existing;
   const wallet = await db.wallet.findFirst({ where: { userId: input.userId, unlinkedAt: null }, orderBy: [{ primary: "desc" }, { verifiedAt: "asc" }] });
   if (!wallet) throw new DepositError("NO_WALLET", "Link a verified wallet before depositing");
-  if (input.purpose === "GEMS") gemsForDeposit(input.amount, await getGemPacks(db), input.productId); // validate early
+  // Resolve the gem grant ONCE, when the player commits to paying, and persist it: crediting must not
+  // re-derive it from shop config that admins can change (or deactivate) after payment.
+  const grant = input.purpose === "GEMS" ? gemsForDeposit(input.amount, await getGemPacks(db), input.productId) : null;
   const memo = `nebula:dep:${randomBytes(12).toString("hex")}`;
   try {
     return await db.deposit.create({
@@ -78,6 +80,8 @@ export async function prepareDeposit(db: Db, input: PrepareDepositInput) {
         amount: input.amount,
         memo,
         purpose: input.purpose,
+        productId: grant?.packId ?? null,
+        gems: grant?.gems ?? null,
         status: DepositStatus.PREPARED,
         idempotencyKey: input.idempotencyKey,
         expiresAt: new Date(Date.now() + (input.ttlMinutes ?? 30) * 60_000)
@@ -106,13 +110,12 @@ export interface VerifiedChainDeposit {
  *  - GEMS:    EXTERNAL_CHAIN:SOL → PREMIUM_REVENUE:SOL (gem sale revenue) and
  *             GAME_ISSUANCE:GEMS → USER_WALLET:<uid>:GEMS; active season revenue += amount.
  */
-export async function creditDeposit(db: Db, depositId: string, userId: string, v: VerifiedChainDeposit, productId?: string | null) {
+export async function creditDeposit(db: Db, depositId: string, userId: string, v: VerifiedChainDeposit) {
   const dupSig = await db.deposit.findUnique({ where: { signature: v.signature }, select: { id: true, userId: true } });
   if (dupSig && dupSig.id !== depositId) {
     await recordRiskSignal(db, { userId, type: CheatType.FAKE_TRANSACTION, score: 15, details: { reason: "signature reuse", signature: v.signature }, source: "deposit" }).catch(() => undefined);
     throw new DepositError("DUPLICATE_SIGNATURE", "This transaction was already used for another deposit");
   }
-  const packs = await getGemPacks(db);
   try {
     return await withSerializableTx(db, async (tx) => {
       const d = await tx.deposit.findUnique({ where: { id: depositId } });
@@ -126,7 +129,7 @@ export async function creditDeposit(db: Db, depositId: string, userId: string, v
       if (v.amount !== d.amount) throw new DepositError("AMOUNT_MISMATCH", "Verified amount differs from prepared amount");
       let gems = 0;
       if (d.purpose === "GEMS") {
-        gems = gemsForDeposit(d.amount, packs, productId).gems;
+        gems = await lockedGemGrant(tx, d);
         await post(tx, {
           from: system(LedgerAccountType.EXTERNAL_CHAIN, Currency.SOL),
           to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.SOL),
@@ -172,6 +175,18 @@ export async function creditDeposit(db: Db, depositId: string, userId: string, v
     if ((err as { code?: string }).code === "P2002") throw new DepositError("DUPLICATE_SIGNATURE", "This transaction was already used for another deposit");
     throw err;
   }
+}
+
+/**
+ * The gem count locked at prepare time. Deposits prepared before the grant was persisted (gems NULL)
+ * fall back to the pack pricing, using the stored product when there is one.
+ */
+async function lockedGemGrant(tx: Tx, d: { amount: bigint; productId: string | null; gems: number | null }): Promise<number> {
+  if (d.gems !== null) {
+    if (!Number.isSafeInteger(d.gems) || d.gems < 1) throw new DepositError("INVALID_STATE", "Deposit has an invalid locked gem grant");
+    return d.gems;
+  }
+  return gemsForDeposit(d.amount, await getGemPacks(tx), d.productId).gems;
 }
 
 /** Marks a deposit REJECTED for non-retryable verification failures and scores the attempt. */

@@ -96,14 +96,28 @@ export async function findPayoutByMemo(
   memo: string,
   limit = 200
 ): Promise<{ signature: string; slot: bigint; err: boolean } | null> {
+  return (await findPayoutsByMemo(rpc, treasury, memo, limit))[0] ?? null;
+}
+
+/**
+ * All treasury transactions (newest first) whose memo matches. A match is only a candidate: anyone
+ * can send the treasury a tx with this memo, so callers must verify it (verifyPayoutTransaction).
+ */
+export async function findPayoutsByMemo(
+  rpc: SolanaRpcClient,
+  treasury: Address | string,
+  memo: string,
+  limit = 200
+): Promise<{ signature: string; slot: bigint; err: boolean }[]> {
   const list = await rpc.getSignaturesForAddress(toAddress(treasury), { limit, commitment: "confirmed" }).send();
+  const out: { signature: string; slot: bigint; err: boolean }[] = [];
   for (const s of list) {
     if (!s.memo) continue;
     const text = s.memo.replace(/^\[\d+\]\s*/, "");
     const parts = text.split(/;\s*/);
-    if (text === memo || parts.includes(memo)) return { signature: s.signature, slot: s.slot, err: s.err !== null };
+    if (text === memo || parts.includes(memo)) out.push({ signature: s.signature, slot: s.slot, err: s.err !== null });
   }
-  return null;
+  return out;
 }
 
 /** Single status check: never resubmit unless EXPIRED. */

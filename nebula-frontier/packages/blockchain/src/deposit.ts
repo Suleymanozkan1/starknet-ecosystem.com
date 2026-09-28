@@ -21,6 +21,8 @@ export interface VerifyDepositInput {
   memo: string;
   /** The user's verified wallet; must be the signer & source of the transfer. */
   expectedSender: string;
+  /** When set, this account must be the transaction fee payer (first account key, a signer). */
+  expectedFeePayer?: string;
   /** "confirmed" (default) or "finalized". */
   minConfirmations?: "confirmed" | "finalized";
   network?: SolanaNetwork;
@@ -157,6 +159,12 @@ export async function verifyDepositTransaction(rpc: SolanaRpcClient, input: Veri
     const keys = tx.transaction.message.accountKeys;
     const senderKey = keys.find((k) => k.pubkey === input.expectedSender);
     if (!senderKey || !senderKey.signer) return reject(DepositRejection.WRONG_SENDER, "Transaction was not signed by your verified wallet");
+    if (input.expectedFeePayer !== undefined) {
+      const feePayer = keys[0];
+      if (!feePayer || feePayer.pubkey !== input.expectedFeePayer || !feePayer.signer) {
+        return reject(DepositRejection.WRONG_SENDER, "Transaction fee payer is not the expected account");
+      }
+    }
 
     const mint = input.mint ?? null;
     let transferred = 0n;
@@ -212,4 +220,39 @@ export async function verifyDepositTransaction(rpc: SolanaRpcClient, input: Veri
   } catch (err) {
     return reject(DepositRejection.RPC_ERROR, `RPC error: ${(err as Error).message}`, true);
   }
+}
+
+export interface VerifyPayoutInput {
+  signature: string;
+  /** Treasury address: must be fee payer, signer and the source of the transfer. */
+  treasury: string;
+  /** Withdrawal destination that must receive exactly `amount`. */
+  destination: string;
+  amount: bigint;
+  /** SPL mint; null/undefined => native SOL. */
+  mint?: string | null;
+  /** The withdrawal memo the payout must carry. */
+  memo: string;
+  network?: SolanaNetwork;
+  skipClusterCheck?: boolean;
+}
+
+/**
+ * Verifies that `signature` is a genuine treasury payout: successful + confirmed, treasury is fee
+ * payer and signer, exactly `amount` moves treasury → `destination` (SOL or SPL `mint`) and the
+ * memo matches. A memo alone proves nothing — anyone can send the treasury a tx carrying it.
+ */
+export function verifyPayoutTransaction(rpc: SolanaRpcClient, input: VerifyPayoutInput): Promise<VerifyDepositResult> {
+  return verifyDepositTransaction(rpc, {
+    signature: input.signature,
+    expectedRecipient: input.destination,
+    expectedAmount: input.amount,
+    mint: input.mint ?? null,
+    memo: input.memo,
+    expectedSender: input.treasury,
+    expectedFeePayer: input.treasury,
+    minConfirmations: "confirmed",
+    ...(input.network ? { network: input.network } : {}),
+    ...(input.skipClusterCheck ? { skipClusterCheck: true } : {})
+  });
 }

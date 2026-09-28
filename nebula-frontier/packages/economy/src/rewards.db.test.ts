@@ -106,12 +106,15 @@ describe("config & controller", () => {
   it("rejects allocation > 100% and audits valid changes with old/new value", async () => {
     await expect(updateEconomyConfig(db, "rewardAllocation.LEADERBOARD", 0.9, null, "try to over-allocate")).rejects.toBeInstanceOf(EconomyConfigError);
     await expect(updateEconomyConfig(db, "nope.key", 1, null, "unknown")).rejects.toBeInstanceOf(EconomyConfigError);
-    const r = await updateEconomyConfig(db, "caps.daily", 60_000_000, null, "raise daily cap");
-    expect(r.oldValue).toBe(50_000_000);
-    const log = await db.auditLog.findFirst({ where: { action: "ECONOMY_CONFIG_UPDATE", targetId: "caps.daily" }, orderBy: { createdAt: "desc" } });
-    expect(log?.oldValue).toBe(50_000_000);
-    expect(log?.newValue).toBe(60_000_000);
-    await updateEconomyConfig(db, "caps.daily", 50_000_000, null, "restore");
+    try {
+      const r = await updateEconomyConfig(db, "caps.daily", 60_000_000, null, "raise daily cap");
+      expect(r.oldValue).toBe(50_000_000);
+      const log = await db.auditLog.findFirst({ where: { action: "ECONOMY_CONFIG_UPDATE", targetId: "caps.daily" }, orderBy: { createdAt: "desc" } });
+      expect(log?.oldValue).toBe(50_000_000);
+      expect(log?.newValue).toBe(60_000_000);
+    } finally {
+      await updateEconomyConfig(db, "caps.daily", 50_000_000, null, "restore");
+    }
   });
 
   it("controller snapshots and trips REWARD_PAUSE when liability is too high", async () => {

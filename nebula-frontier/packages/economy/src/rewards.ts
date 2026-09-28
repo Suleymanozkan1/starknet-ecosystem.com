@@ -116,7 +116,9 @@ async function grantInTx(tx: Tx, input: GrantCryptoRewardInput, cfg: EconomyConf
   }
   // Daily emission cap = budget * rate
   const dayCap = dailyEmissionCap(budget.effectiveBudget, emission.rate);
-  const today = (await tx.reward.aggregate({ where: { createdAt: { gte: startOfUtcDay(now) }, status: { in: ["CLAIMABLE", "CLAIMED", "PENDING_REVIEW"] } }, _sum: { amount: true } }))._sum.amount ?? 0n;
+  // Scoped to this season: dayCap derives from this season's budget, so another season's grants
+  // (e.g. on a rollover day) must not consume it.
+  const today = (await tx.reward.aggregate({ where: { seasonId, createdAt: { gte: startOfUtcDay(now) }, status: { in: ["CLAIMABLE", "CLAIMED", "PENDING_REVIEW"] } }, _sum: { amount: true } }))._sum.amount ?? 0n;
   const dayRoom = dayCap - today;
   if (amount > dayRoom) {
     amount = dayRoom > 0n ? dayRoom : 0n;
@@ -213,8 +215,12 @@ export async function claimReward(db: Db, userId: string, rewardId: string, opts
       throw err;
     }
     const claim = await tx.rewardClaim.create({ data: { rewardId, userId, amount: reward.amount, ledgerTxId: ledgerId } });
-    await tx.reward.update({ where: { id: rewardId }, data: { status: "CLAIMED" } });
-    await tx.rewardLiability.update({ where: { rewardId }, data: { status: "SETTLED", settledAt: now } });
+    // Conditional transitions: a concurrent expiry/review must make the claim fail (and roll back the
+    // payout), never be overwritten.
+    const rewardUpd = await tx.reward.updateMany({ where: { id: rewardId, status: "CLAIMABLE" }, data: { status: "CLAIMED" } });
+    if (rewardUpd.count !== 1) throw new RewardClaimError("NOT_CLAIMABLE", "Reward changed during claim");
+    const liabilityUpd = await tx.rewardLiability.updateMany({ where: { rewardId, status: "OUTSTANDING" }, data: { status: "SETTLED", settledAt: now } });
+    if (liabilityUpd.count !== 1) throw new RewardClaimError("NOT_CLAIMABLE", "Reward liability is no longer outstanding");
     return { rewardId, amount: reward.amount, claimId: claim.id, ledgerTxId: ledgerId, alreadyClaimed: false };
   });
 }
@@ -259,7 +265,13 @@ export async function reviewReward(db: Db, rewardId: string, approve: boolean, a
     if (!r) throw new RewardClaimError("NOT_FOUND", "Reward not found");
     if (r.status !== "PENDING_REVIEW") throw new RewardClaimError("NOT_REVIEWABLE", `Reward is ${r.status}`);
     const status = approve ? "CLAIMABLE" : "REJECTED";
-    await tx.reward.update({ where: { id: rewardId }, data: { status, reviewedBy: adminId } });
+    // Conditional: a concurrent expiry (EXPIRED + liability EXPIRED) must not be overwritten by CLAIMABLE.
+    const upd = await tx.reward.updateMany({ where: { id: rewardId, status: "PENDING_REVIEW" }, data: { status, reviewedBy: adminId } });
+    if (upd.count !== 1) throw new RewardClaimError("NOT_REVIEWABLE", "Reward changed during review");
+    if (approve) {
+      const outstanding = await tx.rewardLiability.count({ where: { rewardId, status: "OUTSTANDING" } });
+      if (outstanding !== 1) throw new RewardClaimError("NOT_REVIEWABLE", "Reward liability is no longer outstanding");
+    }
     if (!approve) await tx.rewardLiability.updateMany({ where: { rewardId, status: "OUTSTANDING" }, data: { status: "CANCELLED", settledAt: new Date() } });
     await tx.auditLog.create({
       data: { actorId: adminId, action: approve ? "REWARD_APPROVED" : "REWARD_REJECTED", targetType: "Reward", targetId: rewardId, oldValue: { status: r.status }, newValue: { status }, reason }

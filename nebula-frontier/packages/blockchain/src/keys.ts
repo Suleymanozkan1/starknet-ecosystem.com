@@ -7,12 +7,15 @@ import {
   type KeyPairSigner
 } from "@solana/kit";
 import type { webcrypto } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 /**
  * Treasury key handling.
  *
  * - The secret is read ONLY from `TREASURY_SECRET` (JSON byte array as written by solana-keygen /
- *   scripts/devnet-setup.ts, or a base58 string of the 64-byte secret key).
+ *   scripts/devnet-setup.ts, or a base58 string of the 64-byte secret key), or — when that is unset —
+ *   from the file named by `TREASURY_SECRET_FILE` (same formats; e.g. a mounted secret or the 0600
+ *   `.secrets/treasury-devnet.json`), so the secret itself never has to live in a shared `.env`.
  * - It may only be loaded inside apps/blockchain-service (`SERVICE_ROLE=blockchain`). Any other
  *   process (API, game server, web) gets an exception — they only ever know the public key.
  * - The secret value is never logged or included in error messages. The resulting signer uses a
@@ -63,11 +66,25 @@ export function assertBlockchainServiceRole(env: NodeJS.ProcessEnv = process.env
   }
 }
 
+/** Reads the raw secret from TREASURY_SECRET or TREASURY_SECRET_FILE. Never echoes the contents. */
+function readTreasurySecret(env: NodeJS.ProcessEnv): string {
+  if (env.TREASURY_SECRET) return env.TREASURY_SECRET;
+  const file = env.TREASURY_SECRET_FILE?.trim();
+  if (!file) throw new TreasuryKeyError("MISSING_SECRET", "TREASURY_SECRET (or TREASURY_SECRET_FILE) is not configured");
+  let raw: string;
+  try {
+    raw = readFileSync(file, "utf8");
+  } catch (err) {
+    throw new TreasuryKeyError("MISSING_SECRET", `TREASURY_SECRET_FILE could not be read (${(err as NodeJS.ErrnoException).code ?? "error"})`);
+  }
+  if (!raw.trim()) throw new TreasuryKeyError("MISSING_SECRET", "TREASURY_SECRET_FILE is empty");
+  return raw;
+}
+
 /** Loads (once) the treasury signer. Throws outside the blockchain service. */
 export function loadTreasurySigner(env: NodeJS.ProcessEnv = process.env): Promise<KeyPairSigner> {
   assertBlockchainServiceRole(env);
-  const raw = env.TREASURY_SECRET;
-  if (!raw) throw new TreasuryKeyError("MISSING_SECRET", "TREASURY_SECRET is not configured");
+  const raw = readTreasurySecret(env);
   cached ??= (async () => {
     const bytes = parseSecretKey(raw);
     try {

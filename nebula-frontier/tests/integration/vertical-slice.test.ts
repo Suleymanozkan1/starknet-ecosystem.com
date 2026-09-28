@@ -25,7 +25,7 @@ import { RoomName } from "@nebula/shared";
 import { getBalance, post, system, userWallet, verifyLedgerIntegrity, type Db } from "@nebula/database";
 import { bootstrapTreasury } from "@nebula/economy";
 import { createIsolatedDb } from "@nebula/economy/testing";
-import { createMockSolanaRpc } from "@nebula/blockchain";
+import { createMockSolanaRpc } from "@nebula/blockchain/testing";
 import { isPvpAllowedAt } from "@nebula/game-core";
 import { buildApp } from "../../apps/api/src/app.js";
 import { loadConfig } from "../../apps/game-server/src/config.js";

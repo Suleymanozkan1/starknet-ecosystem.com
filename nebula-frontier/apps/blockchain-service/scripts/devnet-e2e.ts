@@ -21,7 +21,6 @@ import { Currency, LedgerAccountType } from "@nebula/shared";
 import { createDb, getBalance, post, system, userWallet, verifyLedgerIntegrity, type Db } from "@nebula/database";
 import {
   buildAndSendPayout,
-  createMockSolanaRpc,
   createRpcFromEnv,
   explorerUrl,
   getSolanaNetwork,
@@ -66,6 +65,8 @@ export async function main(argv = process.argv): Promise<E2eResult> {
   if (mock) {
     treasury = await generateKeyPairSigner();
     player = await generateKeyPairSigner();
+    // Test-only mock RPC (no signature verification): loaded lazily and only in --mock mode.
+    const { createMockSolanaRpc } = await import("@nebula/blockchain/testing");
     rpc = createMockSolanaRpc({ balances: { [treasury.address]: 2n * SOL } }).rpc;
     db = await createIsolatedDb("e2e_mock", { truncate: true });
   } else {

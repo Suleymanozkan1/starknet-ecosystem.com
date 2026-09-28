@@ -1,5 +1,5 @@
 import { RiskLevel, CheatType } from "@nebula/shared";
-import type { Db, DbOrTx } from "@nebula/database";
+import { inSerializableTx, type Db, type DbOrTx } from "@nebula/database";
 import { loadEconomyConfig, type EconomyConfig, type RiskConfig } from "./config.js";
 import { toJson, DAY_MS } from "./util.js";
 
@@ -31,30 +31,34 @@ export async function recordRiskSignal(
 ): Promise<{ signalId: string; riskScore: number; riskLevel: RiskLevel; changed: boolean }> {
   const c = cfg ?? (await loadEconomyConfig(db));
   const score = Math.max(0, Math.min(100, Math.round(input.score)));
-  const sig = await db.riskSignal.create({
-    data: { userId: input.userId, type: String(input.type), score, details: toJson(input.details ?? {}), source: input.source }
-  });
-  const since = new Date(Date.now() - c.risk.windowDays * DAY_MS);
-  const agg = await db.riskSignal.aggregate({ where: { userId: input.userId, createdAt: { gte: since } }, _sum: { score: true } });
-  const riskScore = Math.min(100, agg._sum.score ?? 0);
-  const riskLevel = riskLevelForScore(riskScore, c.risk);
-  const user = await db.user.findUnique({ where: { id: input.userId }, select: { riskLevel: true } });
-  const changed = user?.riskLevel !== riskLevel;
-  await db.user.update({ where: { id: input.userId }, data: { riskScore, riskLevel } });
-  if (changed) {
-    await db.auditLog.create({
-      data: {
-        actorType: "SYSTEM",
-        action: "RISK_LEVEL_CHANGED",
-        targetType: "User",
-        targetId: input.userId,
-        oldValue: { riskLevel: user?.riskLevel ?? null },
-        newValue: { riskLevel, riskScore, trigger: String(input.type) },
-        reason: `Risk signal ${String(input.type)} from ${input.source} — manual review required for HIGH/CRITICAL`
-      }
+  // One SERIALIZABLE transaction (or the caller's): concurrent signals cannot both read the old
+  // level and let a stale, lower score overwrite a HIGH escalation.
+  return inSerializableTx(db, async (tx) => {
+    const sig = await tx.riskSignal.create({
+      data: { userId: input.userId, type: String(input.type), score, details: toJson(input.details ?? {}), source: input.source }
     });
-  }
-  return { signalId: sig.id, riskScore, riskLevel, changed };
+    const since = new Date(Date.now() - c.risk.windowDays * DAY_MS);
+    const agg = await tx.riskSignal.aggregate({ where: { userId: input.userId, createdAt: { gte: since } }, _sum: { score: true } });
+    const riskScore = Math.min(100, agg._sum.score ?? 0);
+    const riskLevel = riskLevelForScore(riskScore, c.risk);
+    const user = await tx.user.findUnique({ where: { id: input.userId }, select: { riskLevel: true } });
+    const changed = user?.riskLevel !== riskLevel;
+    await tx.user.update({ where: { id: input.userId }, data: { riskScore, riskLevel } });
+    if (changed) {
+      await tx.auditLog.create({
+        data: {
+          actorType: "SYSTEM",
+          action: "RISK_LEVEL_CHANGED",
+          targetType: "User",
+          targetId: input.userId,
+          oldValue: { riskLevel: user?.riskLevel ?? null },
+          newValue: { riskLevel, riskScore, trigger: String(input.type) },
+          reason: `Risk signal ${String(input.type)} from ${input.source} — manual review required for HIGH/CRITICAL`
+        }
+      });
+    }
+    return { signalId: sig.id, riskScore, riskLevel, changed };
+  });
 }
 
 /** Coefficient of variation of intervals — scripted farming tends to be metronome-regular. */

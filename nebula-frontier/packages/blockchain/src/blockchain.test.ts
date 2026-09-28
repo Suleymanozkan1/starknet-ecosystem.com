@@ -1,11 +1,15 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
 import { generateKeyPairSigner, getBase58Decoder, signBytes, type KeyPairSigner } from "@solana/kit";
 import {
   buildLoginMessage,
-  createMockSolanaRpc,
   encodeMessage,
   explorerUrl,
   findPayoutByMemo,
+  findPayoutsByMemo,
+  verifyPayoutTransaction,
   loadTreasurySigner,
   parseSecretKey,
   resetTreasurySignerCache,
@@ -16,6 +20,7 @@ import {
   buildMintNftInstructions,
   exportKeyPairBytes
 } from "./index.js";
+import { createMockSolanaRpc } from "./testing.js";
 
 const SOL = 1_000_000_000n;
 
@@ -45,12 +50,42 @@ describe("treasury key guard", () => {
     const signer = await loadTreasurySigner({ TREASURY_SECRET: secret, SERVICE_ROLE: "blockchain", TREASURY_PUBLIC_KEY: kp.address });
     expect(signer.address).toBe(kp.address);
     resetTreasurySignerCache();
+    let thrown: unknown;
     try {
       parseSecretKey("[1,2,3]");
     } catch (e) {
-      expect(String((e as Error).message)).not.toContain("1,2,3");
+      thrown = e;
     }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toMatch(/64 bytes/);
+    expect((thrown as Error).message).not.toContain("1,2,3");
     expect(parseSecretKey(getBase58Decoder().decode(bytes))).toEqual(bytes);
+  });
+
+  it("loads the secret from TREASURY_SECRET_FILE without echoing it", async () => {
+    const kp = await generateKeyPairSigner(true);
+    const secret = JSON.stringify(Array.from(await exportKeyPairBytes(kp.keyPair)));
+    const dir = mkdtempSync(join(tmpdir(), "nf-key-"));
+    try {
+      const file = join(dir, "treasury.json");
+      writeFileSync(file, secret, { mode: 0o600 });
+      resetTreasurySignerCache();
+      expect(() => loadTreasurySigner({ TREASURY_SECRET_FILE: file, SERVICE_ROLE: "api" })).toThrow(/blockchain-service/);
+      const signer = await loadTreasurySigner({ TREASURY_SECRET_FILE: file, SERVICE_ROLE: "blockchain", TREASURY_PUBLIC_KEY: kp.address });
+      expect(signer.address).toBe(kp.address);
+      resetTreasurySignerCache();
+      let thrown: unknown;
+      try {
+        loadTreasurySigner({ TREASURY_SECRET_FILE: join(dir, "missing.json"), SERVICE_ROLE: "blockchain" });
+      } catch (e) {
+        thrown = e;
+      }
+      expect((thrown as Error).message).toMatch(/TREASURY_SECRET_FILE could not be read/);
+      expect(() => loadTreasurySigner({ SERVICE_ROLE: "blockchain" })).toThrow(/not configured/);
+    } finally {
+      resetTreasurySignerCache();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -116,6 +151,13 @@ describe("verifyDepositTransaction (mock RPC)", () => {
     const found = await findPayoutByMemo(rpc, treasury.address, "nebula:wd:xyz");
     expect(found?.signature).toBe(out.signature);
     expect(await findPayoutByMemo(rpc, treasury.address, "nebula:wd:none")).toBeNull();
+    // A memo match alone is not a payout: this one is inbound (player → treasury).
+    const payout = { treasury: treasury.address, destination: player.address, amount: 1000n, memo: "nebula:wd:xyz", network: "devnet" as const };
+    expect(await verifyPayoutTransaction(rpc, { ...payout, signature: out.signature })).toMatchObject({ ok: false, retryable: false });
+    const real = await sendSolWithMemo({ rpc, signer: treasury, destination: player.address, amount: 1000n, memo: "nebula:wd:xyz" });
+    expect(await verifyPayoutTransaction(rpc, { ...payout, signature: real.signature })).toMatchObject({ ok: true, amount: 1000n });
+    expect(await verifyPayoutTransaction(rpc, { ...payout, amount: 999n, signature: real.signature })).toMatchObject({ ok: false, reason: "AMOUNT_MISMATCH" });
+    expect((await findPayoutsByMemo(rpc, treasury.address, "nebula:wd:xyz")).map((c) => c.signature).sort()).toEqual([out.signature, real.signature].sort());
   });
 });
 

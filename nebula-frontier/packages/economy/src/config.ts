@@ -1,6 +1,6 @@
 import { ECONOMY } from "@nebula/config";
 import type { EconomyConfigDoc, RiskLevel } from "@nebula/shared";
-import type { Db, DbOrTx } from "@nebula/database";
+import { withSerializableTx, type Db, type DbOrTx } from "@nebula/database";
 
 /** Risk thresholds & bot heuristics (economy.json "risk"). */
 export interface RiskConfig {
@@ -45,16 +45,20 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+/** Path segments that would reach Object.prototype (prototype pollution). */
+const FORBIDDEN_PATH_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
 function getPath(obj: unknown, path: string[]): unknown {
   let cur: unknown = obj;
   for (const p of path) {
-    if (!isPlainObject(cur)) return undefined;
+    if (!isPlainObject(cur) || !Object.hasOwn(cur, p)) return undefined;
     cur = cur[p];
   }
   return cur;
 }
 
 function setPath(obj: Record<string, unknown>, path: string[], value: unknown): void {
+  if (path.some((segment) => FORBIDDEN_PATH_SEGMENTS.has(segment))) return;
   let cur: Record<string, unknown> = obj;
   for (let i = 0; i < path.length - 1; i++) {
     const k = path[i] as string;
@@ -69,6 +73,7 @@ function setPath(obj: Record<string, unknown>, path: string[], value: unknown): 
 function deepMerge(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...a };
   for (const [k, v] of Object.entries(b)) {
+    if (FORBIDDEN_PATH_SEGMENTS.has(k)) continue;
     out[k] = isPlainObject(out[k]) && isPlainObject(v) ? deepMerge(out[k] as Record<string, unknown>, v) : v;
   }
   return out;
@@ -137,7 +142,9 @@ export async function loadEconomyConfig(db: DbOrTx): Promise<EconomyConfig> {
 /** Keys admins may set: any existing leaf/subtree of the defaults (plus runtime.*). */
 export function isKnownConfigKey(key: string): boolean {
   if (!/^[A-Za-z0-9_.]+$/.test(key)) return false;
-  return getPath(defaultEconomyConfig(), key.split(".")) !== undefined;
+  const path = key.split(".");
+  if (path.some((segment) => FORBIDDEN_PATH_SEGMENTS.has(segment))) return false;
+  return getPath(defaultEconomyConfig(), path) !== undefined;
 }
 
 function sameShape(a: unknown, b: unknown): boolean {
@@ -166,7 +173,9 @@ export async function updateEconomyConfig(
   const defVal = getPath(defaults, key.split("."));
   if (!sameShape(defVal, value)) throw new EconomyConfigError([`Value for "${key}" has the wrong type`]);
 
-  return db.$transaction(async (tx) => {
+  // SERIALIZABLE: two concurrent updates (e.g. raising two allocation buckets) must not both
+  // validate against the same old rows and together produce an invalid config.
+  return withSerializableTx(db, async (tx) => {
     const rows = await tx.economyConfig.findMany({ select: { key: true, value: true } });
     const current = applyOverrides(rows);
     const oldValue = getPath(current, key.split("."));

@@ -12,7 +12,8 @@ import { post, system, userWallet, getBalance, type Db } from "../../packages/da
 import { Currency, LedgerAccountType } from "../../packages/shared/src/index.js";
 import { bootstrapTreasury, grantCryptoReward } from "../../packages/economy/src/index.js";
 import { createIsolatedDb } from "../../packages/economy/src/testing.js";
-import { sendSolWithMemo, startMockRpcServer, type MockChainState, type SolanaRpcClient } from "../../packages/blockchain/src/index.js";
+import { sendSolWithMemo, type SolanaRpcClient } from "../../packages/blockchain/src/index.js";
+import { startMockRpcServer, type MockChainState } from "../../packages/blockchain/src/testing.js";
 import { key, signMessage, walletLogin, type Session } from "./helpers.js";
 
 const SOL = 1_000_000_000n;
@@ -97,12 +98,23 @@ describe("deposits", () => {
     expect(dup.statusCode).toBe(409);
     expect(code(dup)).toBe("DUPLICATE_SIGNATURE");
 
-    // fake: right amount/recipient but wrong memo → rejected, deposit REJECTED
+    // fake: right amount/recipient but wrong memo → rejected attempt, scored as suspicious, but the
+    // memo-bound deposit stays creditable (the failure belongs to the signature, not the deposit)
     const fake = await sendSolWithMemo({ rpc: chain.rpc, signer, destination: treasury.address, amount: 50_000_000n, memo: "not-the-memo" });
     const bad = await s.req("POST", "/api/wallet/deposit/verify", { depositId: p2.depositId, signature: fake.signature });
     expect(bad.statusCode).toBe(400);
     expect(code(bad)).toBe("MEMO_MISMATCH");
-    expect((await db.deposit.findUniqueOrThrow({ where: { id: p2.depositId } })).status).toBe("REJECTED");
+    const afterBad = await db.deposit.findUniqueOrThrow({ where: { id: p2.depositId } });
+    expect(afterBad.status).toBe("PREPARED");
+    expect(afterBad.failureReason).toMatch(/^MEMO_MISMATCH/);
+    expect(await db.riskSignal.count({ where: { userId: s.userId, type: "FAKE_TRANSACTION", source: "deposit" } })).toBeGreaterThan(0);
+    // a later genuine payment carrying the right memo is still credited
+    const real = await sendSolWithMemo({ rpc: chain.rpc, signer, destination: treasury.address, amount: 50_000_000n, memo: p2.memo });
+    const ok = await s.req("POST", "/api/wallet/deposit/verify", { depositId: p2.depositId, signature: real.signature });
+    expect(ok.statusCode, ok.body).toBe(200);
+    const credited = await db.deposit.findUniqueOrThrow({ where: { id: p2.depositId } });
+    expect(credited.status).toBe("CREDITED");
+    expect(credited.failureReason).toBeNull();
 
     // fake: wrong recipient
     const p3 = (await s.req("POST", "/api/wallet/deposit/prepare", { amount: "10000000", purpose: "BALANCE", idempotencyKey: key() })).json() as { depositId: string; memo: string };

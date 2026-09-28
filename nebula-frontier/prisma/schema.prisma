@@ -1139,6 +1139,9 @@ model Deposit {
   amount         BigInt
   memo           String    @unique
   purpose        String    @default("BALANCE")
+  /// GEMS deposits: pack and gem count locked at prepare time (credit never re-derives from mutable shop config).
+  productId      String?
+  gems           Int?
   status         String    @default("PREPARED")
   signature      String?   @unique
   slot           BigInt?

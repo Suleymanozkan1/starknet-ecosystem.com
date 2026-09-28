@@ -5,7 +5,8 @@ import { Currency, LedgerAccountType } from "@nebula/shared";
 import { getBalance, post, system, userWallet, verifyLedgerIntegrity, type Db } from "@nebula/database";
 import { bootstrapTreasury, createWithdrawal, withdrawalMemo } from "@nebula/economy";
 import { createIsolatedDb, createTestUser } from "@nebula/economy/testing";
-import { createMockSolanaRpc, sendSolWithMemo, type MockChainState, type SolanaRpcClient } from "@nebula/blockchain";
+import { sendSolWithMemo, type SolanaRpcClient } from "@nebula/blockchain";
+import { createMockSolanaRpc, type MockChainState } from "@nebula/blockchain/testing";
 import { processWithdrawal, type ProcessorDeps } from "./processor.js";
 import { createWithdrawalQueue, createWithdrawalWorker, enqueueWithdrawal, recoverQueue } from "./queue.js";
 
@@ -144,6 +145,26 @@ describe("withdrawal payout pipeline", () => {
     await sendSolWithMemo({ rpc, signer: treasury, destination: w.wallet, amount: row.final, memo: withdrawalMemo(w.id) });
     expect(await runUntilDone(deps(rpc), w.id)).toBe("COMPLETED");
     expect(transfersTo(state, w.wallet).length).toBe(1);
+  });
+
+  it("never adopts a spoofed inbound tx carrying the withdrawal memo; pays out for real and flags it", async () => {
+    const { rpc, state } = chain();
+    const w = await newWithdrawal();
+    const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    // Attacker (knows the withdrawal id → memo) sends the treasury a tx carrying the payout memo.
+    const attacker = await generateKeyPairSigner();
+    state.balances.set(attacker.address, SOL);
+    const spoof = await sendSolWithMemo({ rpc, signer: attacker, destination: treasury.address, amount: row.final, memo: withdrawalMemo(w.id) });
+    expect(spoof.status).toBe("CONFIRMED");
+    expect(await runUntilDone(deps(rpc), w.id)).toBe("COMPLETED");
+    const done = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    expect(done.signature).not.toBe(spoof.signature);
+    const payouts = transfersTo(state, w.wallet);
+    expect(payouts.length).toBe(1);
+    expect(payouts[0]?.transfers.some((t) => t.source === treasury.address && t.destination === w.wallet)).toBe(true);
+    expect(state.balances.get(w.wallet)).toBe(row.final);
+    const signals = await db.riskSignal.findMany({ where: { userId: w.userId, type: "FAKE_TRANSACTION", source: "withdrawal" } });
+    expect(signals.length).toBeGreaterThan(0);
   });
 
   it("max attempts → FAILED with a compensating refund (never COMPLETED)", async () => {

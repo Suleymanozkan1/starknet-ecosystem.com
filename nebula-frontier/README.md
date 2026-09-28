@@ -39,7 +39,7 @@ All variables are documented in [`.env.example`](.env.example). At minimum:
 | `GAME_TICKET_SECRET(S)` | Single-use game-server admission tickets |
 | `INTERNAL_SERVICE_TOKEN` | API ↔ blockchain-service / game-server internal calls |
 | `SOLANA_NETWORK=devnet`, `SOLANA_RPC_URL` | Devnet only |
-| `TREASURY_PUBLIC_KEY`, `TREASURY_SECRET` | Treasury (the secret is used **only** by `apps/blockchain-service`, with `SERVICE_ROLE=blockchain`) |
+| `TREASURY_PUBLIC_KEY`, `TREASURY_SECRET` / `TREASURY_SECRET_FILE` | Treasury (the secret is used **only** by `apps/blockchain-service`, with `SERVICE_ROLE=blockchain`) |
 
 Never commit `.env` or `.secrets/`; both are git-ignored.
 
