@@ -19,8 +19,9 @@ function base(env: Env) {
   };
 }
 
-export function setAuthCookies(reply: FastifyReply, env: Env, accessToken: string, refreshToken: string): string {
-  const csrf = randomToken(24);
+/** Sets the three auth cookies. An existing well-formed CSRF token is kept (multi-tab friendly). */
+export function setAuthCookies(reply: FastifyReply, env: Env, accessToken: string, refreshToken: string, existingCsrf?: string): string {
+  const csrf = existingCsrf && /^[A-Za-z0-9_-]{32}$/.test(existingCsrf) ? existingCsrf : randomToken(24);
   reply.setCookie(COOKIE_ACCESS, accessToken, { ...base(env), httpOnly: true, path: "/", maxAge: ACCESS_TOKEN_TTL_SEC });
   reply.setCookie(COOKIE_REFRESH, refreshToken, { ...base(env), httpOnly: true, path: "/api/auth", maxAge: REFRESH_TOKEN_TTL_SEC });
   reply.setCookie(COOKIE_CSRF, csrf, { ...base(env), httpOnly: false, path: "/", maxAge: REFRESH_TOKEN_TTL_SEC });
