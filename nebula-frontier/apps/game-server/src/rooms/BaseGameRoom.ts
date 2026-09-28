@@ -369,7 +369,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
 
   override onUncaughtException(err: Error, methodName: string): void {
     // Rejected joins (bad/replayed ticket, level, entry cost) surface here too: expected, not errors.
-    if (methodName === "onAuth" || methodName === "onJoin") {
+    if ((methodName === "onAuth" || methodName === "onJoin") && (err instanceof ServerError || err.cause instanceof ServerError)) {
       this.log.info({ reason: err.message, methodName }, "join rejected");
       return;
     }

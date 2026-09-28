@@ -1,0 +1,200 @@
+[
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHA",
+  "path": "nebula-frontier/apps/game-server/src/bots/behaviors.ts",
+  "line": 120,
+  "severity": "🟠 Major",
+  "title": "Put `Attack` before `Collect` for fighters.",
+  "prompt": "nebula-frontier/apps/game-server/src/bots/behaviors.ts at\nline 120:\nReorder the fighter behavior priority in the fighter entry so Attack runs before\nCollect, allowing fighters to choose combat actions before collection when both\napply."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHG",
+  "path": "nebula-frontier/apps/game-server/src/bots/cli.ts",
+  "line": 21,
+  "severity": "🟠 Major",
+  "title": "Reject missing and invalid flag operands.",
+  "prompt": "nebula-frontier/apps/game-server/src/bots/cli.ts around lines\n19 - 21:\nUpdate the `get` helper and the `--duration`/`--count` parsing so a present flag\nwith a missing operand or another flag as its operand is rejected, while an\nabsent flag may use its default. Validate that supplied values are finite and\nwithin the supported bounds before starting bots or issuing the database query."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHK",
+  "path": "nebula-frontier/apps/game-server/src/bots/cli.ts",
+  "line": 85,
+  "severity": "🟠 Major",
+  "title": "Clear the input interval when the room leaves.",
+  "prompt": "nebula-frontier/apps/game-server/src/bots/cli.ts at line 85:\nUpdate the `room.onLeave` handler in `runBot` to clear the input interval before\nresolving, matching the cleanup performed in the timed-stop path so no interval\ncallbacks run after the room leaves."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHO",
+  "path": "nebula-frontier/apps/game-server/src/config.ts",
+  "line": 37,
+  "severity": "🟠 Major",
+  "title": "/node_modules/",
+  "prompt": "nebula-frontier/apps/game-server/src/config.ts at line 37:\nUpdate loadConfig in config.ts to fail during startup when NODE_ENV is\nproduction and REDIS_URL is missing; preserve the existing optional Redis\nconfiguration for non-production environments."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHY",
+  "path": "nebula-frontier/apps/game-server/src/game-server.test.ts",
+  "line": 294,
+  "severity": "🔵 Trivial",
+  "title": "The anti-farming step asserts nothing.",
+  "prompt": "nebula-frontier/apps/game-server/src/game-server.test.ts\naround lines 292 - 294:\nUpdate the anti-farming step in the test around the respawn call to perform a\nsecond kill of the same victim within the window, then assert that lb.score\nremains 1. If the test cannot verify that behavior, remove the misleading\nanti-farming comment."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHb",
+  "path": "nebula-frontier/apps/game-server/src/persistence/player.ts",
+  "line": 88,
+  "severity": "🟡 Minor",
+  "title": "Move the starter-kit existence check inside the transaction and lock the user row.",
+  "prompt": "nebula-frontier/apps/game-server/src/persistence/player.ts\naround lines 85 - 88:\nUpdate ensureStarterKit to lock the user row inside db.$transaction and check\nfor an existing ship again under that lock before creating starter data; an\noutside fast-path check may remain. Add userId to the inventoryItem.findMany\nfilter that uses originRef."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxHv",
+  "path": "nebula-frontier/apps/game-server/src/persistence/writer.ts",
+  "line": 198,
+  "severity": "🟠 Major",
+  "title": "Do not consume ammo from locked (escrowed) stacks. Make the decrement atomic.",
+  "prompt": "nebula-frontier/apps/game-server/src/persistence/writer.ts\naround lines 191 - 198:\nUpdate the ammo-consumption loop over d.ammo to exclude escrowed stacks and make\nconsumption conditional: filter the quantity lookup by lockedBy being null, then\nuse conditional delete and update operations guarded by userId, lockedBy being\nnull, and sufficient quantity. Avoid applying a decrement or deletion when the\nrow no longer matches those conditions."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxH7",
+  "path": "nebula-frontier/apps/game-server/src/persistence/writer.ts",
+  "line": 302,
+  "severity": "🟡 Minor",
+  "title": "Handle duplicate ledger postings explicitly.",
+  "prompt": "nebula-frontier/apps/game-server/src/persistence/writer.ts\naround lines 286 - 302:\nUpdate chargeCredits to inspect the result from post and return zero when the\nposting is a duplicate; return the charged amount only when a new posting is\ncreated."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIG",
+  "path": "nebula-frontier/apps/game-server/src/protocol/messages.ts",
+  "line": 63,
+  "severity": "🟡 Minor",
+  "title": "Also strip Unicode tag characters and other invisible format characters.",
+  "prompt": "nebula-frontier/apps/game-server/src/protocol/messages.ts\naround lines 61 - 63:\nExtend isInvisible in messages.ts to recognize the listed invisible code points\nand ranges, including Unicode tag characters, so existing message sanitization\nremoves them. Keep the change scoped to this predicate and preserve its current\nchecks."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIP",
+  "path": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts",
+  "line": 72,
+  "severity": "🟡 Minor",
+  "title": "Make gate-entry idempotency cover resource spending.",
+  "prompt": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts around\nlines 67 - 72:\nUpdate the gate-entry transaction in beforePlayerJoin to use the idempotency\nresult from chargeCredits and skip spendResources when the entry is a duplicate.\nFor zero-credit entries, create a unique gate-entry claim before spending\nresources so concurrent joins cannot spend them more than once."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIX",
+  "path": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts",
+  "line": 92,
+  "severity": "🟠 Major",
+  "title": "Fire-and-forget promises without `.catch` can crash the game-server process.",
+  "prompt": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts at\nline 92:\nUpdate GateRoom’s joinMatch calls to persist only the joining player and attach\nrejection handlers that log failures; update the onPlayerJoined path\naccordingly. Attach a rejection handler to the completeRun call, and handle each\ngrantBundle failure inside completeRun so remaining rewards, finishMatch, and\nlock() still run."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIc",
+  "path": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts",
+  "line": 200,
+  "severity": "🟠 Major",
+  "title": "Reachability:",
+  "prompt": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts around\nlines 193 - 200:\nAdd server-side admission and payout controls to the raid flow around GateRoom’s\nraidSize setup and RaidRoom.beforePlayerJoin: enforce a configured minimum\ncontributor count and an entry cost or daily limit, then scale down or deny\nrewards when fewer pilots participate than raidSize. Do not rely on\ncontributors.length alone to control raid size."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIf",
+  "path": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts",
+  "line": 221,
+  "severity": "🟡 Minor",
+  "title": "The `\"pending\"` sentinel can leak into persistence as a match id.",
+  "prompt": "nebula-frontier/apps/game-server/src/rooms/GateRoom.ts at\nline 221:\nUpdate the match-creation flow in GateRoom to track in-progress creation with a\nseparate creatingMatch boolean instead of assigning \"pending\" to matchId. Keep\nmatchId null until createMatch returns a real id, and ensure currentMatchId and\nthe crypto persistence call receive only a real match id or undefined."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIk",
+  "path": "nebula-frontier/apps/game-server/src/rooms/MatchRoom.ts",
+  "line": 183,
+  "severity": "🟡 Minor",
+  "title": "Leavers on the winning team gain rating.",
+  "prompt": "nebula-frontier/apps/game-server/src/rooms/MatchRoom.ts at\nline 183:\nUpdate the result mapping in MatchRoom to ensure leavers never receive a\npositive ratingDelta: clamp their delta to zero or below while preserving the\nexisting teamRatingDeltas result for players who did not leave. Keep the\nexisting won calculation, which already excludes leavers."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIp",
+  "path": "nebula-frontier/apps/game-server/src/services/rules.ts",
+  "line": 99,
+  "severity": "🟡 Minor",
+  "title": "Validate the `game.rules` and `game.tuning` overrides with Zod.",
+  "prompt": "nebula-frontier/apps/game-server/src/services/rules.ts around\nlines 85 - 99:\nUpdate loadRules to validate the game.rules and game.tuning database overrides\nwith strict partial Zod schemas before merging them with defaults; reuse an\nexported SimTuning schema if available. On validation failure, log a warning and\nuse the corresponding defaults rather than applying invalid values."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxIw",
+  "path": "nebula-frontier/packages/game-core/src/combat.ts",
+  "line": 212,
+  "severity": "🟡 Minor",
+  "title": "Anchor the next shot to `readyAt` to fix tick-quantization drift.",
+  "prompt": "nebula-frontier/packages/game-core/src/combat.ts around lines\n209 - 212:\nUpdate the next-shot calculation in the firing path to chain from rt.readyAt\nduring continuous fire, avoiding tick-quantization drift; after idling for at\nleast one interval, base the next shot on now so missed shots are not banked.\nPreserve handling of non-finite intervals."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxI3",
+  "path": "nebula-frontier/packages/game-core/src/matchmaking.ts",
+  "line": 110,
+  "severity": "🟡 Minor",
+  "title": "Build parties before you filter by latency and region. The current order can split parties.",
+  "prompt": "nebula-frontier/packages/game-core/src/matchmaking.ts around\nlines 94 - 110:\nIn the formMatches flow, group tickets into party or solo units before applying\nlatency and region filters; reject an entire unit if any member exceeds\nrules.maxLatencyMs, and assign each party to one region so its members cannot be\nsplit across matches. Keep the existing unit-building logic aligned with this\ngrouping."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxI9",
+  "path": "nebula-frontier/packages/game-core/src/progression.ts",
+  "line": 101,
+  "severity": "🟠 Major",
+  "title": "Money values in game-core are JavaScript `number`, not integer `bigint` base units.",
+  "prompt": "nebula-frontier/packages/game-core/src/progression.ts around\nlines 80 - 101:\nConvert game-core money costs to integer base-unit bigints: add one shared\ntoMoney() helper that applies a single rounding rule and rejects non-finite or\nnegative values, then use it for UpgradeCost.credits and gems in upgradeCost and\nreturn bigint from deathRepairCost and repairCost. In\nnebula-frontier/packages/game-core/src/progression.ts lines 80-101, update\nUpgradeCost and upgradeCost; lines 111-118, update deathRepairCost and\nrepairCost. In nebula-frontier/packages/game-core/src/crafting.ts lines 8-14,\nchange CrafterState.credits to bigint; lines 21-25, calculate\ncraftCost().credits as BigInt(bp.credits) multiplied by BigInt(q)."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxJB",
+  "path": "nebula-frontier/packages/game-core/src/stats.ts",
+  "line": 330,
+  "severity": "🟡 Minor",
+  "title": "Compute `gearScore` from the slot-limited loadout, not from the raw `input`.",
+  "prompt": "nebula-frontier/packages/game-core/src/stats.ts around lines\n320 - 330:\nUpdate the gearScore call in computeStats to use the clamped shipLevel and\nslot-limited, slot-type-filtered lasers, missiles, generators, modules, and\ndrones already used for stat calculation. Keep gearScore’s scoring formula\nunchanged so maxGearSpreadRatio uses the same equipped loadout as computeStats."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxJJ",
+  "path": "nebula-frontier/packages/game-core/src/tuning.ts",
+  "line": 98,
+  "severity": "🟠 Major",
+  "title": "Validate tuning overrides before you merge them into the simulation.",
+  "prompt": "nebula-frontier/packages/game-core/src/tuning.ts around lines\n90 - 98:\nUpdate mergeTuning to validate overrides before merging, rejecting invalid\nvalues and unknown cap keys and falling back to defaults when validation fails.\nReturn a fresh tuning object on the no-override path so callers cannot mutate\nthe shared DEFAULT_TUNING; preserve the existing nested cap merging for valid\noverrides."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxJP",
+  "path": "nebula-frontier/packages/game-core/src/zones.ts",
+  "line": 37,
+  "severity": "🟡 Minor",
+  "title": "Define `PIRATE` PvP semantics and cover the non-PvP case.",
+  "prompt": "nebula-frontier/packages/game-core/src/zones.ts around lines\n32 - 37:\nUpdate isPvpAllowedAt so a PIRATE zone on a non-PvP map does not independently\nenable PvP; remove PIRATE from the zone-based allow condition while preserving\nthe existing map.pvp, PVP, HIGH_RISK, and SAFE behavior. Add a regression test\ncovering the non-PvP pirate-zone case."
+ },
+ {
+  "id": null,
+  "thread": "PRRT_kwDOG88e186mxxJW",
+  "path": "nebula-frontier/packages/game-core/tsconfig.json",
+  "line": 4,
+  "severity": "🔵 Trivial",
+  "title": "Exclude test files from the `build`/`typecheck` program.",
+  "prompt": "nebula-frontier/packages/game-core/tsconfig.json at line 4:\nUpdate the base tsconfig include/exclude configuration so `build` and\n`typecheck` do not compile test files matched by `include: [\"src\"]`; exclude\n`*.test.ts` and `*.spec.ts` under `src`. Do not add a separate test config or\ndependency changes."
+ }
+]
