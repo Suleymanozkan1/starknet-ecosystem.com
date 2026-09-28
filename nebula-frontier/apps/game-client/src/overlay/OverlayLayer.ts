@@ -69,13 +69,21 @@ export class OverlayModel {
   }
 }
 
-interface FloatText { t: Phaser.GameObjects.Text; life: number; max: number; vx: number; vy: number; active: boolean }
+interface FloatText { t: Phaser.GameObjects.Text; life: number; max: number; ox: number; oy: number; vx: number; vy: number; mx: number; my: number; id: string; active: boolean }
+
+/**
+ * Map → screen projection supplied by the game (returns false when off-screen).
+ * When `followId` names a live entity, its current rendered position is used.
+ */
+export type Projector = (mx: number, my: number, followId: string, out: { x: number; y: number }) => boolean;
 
 const PLATE_POOL = 40;
 const FLOAT_POOL = 48;
 
 class OverlayScene extends Phaser.Scene {
   model!: OverlayModel;
+  project: Projector | null = null;
+  private readonly scr = { x: 0, y: 0 };
   private radarG!: Phaser.GameObjects.Graphics;
   private hudG!: Phaser.GameObjects.Graphics;
   private plateTexts: Phaser.GameObjects.Text[] = [];
@@ -98,11 +106,12 @@ class OverlayScene extends Phaser.Scene {
     for (let i = 0; i < FLOAT_POOL; i++) {
       const t = this.add.text(0, 0, "", { fontFamily: "Inter, system-ui, sans-serif", fontSize: "16px", fontStyle: "bold", color: "#ffffff", stroke: "#000000", strokeThickness: 4 });
       t.setOrigin(0.5, 0.5).setVisible(false);
-      this.floats.push({ t, life: 0, max: 1, vx: 0, vy: 0, active: false });
+      this.floats.push({ t, life: 0, max: 1, ox: 0, oy: 0, vx: 0, vy: 0, mx: 0, my: 0, id: "", active: false });
     }
   }
 
-  spawnText(sx: number, sy: number, text: string, color: string, size: number): void {
+  /** Spawn floating text anchored at map position (mx, my), with a screen-space pixel offset. */
+  spawnText(mx: number, my: number, text: string, color: string, size: number, offsetY = 0, followId = ""): void {
     let f = this.floats.find((x) => !x.active);
     if (!f) {
       // recycle the oldest
@@ -111,9 +120,14 @@ class OverlayScene extends Phaser.Scene {
     f.active = true;
     f.life = 0;
     f.max = 1.1;
+    f.mx = mx;
+    f.my = my;
+    f.id = followId;
+    f.ox = (Math.random() - 0.5) * 16;
+    f.oy = offsetY;
     f.vx = (Math.random() - 0.5) * 30;
     f.vy = -55 - Math.random() * 20;
-    f.t.setText(text).setColor(color).setFontSize(size).setPosition(sx, sy).setAlpha(1).setScale(1.25).setVisible(true);
+    f.t.setText(text).setColor(color).setFontSize(size).setAlpha(1).setScale(1.25).setVisible(false);
   }
 
   override update(_time: number, deltaMs: number): void {
@@ -132,9 +146,14 @@ class OverlayScene extends Phaser.Scene {
         f.t.setVisible(false);
         continue;
       }
-      f.t.x += f.vx * dt;
-      f.t.y += f.vy * dt;
+      f.ox += f.vx * dt;
+      f.oy += f.vy * dt;
       f.vy += 40 * dt;
+      if (!this.project || !this.project(f.mx, f.my, f.id, this.scr)) {
+        f.t.setVisible(false);
+        continue;
+      }
+      f.t.setVisible(true).setPosition(this.scr.x + f.ox, this.scr.y + f.oy);
       f.t.setAlpha(k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3);
       f.t.setScale(1 + Math.max(0, 0.25 - k));
     }
@@ -253,7 +272,8 @@ export class OverlayLayer {
   readonly model = new OverlayModel();
   private readonly game: Phaser.Game;
   private scene: OverlayScene | null = null;
-  private readonly pending: { sx: number; sy: number; text: string; color: string; size: number }[] = [];
+  private readonly pending: { mx: number; my: number; text: string; color: string; size: number; offsetY: number; followId: string }[] = [];
+  private projector: Projector | null = null;
   private readonly parent: HTMLElement;
 
   constructor(parent: HTMLElement, width: number, height: number) {
@@ -275,7 +295,8 @@ export class OverlayLayer {
       callbacks: {
         postBoot: () => {
           this.scene = scene;
-          for (const p of this.pending) scene.spawnText(p.sx, p.sy, p.text, p.color, p.size);
+          scene.project = this.projector;
+          for (const p of this.pending) scene.spawnText(p.mx, p.my, p.text, p.color, p.size, p.offsetY, p.followId);
           this.pending.length = 0;
           const c = this.game.canvas;
           c.style.pointerEvents = "none";
@@ -286,9 +307,15 @@ export class OverlayLayer {
     });
   }
 
-  floatText(sx: number, sy: number, text: string, color: string, size = 16): void {
-    if (this.scene) this.scene.spawnText(sx, sy, text, color, size);
-    else if (this.pending.length < 16) this.pending.push({ sx, sy, text, color, size });
+  setProjector(p: Projector): void {
+    this.projector = p;
+    if (this.scene) this.scene.project = p;
+  }
+
+  /** Floating combat text anchored at a MAP position (follows the camera). */
+  floatText(mx: number, my: number, text: string, color: string, size = 16, offsetY = 0, followId = ""): void {
+    if (this.scene) this.scene.spawnText(mx, my, text, color, size, offsetY, followId);
+    else if (this.pending.length < 16) this.pending.push({ mx, my, text, color, size, offsetY, followId });
   }
 
   resize(w: number, h: number): void {

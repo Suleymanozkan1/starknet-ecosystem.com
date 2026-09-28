@@ -26,6 +26,9 @@ export class FollowCamera {
   private curDistance: number;
   private readonly focus = new Vector3();
   private readonly desired = new Vector3();
+  /** The followed entity position (leash anchor). */
+  private readonly anchor = new Vector3();
+  private hasAnchor = false;
   private readonly vel = new Vector3();
   private readonly shakeOffset = new Vector3();
   private trauma = 0;
@@ -91,19 +94,30 @@ export class FollowCamera {
   follow(x: number, z: number, vx = 0, vz = 0): void {
     if (this.frozen) return;
     const look = 0.35;
-    this.desired.set(x + vx * look, 0, z + vz * look);
+    let ox = vx * look, oz = vz * look;
     if (this.hasAim) {
-      this.desired.x += (this.aim.x - x) * 0.12;
-      this.desired.z += (this.aim.z - z) * 0.12;
+      ox += (this.aim.x - x) * 0.1;
+      oz += (this.aim.z - z) * 0.1;
     }
     if (this.hasTarget) {
-      this.desired.x += (this.targetPos.x - x) * 0.25;
-      this.desired.z += (this.targetPos.z - z) * 0.25;
+      ox += (this.targetPos.x - x) * 0.15;
+      oz += (this.targetPos.z - z) * 0.15;
     }
     if (this.boss) {
-      this.desired.x += (this.boss.x - x) * 0.4 * this.cinematic;
-      this.desired.z += (this.boss.z - z) * 0.4 * this.cinematic;
+      ox += (this.boss.x - x) * 0.35 * this.cinematic;
+      oz += (this.boss.z - z) * 0.35 * this.cinematic;
     }
+    // never push the followed ship out of the view: clamp the offset to a
+    // fraction of the visible ground footprint (vertical extent is the limit)
+    const maxOff = this.curDistance * Math.tan((this.camera.fov * Math.PI) / 360) * 0.55;
+    const off = Math.hypot(ox, oz);
+    if (off > maxOff) {
+      ox *= maxOff / off;
+      oz *= maxOff / off;
+    }
+    this.desired.set(x + ox, 0, z + oz);
+    this.anchor.set(x, 0, z);
+    this.hasAnchor = true;
   }
 
   /** Instantly jump to the desired focus (after spawn / map change). */
@@ -123,7 +137,7 @@ export class FollowCamera {
     this.time += dt;
     const d = Math.min(0.1, Math.max(0, dt));
     // critically damped spring toward desired
-    const omega = 6;
+    const omega = 8;
     const x = omega * d;
     const exp = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
     const cx = this.focus.x - this.desired.x, cz = this.focus.z - this.desired.z;
@@ -132,6 +146,16 @@ export class FollowCamera {
     this.vel.z = (this.vel.z - omega * tz) * exp;
     this.focus.x = this.desired.x + (cx + tx) * exp;
     this.focus.z = this.desired.z + (cz + tz) * exp;
+    // leash: the followed ship must stay well inside the view whatever the spring lag
+    if (this.hasAnchor && !this.frozen) {
+      const leash = this.curDistance * Math.tan((this.camera.fov * Math.PI) / 360) * 0.6;
+      const lx = this.focus.x - this.anchor.x, lz = this.focus.z - this.anchor.z;
+      const l = Math.hypot(lx, lz);
+      if (l > leash) {
+        this.focus.x = this.anchor.x + (lx / l) * leash;
+        this.focus.z = this.anchor.z + (lz / l) * leash;
+      }
+    }
 
     this.combatBlend += ((this.combat ? 1 : 0) - this.combatBlend) * Math.min(1, d * 2);
     this.cinematic += ((this.boss ? 1 : 0) - this.cinematic) * Math.min(1, d * 1.2);
@@ -140,7 +164,7 @@ export class FollowCamera {
     // auto-frame the locked target so both stay on screen
     if (this.hasTarget) {
       const sep = Math.hypot(this.targetPos.x - this.desired.x, this.targetPos.z - this.desired.z);
-      want = Math.max(want, sep * 1.35);
+      want = Math.min(Math.max(want, sep * 1.8), this.distance * 1.5);
     }
     if (this.boss) want = Math.max(want, (this.boss.r * 3.2 + 30) * this.cinematic + want * (1 - this.cinematic));
     want = Math.min(this.maxDistance * 1.4, want);

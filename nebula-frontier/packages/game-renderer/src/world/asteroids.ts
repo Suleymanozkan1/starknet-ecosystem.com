@@ -46,11 +46,11 @@ export function createAsteroidGeometry(detail: number, seed: number): BufferGeom
     const cz = (p2.getZ(f) + p2.getZ(f + 1) + p2.getZ(f + 2)) / 3;
     const vein = fbm3(cx * 3.2, cy * 3.2, cz * 3.2 + seed, 3, seed + 11) > 0.64;
     const shade = 0.035 + fbm3(cx * 2, cy * 2, cz * 2, 2, seed + 5) * 0.05;
-    const v = vein ? 1 : shade;
+    const v = vein ? 0.85 : shade;
     for (let k = 0; k < 3; k++) {
       colors[(f + k) * 3] = v;
       colors[(f + k) * 3 + 1] = v;
-      colors[(f + k) * 3 + 2] = vein ? 1 : v * 1.05;
+      colors[(f + k) * 3 + 2] = vein ? 0.85 : v * 1.05;
     }
   }
   g.setAttribute("color", new BufferAttribute(colors, 3));
@@ -87,7 +87,7 @@ export class AsteroidLayer {
     this.material.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <emissivemap_fragment>",
-        "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += max(vColor.rgb - vec3(0.2), vec3(0.0)) * 1.3;\n#endif",
+        "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n float veinMask = step(0.25, max(vColor.r, max(vColor.g, vColor.b)));\n totalEmissiveRadiance += vColor.rgb * veinMask * 0.75;\n#endif",
       );
     };
     for (let v = 0; v < variants; v++) {

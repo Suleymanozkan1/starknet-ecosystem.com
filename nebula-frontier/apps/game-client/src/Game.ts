@@ -101,6 +101,10 @@ export class Game {
     this.world.resize(rect.width, rect.height);
     this.overlay = new OverlayLayer(this.overlayHost, rect.width, rect.height);
     this.overlay.model.compact = !!this.opts.isMobile;
+    this.overlay.setProjector((mx, my, followId, out) => {
+      const r = followId ? this.renderInputs.get(followId) : undefined;
+      return r ? this.world.mapToScreen(r.x, r.y, out, 1.5) : this.world.mapToScreen(mx, my, out, 1.5);
+    });
     this.emit({ type: "graphics", tier: this.tier, backend: this.world.backend.kind });
 
     this.input.aimFromScreen = (sx, sy) => {
@@ -198,9 +202,11 @@ export class Game {
       this.world.damage(d.targetId, d.x, d.y, d.shieldDamage, d.hullDamage, d.crit);
       const toLocal = d.targetId === s.localId, fromLocal = d.sourceId === s.localId;
       const amount = Math.round(d.shieldDamage + d.armorDamage + d.hullDamage);
-      if (this.world.mapToScreen(d.x, d.y, this.tmpScreen, 1.5) && amount > 0) {
+      if (amount > 0) {
         const color = toLocal ? "#ff5a5a" : d.crit ? "#ffe066" : d.hullDamage > 0 ? "#ffb347" : "#7fd8ff";
-        this.overlay.floatText(this.tmpScreen.x, this.tmpScreen.y, d.crit ? `${amount}!` : `${amount}`, color, d.crit ? 22 : toLocal ? 15 : 16);
+        // anchor at the rendered (interpolated) target position when known
+        const tr = this.renderInputs.get(d.targetId);
+        this.overlay.floatText(tr?.x ?? d.x, tr?.y ?? d.y, d.crit ? `${amount}!` : `${amount}`, color, d.crit ? 22 : toLocal ? 15 : 16, -14, d.targetId);
       }
       if (toLocal || fromLocal) {
         this.lastDamageAt = performance.now();
@@ -238,11 +244,9 @@ export class Game {
       if (p.byEntityId !== s.localId) return;
       this.sfx("pickup");
       this.world.effect("HEAL", this.localPose.x, this.localPose.y, 3, p.byEntityId);
-      if (this.world.mapToScreen(this.localPose.x, this.localPose.y, this.tmpScreen, 2)) {
-        const first = p.items[0];
-        const label = first ? `+${first.quantity} ${first.name}` : p.credits > 0 ? `+${p.credits} CR` : "+loot";
-        this.overlay.floatText(this.tmpScreen.x, this.tmpScreen.y - 20, label, "#c9a7ff", 14);
-      }
+      const first = p.items[0];
+      const label = first ? `+${first.quantity} ${first.name}` : p.credits > 0 ? `+${p.credits} CR` : "+loot";
+      this.overlay.floatText(this.localPose.x, this.localPose.y, label, "#c9a7ff", 14, -34, s.localId);
       this.emit({ type: "loot_pickup", data: p });
     });
     on("quest_progress", (q) => {
@@ -267,9 +271,7 @@ export class Game {
       this.xpGained += r.xp;
       this.creditsGained += r.credits;
       this.honorGained += r.honor;
-      if (r.xp > 0 && this.world.mapToScreen(this.localPose.x, this.localPose.y, this.tmpScreen, 2)) {
-        this.overlay.floatText(this.tmpScreen.x, this.tmpScreen.y - 34, `+${r.xp} XP`, "#8cffb0", 13);
-      }
+      if (r.xp > 0) this.overlay.floatText(this.localPose.x, this.localPose.y, `+${r.xp} XP`, "#8cffb0", 13, -48, s.localId);
       this.emit({ type: "reward", data: r });
     });
     on("chat", (m) => this.emit({ type: "chat", channel: m.channel, from: m.from, fromId: m.fromId, text: m.text, at: m.at }));

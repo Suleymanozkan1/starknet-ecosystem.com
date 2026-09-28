@@ -128,7 +128,7 @@ async function worldView(): Promise<void> {
     ents.push(entity(`ast${i}`, "ASTEROID", res, cx + 30 + (i % 6) * 5 + Math.sin(i) * 2, cy - 25 + Math.floor(i / 6) * 6, 0, { maxHull: 400 }));
   }
   ["COMMON", "RARE", "EPIC", "LEGENDARY"].forEach((r, i) => ents.push(entity(`loot${i}`, "LOOT", r, cx - 12 + i * 4, cy + 14, 0)));
-  world.camera.follow(cx, cy);
+  world.camera.follow(cx + Number(params.get("dx") ?? 0), cy + Number(params.get("dy") ?? 0));
   world.camera.setZoom(Number(params.get("zoom") ?? 110));
   world.camera.snap();
   let frames = 0;

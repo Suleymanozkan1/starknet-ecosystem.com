@@ -34,7 +34,8 @@ import { ensureCatalog } from "../../apps/game-server/src/persistence/catalog.js
 import { createGameServer } from "../../apps/game-server/src/server.js";
 import { shieldTestIpcFromPm2 } from "../../apps/game-server/src/test-utils.js";
 import { processWithdrawal } from "../../apps/blockchain-service/src/processor.js";
-import { Session, walletLogin } from "./helpers.js";
+import type { Session} from "./helpers.js";
+import { walletLogin } from "./helpers.js";
 
 const envPath = resolve(import.meta.dirname, "../../.env");
 if (existsSync(envPath)) process.loadEnvFile(envPath);
@@ -60,6 +61,7 @@ interface RoomInternals {
   getPlayerByUser(id: string): Actor | undefined;
   spawnNpc(def: unknown, x: number, y: number, o?: { spawnIndex?: number | null }): Actor;
   getLoot(): { id: string; x: number; y: number }[];
+  getNpcs(): Actor[];
   flushAll(final: boolean): Promise<void>;
 }
 const internals = (roomId: string) => matchMaker.getLocalRoomById(roomId) as unknown as RoomInternals;
@@ -264,7 +266,10 @@ describe.sequential("MVP vertical slice", { timeout: 90_000 }, () => {
     const a = await ticketAndJoin(S.pilot!.s);
     const b = await ticketAndJoin(S.rival!.s);
     expect(a.roomId).toBe(b.roomId);
+    S.room = a;
     const r = internals(a.roomId);
+    // Vanta Rift is a pirate zone: freeze its NPCs so the kill below is unambiguously pilot-vs-pilot.
+    for (const n of r.getNpcs()) Object.assign(n, { stunnedUntil: Number.MAX_SAFE_INTEGER, nextThinkAt: Number.MAX_SAFE_INTEGER });
     const map = MAPS_BY_ID.get("map_vanta_rift")!;
     let px = map.width / 2;
     let py = map.height / 2;
@@ -295,7 +300,6 @@ describe.sequential("MVP vertical slice", { timeout: 90_000 }, () => {
     expect(["CLAIMABLE", "PENDING_REVIEW"]).toContain(reward.status);
     const liability = await db.rewardLiability.findUnique({ where: { rewardId: reward.id } });
     expect(liability?.status).toBe("OUTSTANDING");
-    S.room = a;
     await b.leave();
   });
 
@@ -369,6 +373,6 @@ describe.sequential("MVP vertical slice", { timeout: 90_000 }, () => {
     const shown = (list.json() as { withdrawals: { id: string; signature: string | null; status: string }[] }).withdrawals.find((x) => x.id === wd.id);
     expect(shown?.signature).toBe(done.signature);
     expect((await verifyLedgerIntegrity(db)).every((a) => a.ok)).toBe(true);
-    await S.room?.leave();
+    if (S.room?.connection.isOpen) await S.room.leave();
   });
 });

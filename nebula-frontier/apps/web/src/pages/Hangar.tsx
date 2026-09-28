@@ -126,8 +126,8 @@ function UpgradePanel({ ship }: { ship: ShipInstanceDto }) {
             </div>
             <div className="grid gap-2 rounded-lg border border-line bg-black/25 p-3">
               <div className="nf-label">Cost</div>
-              {cost.cost.credits > 0 && <CurrencyAmount amount={cost.cost.credits} currency="CREDITS" />}
-              {cost.cost.gems > 0 && <CurrencyAmount amount={cost.cost.gems} currency="GEMS" />}
+              {BigInt(cost.cost.credits) > 0n && <CurrencyAmount amount={cost.cost.credits} currency="CREDITS" />}
+              {BigInt(cost.cost.gems) > 0n && <CurrencyAmount amount={cost.cost.gems} currency="GEMS" />}
               {Object.entries(cost.cost.resources).map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between text-[14px]"><span style={{ color: RESOURCE_META[k as ResourceId]?.color }}>{RESOURCE_META[k as ResourceId]?.label ?? k}</span><span className="tabular-nums">×{v}</span></div>
               ))}

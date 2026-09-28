@@ -53,7 +53,7 @@ export interface ShipCatalogEntry {
 }
 export interface ShipsResponse { owned: ShipInstanceDto[]; catalog: ShipCatalogEntry[] }
 
-export interface UpgradeCost { toLevel: number; credits: number; gems: number; resources: Record<string, number>; successChance: number }
+export interface UpgradeCost { toLevel: number; /** Integer base units as decimal strings (server bigint). */ credits: string; gems: string; resources: Record<string, number>; successChance: number }
 export interface UpgradeCostResponse { maxed: boolean; cost: UpgradeCost | null }
 export interface UpgradeResult { success: boolean; fromLevel: number; toLevel: number; cost: UpgradeCost }
 

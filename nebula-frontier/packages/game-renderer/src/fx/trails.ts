@@ -41,6 +41,8 @@ export interface TrailStyle {
   width: number;
   /** "", "stardust", "void_tear", "aurora_ribbon" */
   effect?: string;
+  /** Max ribbon length (world units). */
+  maxLength?: number;
 }
 
 /** One ribbon trail. Positions are rewritten each frame from a fixed-size history (no allocation). */
@@ -51,6 +53,8 @@ export class Trail {
   private count = 0;
   private head = 0;
   private width = 0.3;
+  /** Max ribbon length in world units (frame-rate independent). */
+  private maxLength = 12;
   private readonly posAttr: BufferAttribute;
   active = false;
   /** When > 0, trail is fading out after release. */
@@ -105,6 +109,7 @@ export class Trail {
     if (u.uStyle) u.uStyle.value = style.effect === "stardust" ? 1 : style.effect === "void_tear" ? 2 : 0;
     if (u.uOpacity) u.uOpacity.value = 1;
     this.width = style.width;
+    this.maxLength = style.maxLength ?? Math.max(4, style.width * 26);
     this.minDist2 = (style.width * 0.35) ** 2;
     this.count = 0;
     this.head = 0;
@@ -150,10 +155,29 @@ export class Trail {
     const pos = this.posAttr.array as Float32Array;
     const n = this.n;
     let px = 0, pz = 0;
+    let acc = 0;
+    let lx = 0, ly = 0, lz = 0;
+    let clamped = false;
+    let collapsed = false;
     for (let k = 0; k < n; k++) {
       const kk = Math.min(k, Math.max(0, this.count - 1));
       const hi = ((this.head - kk + n) % n) * 3;
-      const x = this.hist[hi] ?? 0, y = this.hist[hi + 1] ?? 0, z = this.hist[hi + 2] ?? 0;
+      let x = this.hist[hi] ?? 0, y = this.hist[hi + 1] ?? 0, z = this.hist[hi + 2] ?? 0;
+      if (k > 0 && !clamped) {
+        const seg = Math.hypot(x - lx, z - lz);
+        if (acc + seg > this.maxLength) {
+          // cut the ribbon at maxLength along this segment; collapse the rest
+          const t = seg > 0 ? (this.maxLength - acc) / seg : 0;
+          x = lx + (x - lx) * t; y = ly + (y - ly) * t; z = lz + (z - lz) * t;
+          clamped = true;
+        } else {
+          acc += seg;
+        }
+      } else if (clamped) {
+        x = lx; y = ly; z = lz;
+        collapsed = true;
+      }
+      lx = x; ly = y; lz = z;
       // direction to the next (older) point
       const kn = Math.min(kk + 1, Math.max(0, this.count - 1));
       const ni = ((this.head - kn + n) % n) * 3;
@@ -161,7 +185,7 @@ export class Trail {
       let len = Math.hypot(dx, dz);
       if (len < 1e-5) { dx = px; dz = pz; len = Math.hypot(dx, dz) || 1; }
       px = dx; pz = dz;
-      const w = this.width * (1 - k / n) * 0.5;
+      const w = collapsed ? 0 : this.width * (1 - (clamped ? 1 : acc / this.maxLength) * 0.85) * (1 - k / n) * 0.5;
       const sx = (-dz / len) * w, sz = (dx / len) * w;
       const o = k * 6;
       pos[o] = x + sx; pos[o + 1] = y; pos[o + 2] = z + sz;
