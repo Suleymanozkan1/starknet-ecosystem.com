@@ -8,8 +8,12 @@ import { FACTIONS_BY_ID, MAPS_BY_ID } from "@nebula/config";
 import { signGameTicket } from "@nebula/authentication";
 import { gameTicketSchema } from "@nebula/validation";
 import { badRequest, forbidden } from "../errors.js";
+import { PushType, notify } from "../lib/notify.js";
 
 const TICKET_TTL_SEC = 60;
+const PRESENCE_TTL_SEC = 10 * 60;
+/** At most one FRIEND_ONLINE push per pilot per 30 minutes. */
+const FRIEND_ONLINE_COOLDOWN_SEC = 30 * 60;
 
 export default async function gameRoutes(app: FastifyInstance): Promise<void> {
   const { db, env } = app;
@@ -32,6 +36,16 @@ export default async function gameRoutes(app: FastifyInstance): Promise<void> {
     const ticket = await signGameTicket({ sub: req.user.id, username: u.username, mapId, jti }, env.gameTicketKeys, TICKET_TTL_SEC);
     // Recorded so the game server can enforce single use (SET NX on consume).
     await app.redis.set(`gt:${jti}`, req.user.id, "EX", TICKET_TTL_SEC + 5);
+    // Presence: a ticket means the pilot is entering the game. The game server may keep refreshing
+    // `presence:<userId>`; the API sets it with a TTL so friends see the pilot online.
+    await app.redis.set(`presence:${req.user.id}`, "api", "EX", PRESENCE_TTL_SEC);
+    const announce = await app.redis.set(`online:announced:${req.user.id}`, "1", "EX", FRIEND_ONLINE_COOLDOWN_SEC, "NX");
+    if (announce === "OK") {
+      const friends = await db.friend.findMany({ where: { friendId: req.user.id, status: "ACCEPTED" }, select: { userId: true }, take: 200 });
+      for (const f of friends) {
+        await notify(db, f.userId, PushType.FRIEND_ONLINE, "Friend online", `${u.username} just came online.`, { friendId: req.user.id, mapId });
+      }
+    }
     return { ticket, mapId, gameServerUrl: env.PUBLIC_GAME_SERVER_URL, expiresAt: new Date(Date.now() + TICKET_TTL_SEC * 1000).toISOString() };
   });
 }
