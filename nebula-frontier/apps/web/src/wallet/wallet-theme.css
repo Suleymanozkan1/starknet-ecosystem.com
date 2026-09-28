@@ -1,0 +1,14 @@
+/* Re-skin the wallet-adapter modal to match the holographic UI. */
+.wallet-adapter-modal-wrapper {
+  background: rgba(8, 13, 26, 0.94) !important;
+  border: 1px solid var(--nf-line-strong);
+  box-shadow: 0 30px 80px -20px #000, 0 0 60px -30px var(--nf-accent) !important;
+  border-radius: 14px !important;
+  font-family: var(--nf-font-body) !important;
+}
+.wallet-adapter-modal-title { font-family: var(--nf-font-display) !important; letter-spacing: 0.08em; font-size: 20px !important; }
+.wallet-adapter-modal-overlay { background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(6px); }
+.wallet-adapter-modal-list .wallet-adapter-button { font-family: var(--nf-font-ui) !important; font-size: 17px !important; letter-spacing: 0.06em; border-radius: 8px; }
+.wallet-adapter-modal-list .wallet-adapter-button:not([disabled]):hover { background: color-mix(in oklab, var(--nf-accent) 16%, transparent) !important; }
+.wallet-adapter-button-trigger { background: color-mix(in oklab, var(--nf-accent) 30%, #111) !important; }
+.wallet-adapter-dropdown-list { background: var(--nf-panel-strong) !important; border: 1px solid var(--nf-line-strong); }
