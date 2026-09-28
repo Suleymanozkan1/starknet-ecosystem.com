@@ -1174,7 +1174,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     }
     if (boss) this.broadcast(ServerEvent.KILL_FEED, { killer: credited?.name ?? killer?.name ?? "?", victim: n.name, weapon: "", pvp: false });
 
-    const rewardMult = n.rewardMult * this.rewardScale(n, contributors.length);
+    const scale = this.rewardScale(n, contributors.length);
+    const rewardMult = n.rewardMult * scale;
     if (rewardMult <= 0) {
       // No rewards (e.g. under-manned raid); kill still counts for match/quest bookkeeping below.
     } else if (this.shareRewards(n) && totalDmg > 0) {
@@ -1184,11 +1185,11 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         const factor = Math.max(0.1, Math.min(1, share * contributors.length));
         this.grantNpcRewards(c.p, n, factor * rewardMult, `${n.uid}`);
         if (boss) c.p.pending.bossKills++;
-        this.rollLootFor(n, c.p, true);
+        this.rollLootFor(n, c.p, true, scale);
       }
     } else if (credited) {
       this.grantNpcRewards(credited, n, rewardMult, n.uid);
-      this.rollLootFor(n, credited, false);
+      this.rollLootFor(n, credited, false, scale);
     }
     if (boss) void this.onBossKilled(n, contributors, totalDmg);
     this.onNpcKilled(n, credited);
@@ -1228,10 +1229,11 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     }
   }
 
-  private rollLootFor(n: NpcActor, owner: PlayerActor, personal: boolean): void {
+  /** `scale` is the room's reward scale (e.g. an under-manned raid) and applies to loot as it does to XP/credits. */
+  private rollLootFor(n: NpcActor, owner: PlayerActor, personal: boolean, scale = 1): void {
     const table = LOOT_TABLES_BY_ID.get(n.def.lootTable);
-    if (!table) return;
-    const drops = rollLoot(table, this.rng, { dropMultiplier: this.dropMultiplier });
+    if (!table || scale <= 0) return;
+    const drops = rollLoot(table, this.rng, { dropMultiplier: this.dropMultiplier, scale });
     if (!drops.length) return;
     const a = this.rng() * Math.PI * 2;
     const r = personal ? 4 + this.rng() * 8 : 0;

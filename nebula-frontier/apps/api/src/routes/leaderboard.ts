@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import type { LeaderboardResponse } from "@nebula/shared";
 import { leaderboardQuerySchema } from "@nebula/validation";
 import { activeSeasonId } from "../lib/grants.js";
+import { factionWarStandings } from "../lib/factionWar.js";
 
 type Entry = LeaderboardResponse["entries"][number];
 
@@ -63,8 +64,10 @@ export default async function leaderboardRoutes(app: FastifyInstance): Promise<v
       case "honor": entries = await playerBoard("honor", q.limit); break;
       case "season_score": entries = await playerBoard("seasonScore", q.limit); break;
       case "faction": {
-        const rows = await db.faction.findMany({ orderBy: { score: "desc" }, take: q.limit });
-        entries = rows.map((f, i) => ({ rank: i + 1, userId: f.id, username: f.name, faction: f.id, clanTag: f.tag, score: Number(f.score), level: f.territory }));
+        // Seasonal faction war standings (event score + live territory); all-time when no season is active.
+        const war = await factionWarStandings(db);
+        const rows = war.seasonId ? war.season : war.allTime;
+        entries = rows.slice(0, q.limit).map((f, i) => ({ rank: i + 1, userId: f.factionId, username: f.name, faction: f.factionId, clanTag: f.tag, score: Number(f.score), level: f.territory }));
         break;
       }
       case "clan": {
@@ -73,8 +76,17 @@ export default async function leaderboardRoutes(app: FastifyInstance): Promise<v
         break;
       }
     }
-    const res: LeaderboardResponse = { board: q.board, season: q.board === "season_score" ? await activeSeasonId(db) : null, entries };
+    const res: LeaderboardResponse = { board: q.board, season: q.board === "season_score" || q.board === "faction" ? await activeSeasonId(db) : null, entries };
     await redis.set(cacheKey, JSON.stringify(res), "EX", 30);
+    return res;
+  });
+
+  /** Faction war: season and all-time standings with the metric breakdown and scoring weights. */
+  app.get("/api/factions/war", async () => {
+    const cached = await redis.get("factionwar");
+    if (cached) return JSON.parse(cached) as unknown;
+    const res = await factionWarStandings(db);
+    await redis.set("factionwar", JSON.stringify(res), "EX", 30);
     return res;
   });
 }

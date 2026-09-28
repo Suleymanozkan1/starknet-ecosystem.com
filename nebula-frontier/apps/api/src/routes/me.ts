@@ -2,10 +2,10 @@
  * Current user, public profiles, username change, faction choice (grants the starter ship/loadout).
  */
 import type { FastifyInstance } from "fastify";
-import { ACHIEVEMENTS_BY_ID, FACTIONS, FACTIONS_BY_ID, WEAPONS_BY_ID, MODULES_BY_ID, itemIdForDef } from "@nebula/config";
+import { ACHIEVEMENTS_BY_ID, FACTIONS, FACTIONS_BY_ID, PETS_BY_ID, WEAPONS_BY_ID, MODULES_BY_ID, itemIdForDef } from "@nebula/config";
 import type { Tx } from "@nebula/database";
-import type { ProfileResponse } from "@nebula/shared";
-import { starterAmmoFor, starterAmmoOriginRef } from "@nebula/game-core";
+import { Reputation, type ProfileResponse } from "@nebula/shared";
+import { starterAmmoFor, starterAmmoOriginRef, starterPetFor } from "@nebula/game-core";
 import { chooseFactionSchema, idSchema, updateMeSchema } from "@nebula/validation";
 import { badRequest, conflict, notFound } from "../errors.js";
 import { getCatalog } from "../lib/catalog.js";
@@ -110,6 +110,10 @@ export default async function meRoutes(app: FastifyInstance): Promise<void> {
           });
           loadout.ammo = ammo[0]?.itemId ?? null;
         }
+        // Starter companion (factions.json starterLoadout.pet) — same data + unique (userId, petId) as the game server.
+        const starterPet = starterPetFor(faction);
+        const petDef = starterPet ? PETS_BY_ID.get(starterPet) : undefined;
+        if (starterPet && petDef) await tx.pet.createMany({ data: [{ userId, petId: starterPet, name: petDef.name, active: true }], skipDuplicates: true });
         const lo = await tx.shipLoadout.create({ data: { shipInstanceId: inst.id, name: "PVE", preset: "PVE", config: loadout as object } });
         await tx.shipInstance.update({ where: { id: inst.id }, data: { activeLoadoutId: lo.id } });
         const stats = await computeShipStats(tx, inst.id, catalog);
@@ -149,6 +153,8 @@ export default async function meRoutes(app: FastifyInstance): Promise<void> {
       clan: u.clanMember ? { name: u.clanMember.clan.name, tag: u.clanMember.clan.tag } : null,
       ship: shipRow ? { defId: shipRow.shipId, name: catalog.ships.get(shipRow.shipId)?.name ?? shipRow.shipId } : null,
       gearScore: u.gearScore,
+      reputation: (Object.values(Reputation) as string[]).includes(u.reputation) ? (u.reputation as Reputation) : Reputation.NEUTRAL,
+      karma: u.karma,
       pvp: { kills: u.stats?.playerKills ?? 0, deaths: u.stats?.deaths ?? 0, wins: u.stats?.pvpWins ?? 0, rating: u.pvpRating },
       pve: { npcKills: u.stats?.npcKills ?? 0, bossKills: u.stats?.bossKills ?? 0, gatesCompleted: u.stats?.gatesCompleted ?? 0 },
       achievements: u.achievements.map((a) => ({

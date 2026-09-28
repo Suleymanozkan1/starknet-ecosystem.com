@@ -40,6 +40,7 @@ import galaxyRoutes from "./routes/galaxy.js";
 import seasonRoutes from "./routes/season.js";
 import adminRoutes from "./routes/admin.js";
 import internalRoutes from "./routes/internal.js";
+import petRoutes from "./routes/pets.js";
 // Economy engineer's route modules (wallet / deposits / withdrawals / rewards / economy admin).
 import walletRoutes from "./routes/wallet.js";
 import economyRoutes from "./routes/economy.js";
@@ -144,6 +145,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(socialRoutes);
   await app.register(progressRoutes);
   await app.register(galaxyRoutes);
+  await app.register(petRoutes);
   await app.register(seasonRoutes);
   await app.register(adminRoutes);
   await app.register(internalRoutes);

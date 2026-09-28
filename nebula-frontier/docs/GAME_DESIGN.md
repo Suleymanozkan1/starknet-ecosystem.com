@@ -71,6 +71,36 @@ The architecture supports 30–50+ ships by adding data rows; the procedural fac
 - **Ranked:** Elo/MMR seasons.
 - **Social pressure:** bounties, and reputation/karma (Neutral, Friendly, Hostile, Outlaw, Bounty Target).
 
+## Reputation, companions and faction war (implemented rules)
+
+Numbers come from `progression.json` (`reputation`, `factionWar`) and `pets.json`.
+
+**Reputation / karma.**
+- Attacking a pilot who isn't a legitimate target lowers karma. That covers same-faction pilots in PvP space, excluding outlaws and self-defense. The penalty is `unprovokedAttackPenalty`, applied at most once per victim per window. Killing such a pilot costs `unprovokedKillPenalty` and pays no PvP rewards.
+- Killing an outlaw raises karma by `outlawKillReward`.
+- Karma decays toward 0 at `decayPerHour`.
+- Status by karma: FRIENDLY at ≥ `friendlyKarma`, HOSTILE at ≤ `hostileKarma`, OUTLAW at ≤ `outlawKarma`. An ACTIVE bounty makes the pilot BOUNTY_TARGET. When statuses overlap, OUTLAW wins over BOUNTY_TARGET, which wins over HOSTILE, then FRIENDLY, then NEUTRAL.
+- Outlaws carry `EntityFlag.OUTLAW`. Anyone may attack them, and they lose safe-zone protection when `outlawLosesSafeZone` is set. A pilot who turns outlaw gets a system-funded bounty (`outlawSystemBountyCredits`, escrowed from game issuance) that the killer claims.
+- Bounty targets carry `EntityFlag.BOUNTY`. `GET /api/profile` returns `reputation` and `karma`.
+
+**Companions.**
+- Every faction's starter pet is `pet_glimmer` (`starterLoadout.pet`). The game server and `/api/me/faction` grant it idempotently; a pilot owns at most one pet of each kind.
+- Owning an `item_pet_*` item unlocks that pet (`GET /api/pets`); `POST /api/pets/:id/activate` switches the active one.
+- The active pet is an entity of kind `PET` that follows its owner. Depending on its abilities it can:
+  - collect the owner's loot within `lootRadius` (same idempotent loot grant as a manual pickup);
+  - repair the owner at `repairPerSecond` when out of combat;
+  - extend the owner's area-of-interest radius (`radarBonus`);
+  - reveal cloaked enemies within `petScanRadius` (they arrive with `cloaked: true`);
+  - send a nearest-asteroid hint via the `pet` event.
+- Every pet's `buff` feeds `computeStats` as a percent source, whatever its abilities.
+- The pet earns `petXpShare` of its owner's kill XP. It levels up linearly by `xpPerLevel`, abilities get stronger by `levelScalePerLevel` per level, and pet XP is persisted by the batched writer.
+
+**Faction war.**
+- Each pilot flush adds to their faction's kills, PvP score, resources mined and boss kills, and to its score (weights in `factionWar`). This happens in the same transaction as the pilot's own counters, so each event counts exactly once.
+- Totals are kept all-time in `Faction` and per season in `FactionSeasonScore`.
+- Territory is the number of maps held by the faction's clans (ClanTerritory). It adds `territoryPoints` per map.
+- Read the standings from `GET /api/factions/war` and `GET /api/leaderboard?board=faction` (season standings).
+
 ## Progression & economy loops
 - **Levels:** 1–50 with a data-defined XP curve, ranks from honor, prestige, gear score, achievements, season score, faction reputation, item upgrades +1…+20.
 - **Resources:** Titanium, Plasma Ore, Dark Matter, Quantum Shard, Cryonite, Aether Crystal, Void Essence. They come from asteroids, wrecks, NPCs, quests, events and raids, and feed blueprint crafting (Standard → Legendary).

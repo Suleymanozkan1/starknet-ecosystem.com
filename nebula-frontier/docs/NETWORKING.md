@@ -108,6 +108,8 @@ All client messages go through two checks in order:
 | `kill_feed` | room | killer, victim, pvp |
 | `effect` | AOI | EMP / WARP / SHIELD_BURST / HEAL / CLOAK / BARRAGE / DASH / MINING / ENRAGE |
 | `marker` | allies | `{ x, y, kind, fromId, fromName }` |
+| `reputation` | self | `{ karma, reputation, outlaw, bountyTarget, reason }`, sent on join and whenever karma or status changes |
+| `pet` | self | companion status `{ entityId, petId, name, level, xp, xpToNext, abilities, hint? }`. `hint` is the nearest asteroid (RESOURCE_DETECTION); `null` means none is in range. |
 | `chat` | channel | `{ channel, from, fromId, text, at, faction }` |
 | `docked` | self | station id + services |
 | `jump` | self | `{ mapId, portalId, roomName, reservation }` |
@@ -119,8 +121,11 @@ Synchronized state (`WorldState`):
 - Room-wide fields: `mapId`, `roomKind`, `region`, `serverTime`, `tick`, `online`, `match` (`MatchInfo`), the current
   event, `xpMultiplier`/`dropMultiplier`, and boss `bossId`/`bossName`/`bossPhase`/`bossHullPct`.
 - `entities`: a **view-filtered** `MapSchema<Entity>` whose fields mirror `EntitySnapshot`.
-- Entity kinds: `PLAYER`, `NPC`, `BOSS`, `LOOT`, `ASTEROID`, `PORTAL`. `PORTAL` is used for rift gates, with
-  `defId: "EVENT_GATE"` and `aiState` set to the event id. Static map portals and stations come from `maps.json`.
+- Entity kinds: `PLAYER`, `NPC`, `BOSS`, `LOOT`, `ASTEROID`, `PORTAL`, `PET`.
+  - A `PET` entity's `targetId` is its owner's entity id.
+  - Reputation shows up as `flags & OUTLAW` and `flags & BOUNTY`.
+  - `PORTAL` is used for rift gates, with `defId: "EVENT_GATE"` and `aiState` set to the event id. Static map portals
+    and stations come from `maps.json`.
 
 ## 4. Tick and patch rate
 
