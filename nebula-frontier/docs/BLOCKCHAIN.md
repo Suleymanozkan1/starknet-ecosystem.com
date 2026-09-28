@@ -129,7 +129,18 @@ Treasury bootstrap (`scripts/economy-bootstrap.ts` → `bootstrapTreasury`): rea
 
 ## Why the Anchor program is not deployed in the MVP
 
-`programs/nebula_settlement` (Anchor 1.2, `cargo check` clean) contains real instruction handlers with account validation and events: `initialize`, `set_paused`, `fund_vault`, `verify_reward` (reward-signer co-signature + per-reward receipt PDA ⇒ no double claims, per-claim cap, vault rent floor), SOL escrow (`open_escrow` / `release_escrow` / `refund_escrow`), tournaments (`create_tournament` / `join_tournament` / `settle_tournament` with payouts via remaining accounts and a fee capped at `fee_bps ≤ 10%` / `cancel_tournament` / `refund_entry`).
+`programs/nebula_settlement` (Anchor 1.2, `cargo check` clean) contains real instruction handlers with account validation and events:
+- **Admin:** `initialize` (only the program's upgrade authority, checked via `ProgramData`), `update_config` (rotate the reward signer and change the fee / per-claim cap / per-epoch emission cap), two-step authority transfer (`propose_authority` → `accept_authority`), and `set_paused`.
+- **Rewards:** `fund_vault` and `verify_reward`. `verify_reward` needs a reward-signer co-signature and creates a per-reward receipt PDA, so a reward can't be claimed twice. It also enforces the per-claim cap, a **per-epoch emission cap** and a vault rent floor.
+- **SOL escrow:** `open_escrow`, `release_escrow`, `refund_escrow`. Opening is rejected while paused.
+- **Tournaments:**
+  - `create_tournament`.
+  - `join_tournament` (rejected while paused).
+  - `settle_tournament`: pays out via remaining accounts; the fee is capped at `fee_bps ≤ 10%`.
+  - `cancel_tournament`.
+  - `refund_entry`: refunds fee + rent when cancelled, and rent only after settlement.
+
+The Anchor provider wallet is a dedicated deployer key (`.secrets/program-deployer-devnet.json`), never the treasury key. `anchor test` runs `cargo test`, which runs the Rust unit tests for the config and emission checks, fee cap and refund rules. On-chain (bankrun) tests are not written yet.
 
 It is intentionally **not deployed** for the MVP because:
 1. The economy's safety controls (eligibility, caps, bot/risk review, circuit breakers, treasury health throttling) live off-chain and change often; moving settlement on-chain now would duplicate them or bypass them.
