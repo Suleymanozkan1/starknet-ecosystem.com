@@ -5,8 +5,12 @@
  * item or resource) cannot be derived from PlayerStat counters, so the game
  * server reports the gameplay events of clan members to
  * `POST {API_INTERNAL_URL}/api/internal/clan-missions/progress`
- * (`x-internal-token: INTERNAL_SERVICE_TOKEN`, body `{ events: [{ userId, event }] }`,
- * ≤ 500 events per request — see @nebula/validation clanMissionProgressSchema).
+ * (`x-internal-token: INTERNAL_SERVICE_TOKEN`, body `{ events: [{ eventId, userId, event }] }`,
+ * ≤ 500 events per request — see @nebula/validation clanMissionProgressSchema). Every event gets a
+ * stable `eventId` when it enters the send queue (before any retry), and the API stores a unique
+ * (mission, eventId) receipt, so a retried request whose response was lost is never counted twice.
+ * Memory is bounded: the aggregate map and the send queue each hold at most MAX_QUEUE events;
+ * anything beyond is discarded and counted (`dropped`, errors_total{clan_missions,discarded}).
  *
  * Never blocks the tick: events are queued in memory (quantity events such as
  * boss damage and mining are aggregated per user/target), flushed together with
@@ -14,6 +18,7 @@
  * progress is a non-critical side channel: after `maxAttempts` a batch is dropped
  * and logged (untargeted objectives still progress from PlayerStat in the API).
  */
+import { randomUUID } from "node:crypto";
 import type { GameplayEvent } from "@nebula/game-core";
 import { errorsTotal, type Logger } from "@nebula/telemetry";
 
@@ -22,16 +27,21 @@ export interface ClanMissionEvent {
   event: GameplayEvent;
 }
 
+/** Queued for sending: identity fixed once, reused by every retry of the batch. */
+interface QueuedEvent extends ClanMissionEvent {
+  eventId: string;
+}
+
 /** Event types that clan-mission objectives can target. */
 const REPORTED = new Set<GameplayEvent["type"]>(["KILL", "KILL_PLAYER", "COLLECT", "MINE", "TRAVEL", "DAMAGE_BOSS", "COMPLETE_GATE", "WIN_PVP", "DELIVER"]);
 
 const MAX_BATCH = 500;
-const MAX_QUEUE = 20_000;
+export const MAX_QUEUE = 20_000;
 
 type Fetch = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal: AbortSignal }) => Promise<{ ok: boolean; status: number }>;
 
 export class ClanMissionReporter {
-  private queue: ClanMissionEvent[] = [];
+  private queue: QueuedEvent[] = [];
   /** Aggregated quantity events keyed by user|type|target|map. */
   private agg = new Map<string, ClanMissionEvent>();
   private inFlight = false;
@@ -78,15 +88,18 @@ export class ClanMissionReporter {
         else if ((e.type === "MINE" || e.type === "COLLECT" || e.type === "DELIVER") && "quantity" in event) e.quantity += event.quantity;
         return;
       }
+      if (this.agg.size >= MAX_QUEUE) return this.discard(1);
       this.agg.set(key, { userId, event: { ...event } });
       return;
     }
-    this.queue.push({ userId, event });
-    if (this.queue.length > MAX_QUEUE) {
-      const n = this.queue.length - MAX_QUEUE;
-      this.queue.splice(0, n);
-      this.dropped += n;
-    }
+    this.queue.push({ eventId: randomUUID(), userId, event });
+    if (this.queue.length > MAX_QUEUE) this.discard(this.queue.splice(0, this.queue.length - MAX_QUEUE).length);
+  }
+
+  private discard(n: number): void {
+    if (n <= 0) return;
+    this.dropped += n;
+    errorsTotal.inc({ component: "clan_missions", code: "discarded" }, n);
   }
 
   pending(): number {
@@ -106,12 +119,19 @@ export class ClanMissionReporter {
   /** Send everything queued. Fire-and-forget safe: never throws. */
   async flush(): Promise<void> {
     if (this.inFlight || !this.enabled) return;
+    let overflow = 0;
     for (const e of this.agg.values()) {
       const ev = e.event;
       const amount = ev.type === "DAMAGE_BOSS" ? ev.amount : "quantity" in ev ? ev.quantity : 1;
-      if (amount >= 1) this.queue.push({ userId: e.userId, event: ev.type === "DAMAGE_BOSS" ? { ...ev, amount: Math.floor(ev.amount) } : ev });
+      if (amount < 1) continue;
+      if (this.queue.length >= MAX_QUEUE) {
+        overflow++;
+        continue;
+      }
+      this.queue.push({ eventId: randomUUID(), userId: e.userId, event: ev.type === "DAMAGE_BOSS" ? { ...ev, amount: Math.floor(ev.amount) } : ev });
     }
     this.agg.clear();
+    this.discard(overflow);
     if (!this.queue.length) return;
     this.inFlight = true;
     try {
@@ -130,7 +150,8 @@ export class ClanMissionReporter {
     }
   }
 
-  private async sendWithRetry(events: ClanMissionEvent[]): Promise<boolean> {
+  /** `events` carry their `eventId` already: the identical body is resent on every attempt. */
+  private async sendWithRetry(events: QueuedEvent[]): Promise<boolean> {
     const body = JSON.stringify({ events });
     for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
       try {

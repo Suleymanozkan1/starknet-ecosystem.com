@@ -285,12 +285,14 @@ export class Persistence {
       // ---- Companion XP / level
       let pet: FlushResult["pet"] = null;
       if (ctx.pet) {
-        const row = d.petXp > 0
-          ? await tx.pet.update({ where: { id: ctx.pet.rowId }, data: { xp: { increment: Math.floor(d.petXp) } }, select: { xp: true, level: true } })
-          : await tx.pet.findUnique({ where: { id: ctx.pet.rowId }, select: { xp: true, level: true } });
+        // Owner-scoped, conditional writes: a deleted/foreign cached pet row is skipped (no P2025) instead
+        // of rolling back the whole flush (progression, resources, issuance) and failing every retry.
+        const petWhere = { id: ctx.pet.rowId, userId };
+        if (d.petXp > 0) await tx.pet.updateMany({ where: petWhere, data: { xp: { increment: Math.floor(d.petXp) } } });
+        const row = await tx.pet.findFirst({ where: petWhere, select: { xp: true, level: true } });
         if (row) {
           const lvl = petLevelForXp(row.xp, ctx.pet.def);
-          if (lvl !== row.level) await tx.pet.update({ where: { id: ctx.pet.rowId }, data: { level: lvl } });
+          if (lvl !== row.level) await tx.pet.updateMany({ where: petWhere, data: { level: lvl } });
           pet = { level: lvl, xp: row.xp };
         }
       }
@@ -495,6 +497,26 @@ export class Persistence {
   async createMatch(data: { roomId: string; mode: string; mapId: string; metadata?: Record<string, unknown> }): Promise<string> {
     const m = await this.db.gameMatch.create({ data: { roomId: data.roomId, mode: data.mode, mapId: data.mapId, metadata: (data.metadata ?? {}) as object } });
     return m.id;
+  }
+
+  /**
+   * Atomically claim one of `limit` daily entries for `mode` (raids). The user row is locked FOR UPDATE, so
+   * concurrent joins on any instance/process serialise: count + insert of the entry row happen in one
+   * transaction. A pilot already enrolled in `matchId` (re-join) is admitted without consuming an entry.
+   */
+  async claimDailyMatchEntry(matchId: string, userId: string, mode: string, since: Date, limit: number): Promise<boolean> {
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+      const own = await tx.gameMatchPlayer.findUnique({ where: { matchId_userId: { matchId, userId } }, select: { id: true } });
+      if (own) {
+        await tx.gameMatchPlayer.update({ where: { id: own.id }, data: { leftAt: null } });
+        return true;
+      }
+      const entries = await tx.gameMatchPlayer.count({ where: { userId, joinedAt: { gte: since }, match: { mode } } });
+      if (entries >= limit) return false;
+      await tx.gameMatchPlayer.create({ data: { matchId, userId, team: 0 } });
+      return true;
+    });
   }
 
   async joinMatch(matchId: string, userId: string, team: number): Promise<void> {

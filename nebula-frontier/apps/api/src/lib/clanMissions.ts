@@ -138,8 +138,12 @@ export async function refreshMission(db: Db, missionId: string) {
   return res.mission;
 }
 
-/** Apply a game-server gameplay event for a player to their clan's active missions (targeted objectives only). */
-export async function contributeToMissions(db: Db, userId: string, ev: GameplayEvent): Promise<number> {
+/**
+ * Apply a game-server gameplay event for a player to their clan's active missions (targeted objectives only).
+ * Idempotent per `eventId`: a (missionId, eventId) receipt is inserted in the same transaction as the
+ * contribution; a replayed event (retried request) conflicts on the unique key and is not counted again.
+ */
+export async function contributeToMissions(db: Db, userId: string, ev: GameplayEvent, eventId: string): Promise<number> {
   const member = await db.clanMember.findUnique({ where: { userId }, select: { clanId: true } });
   if (!member) return 0;
   const active = await db.clanMission.findMany({ where: { clanId: member.clanId, status: "ACTIVE" } });
@@ -149,15 +153,20 @@ export async function contributeToMissions(db: Db, userId: string, ev: GameplayE
     if (!q) continue;
     const incs = q.objectives.map((o) => (statMetric(o) ? 0 : objectiveIncrement(o, ev)));
     if (!incs.some((x) => x > 0)) continue;
-    await withSerializableTx(db, async (tx) => {
+    const applied = await withSerializableTx(db, async (tx) => {
       const cur = await tx.clanMission.findUniqueOrThrow({ where: { id: m.id } });
-      if (cur.status !== "ACTIVE") return;
+      if (cur.status !== "ACTIVE") return false;
+      // ON CONFLICT DO NOTHING: keeps the transaction usable and turns a replay into a no-op.
+      const receipt = await tx.clanMissionEventReceipt.createMany({ data: [{ missionId: m.id, eventId, userId }], skipDuplicates: true });
+      if (receipt.count === 0) return false;
       const c = asRecord(cur.contributions);
       incs.forEach((inc, i) => {
         if (inc > 0) c[String(i)] = Number(c[String(i)] ?? 0) + inc;
       });
       await tx.clanMission.update({ where: { id: m.id }, data: { contributions: toJsonValue(c) } });
+      return true;
     });
+    if (!applied) continue;
     await refreshMission(db, m.id);
     touched++;
   }

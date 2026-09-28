@@ -847,9 +847,24 @@ model ClanMission {
   completedAt   DateTime?
   claimedAt     DateTime?
   clan          Clan      @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  eventReceipts ClanMissionEventReceipt[]
 
   @@unique([clanId, questId, periodKey])
   @@index([status])
+}
+
+/// Idempotency receipt: one row per (mission, game-server event id). A replayed progress event
+/// (retried request whose response was lost) hits the unique key and is not counted again.
+model ClanMissionEventReceipt {
+  id        String      @id @default(cuid())
+  missionId String
+  eventId   String
+  userId    String
+  createdAt DateTime    @default(now())
+  mission   ClanMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([missionId, eventId])
+  @@index([createdAt])
 }
 
 model ClanTerritory {

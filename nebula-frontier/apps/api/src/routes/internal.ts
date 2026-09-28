@@ -21,7 +21,7 @@ export default async function internalRoutes(app: FastifyInstance): Promise<void
   app.post("/api/internal/clan-missions/progress", { preHandler: requireService, config: { rateLimit: { max: 600, timeWindow: 60_000 } } }, async (req) => {
     const body = app.parse(clanMissionProgressSchema, req.body);
     let touched = 0;
-    for (const e of body.events) touched += await contributeToMissions(app.db, e.userId, e.event);
+    for (const e of body.events) touched += await contributeToMissions(app.db, e.userId, e.event, e.eventId);
     return { ok: true, missionsUpdated: touched };
   });
 }

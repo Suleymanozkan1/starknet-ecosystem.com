@@ -18,6 +18,8 @@ async function main(): Promise<void> {
     svc.log.info("shutting down: rooms persisted, closing connections");
     svc.events.stop();
     svc.clanMissions.stop();
+    // Last chance for failed post-leave flushes; anything still failing is dropped with an error metric.
+    await svc.flushRetry.drainAndDrop();
     await svc.clanMissions.flush();
     await disconnectDb().catch(() => undefined);
     await svc.db.$disconnect().catch(() => undefined);

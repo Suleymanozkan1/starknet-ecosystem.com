@@ -285,6 +285,10 @@ WIN_PVP / DELIVER) are sent to `POST {API_INTERNAL_URL}/api/internal/clan-missio
 - Quantity events (boss damage, mining, collecting) are aggregated per user and target.
 - Events are sent with the persistence flush, in batches of at most 500, fire-and-forget, retried with backoff.
 - Delivery never blocks the tick.
+- Each event carries a stable `eventId` (UUID) assigned before the first attempt. The API stores a unique
+  `(missionId, eventId)` receipt with the contribution, so a retried request is never counted twice.
+- The aggregate map and the send queue are each bounded (20 000 events); overflow is discarded and counted.
+- `API_INTERNAL_URL` must be `https://` when `INTERNAL_SERVICE_TOKEN` is set, except for loopback hosts.
 - After the retries are exhausted the batch is dropped and logged. Untargeted objectives still progress from
   PlayerStat in the API.
 

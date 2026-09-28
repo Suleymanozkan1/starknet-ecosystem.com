@@ -245,7 +245,8 @@ describe.sequential("MVP vertical slice", { timeout: 90_000 }, () => {
     const inv = await S.pilot!.s.req("GET", "/api/inventory");
     expect(inv.statusCode).toBe(200);
     const items = (inv.json() as { items: { id: string; itemId: string; category: string; equippedOn: string | null }[] }).items;
-    const weapon = items.find((i) => i.category === "WEAPON" && i.itemId.startsWith("item_wpn_laser"));
+    // The starter laser (level 1): random loot from the previous step may add higher-level lasers.
+    const weapon = items.find((i) => i.category === "WEAPON" && i.itemId === "item_wpn_laser_mk1");
     expect(weapon, "starter weapons present in inventory").toBeTruthy();
     const u = await db.user.findUniqueOrThrow({ where: { id: S.pilot!.s.userId } });
     const ship = await db.shipInstance.findUniqueOrThrow({ where: { id: u.activeShipId! } });

@@ -7,7 +7,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { clanMissionProgressSchema } from "@nebula/validation";
 import { resolve } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { matchMaker } from "@colyseus/core";
 import { Client as SdkClient } from "@colyseus/sdk";
 import { EVENTS_BY_ID, PETS_BY_ID, PROGRESSION, QUESTS_BY_ID, NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
@@ -47,6 +47,12 @@ interface Internals {
   getLoot(): LootActor[];
   playersAttackable(a: PlayerActor, b: PlayerActor): boolean;
   clanWarId?: string | null;
+  processedLoot: Set<string>;
+  pvpKillLog: Map<string, number>;
+  prunePvpKillLog(): void;
+  now: number;
+  flushPlayer(p: PlayerActor, final: boolean): Promise<boolean>;
+  applyFlushSocial(p: PlayerActor, res: unknown): void;
 }
 const I = (room: unknown) => room as Internals;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -279,6 +285,10 @@ describe("combat, rewards & loot persistence", () => {
     client.send("pickup", { lootId: loot.id });
     client.send("pickup", { lootId: loot.id });
     await until(() => pickups.length === 1 && errors.includes("LOOT_GONE"));
+    // Bounded in-flight guard: the granted id is pruned; repeats are still rejected (loot removed).
+    expect(I(room).processedLoot.has(loot.id)).toBe(false);
+    client.send("pickup", { lootId: loot.id });
+    await until(() => errors.filter((c) => c === "LOOT_GONE").length === 2);
     const inv = await db.inventoryItem.findMany({ where: { userId: user.id, originRef: { startsWith: `loot:${loot.id}` } } });
     expect(inv).toHaveLength(1);
     expect(inv[0]?.quantity).toBe(2);
@@ -299,9 +309,7 @@ describe("pvp", () => {
     const a = await joinSector(map.id, { faction: "aurora", level: 20 });
     const b = await joinSector(map.id, { faction: "vortex", level: 20, credits: 5000 });
     expect(a.room).toBe(b.room);
-    let px = map.width / 2;
-    let py = map.height / 2;
-    for (let i = 0; i < 50 && !isPvpAllowedAt(map, px, py); i++) { px = 50 + Math.random() * (map.width - 100); py = 50 + Math.random() * (map.height - 100); }
+    const { x: px, y: py } = await pvpSpot(map);
     expect(isPvpAllowedAt(map, px, py)).toBe(true);
     Object.assign(a.actor, { x: px, y: py, invulnerableUntil: 0 });
     Object.assign(b.actor, { x: px + 10, y: py, invulnerableUntil: 0, shield: 0, hull: 1 });
@@ -642,6 +650,67 @@ describe("review fixes (PR #2 round 1)", () => {
     expect(await db.inventoryItem.findUnique({ where: { id: free.id } })).toBeNull();
   });
 
+  it("round 3: pet persistence tolerates a deleted or foreign cached pet row", async () => {
+    const def = PETS_BY_ID.get("pet_glimmer")!;
+    const u = await createPlayerUser(db, { faction: "aurora" });
+    const other = await createPlayerUser(db, { faction: "aurora" });
+    const foreign = await db.pet.create({ data: { userId: other.id, petId: def.id, name: "Other", xp: 5 } });
+    for (const rowId of ["missing-pet-row", foreign.id]) {
+      const d = new PendingDelta();
+      d.xp = 10;
+      d.petXp = 50;
+      const res = await svc.persistence.flush(u.id, d, [], new Set(), { factionId: null, pet: { rowId, def } });
+      expect(res.pet).toBeNull();
+    }
+    // Progression still committed; the other pilot's pet is untouched.
+    expect((await db.user.findUniqueOrThrow({ where: { id: u.id } })).xp).toBe(20n);
+    expect((await db.pet.findUniqueOrThrow({ where: { id: foreign.id } })).xp).toBe(5);
+    const own = await db.pet.create({ data: { userId: u.id, petId: def.id, name: "Mine" } });
+    const d = new PendingDelta();
+    d.petXp = 7;
+    const res = await svc.persistence.flush(u.id, d, [], new Set(), { factionId: null, pet: { rowId: own.id, def } });
+    expect(res.pet?.xp).toBe(7);
+  });
+
+  it("round 3: pvpKillLog prunes entries older than the anti-farming horizon", async () => {
+    const { client, room } = await joinSector("map_aurora_prime");
+    const r = I(room);
+    const horizon = Math.max(r.rules.pvpSameVictimWindowMs, 60_000);
+    r.pvpKillLog.set("old:pair", r.now - horizon - 1);
+    r.pvpKillLog.set("fresh:pair", r.now);
+    r.prunePvpKillLog();
+    expect(r.pvpKillLog.has("old:pair")).toBe(false);
+    expect(r.pvpKillLog.has("fresh:pair")).toBe(true);
+    await client.leave();
+  });
+
+  it("round 3: post-commit errors never re-queue a committed delta; failed final flushes are retried", async () => {
+    const { client, room, actor, user } = await joinSector("map_aurora_prime");
+    const r = I(room);
+    const xp0 = (await db.user.findUniqueOrThrow({ where: { id: user.id } })).xp;
+    const social = vi.spyOn(r, "applyFlushSocial").mockImplementation(() => {
+      throw new Error("post-commit boom");
+    });
+    actor.pending.xp += 40;
+    expect(await r.flushPlayer(actor, false)).toBe(true);
+    social.mockRestore();
+    expect(actor.pending.xp).toBe(0); // not merged back -> not applied twice
+    await r.flushPlayer(actor, false);
+    expect((await db.user.findUniqueOrThrow({ where: { id: user.id } })).xp).toBe(xp0 + 40n);
+
+    const realFlush = svc.persistence.flush.bind(svc.persistence);
+    const flush = vi.spyOn(svc.persistence, "flush").mockImplementation((uid, ...rest) =>
+      uid === user.id ? Promise.reject(new Error("db down")) : realFlush(uid, ...rest));
+    const queued = svc.flushRetry.size;
+    actor.pending.xp += 25;
+    await client.leave();
+    await until(() => svc.flushRetry.size === queued + 1);
+    flush.mockRestore();
+    await svc.flushRetry.drain();
+    expect(svc.flushRetry.size).toBe(queued);
+    expect((await db.user.findUniqueOrThrow({ where: { id: user.id } })).xp).toBe(xp0 + 65n);
+  });
+
   it("#6 concurrent first joins create exactly one starter ship and loadout", async () => {
     const u = await createPlayerUser(db, { faction: "nova" });
     await Promise.all([ensureStarterKit(db, u.id, null), ensureStarterKit(db, u.id, null), ensureStarterKit(db, u.id, null)]);
@@ -677,6 +746,30 @@ describe("review fixes (PR #2 round 1)", () => {
     expect(rows.find((r) => r.userId === uc!.id)!.ratingDelta).toBeLessThanOrEqual(0);
     await ca.leave().catch(() => undefined);
     await cb.leave().catch(() => undefined);
+  });
+
+  it("round 3: gate/raid/event/pvp rooms reject a ticket issued for another map", async () => {
+    const u = await createPlayerUser(db, { faction: "aurora", level: 40 });
+    const k = `mm-${Date.now()}`;
+    for (const [room, mapId] of [[RoomName.GATE, "map_gate_alpha"], [RoomName.RAID, "map_raid_titan_vault"], [RoomName.EVENT, "map_astra_graveyard"], [RoomName.PVP, "map_eclipse_arena"]] as const) {
+      const ticket = await ticketFor(secret, u, "map_aurora_prime");
+      await expect(colyseus.sdk.joinOrCreate(room, { ticket, mapId, instanceKey: k }), room).rejects.toThrow(/TICKET_MAP_MISMATCH/);
+    }
+  });
+
+  it("round 3: concurrent raid entry claims never exceed the daily limit", async () => {
+    const mapId = "map_raid_titan_vault";
+    const u = await createPlayerUser(db, { faction: "aurora", level: 40 });
+    const matches = await Promise.all([1, 2, 3, 4, 5, 6].map(() => db.gameMatch.create({ data: { mode: "RAID", mapId } })));
+    const since = new Date();
+    since.setUTCHours(0, 0, 0, 0);
+    const res = await Promise.all(matches.map((m) => svc.persistence.claimDailyMatchEntry(m.id, u.id, "RAID", since, 3)));
+    expect(res.filter(Boolean)).toHaveLength(3);
+    expect(await db.gameMatchPlayer.count({ where: { userId: u.id } })).toBe(3);
+    // Re-join of an already-claimed instance is admitted without consuming another entry.
+    const claimed = matches[res.indexOf(true)]!;
+    expect(await svc.persistence.claimDailyMatchEntry(claimed.id, u.id, "RAID", since, 3)).toBe(true);
+    expect(await db.gameMatchPlayer.count({ where: { userId: u.id } })).toBe(3);
   });
 
   it("#12 raids: daily entry limit and no rewards for under-manned raids", async () => {

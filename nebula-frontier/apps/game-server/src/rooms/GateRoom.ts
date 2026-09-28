@@ -13,6 +13,12 @@ import type { NpcActor, PlayerActor } from "./actors.js";
 
 export class GateRoom extends BaseGameRoom {
   readonly roomKind: RoomName = RoomName.GATE;
+
+  /** Portal/rift jumps issue a ticket for exactly this map; a ticket for another map must not enter. */
+  protected override requireTicketMap(): boolean {
+    return true;
+  }
+
   protected gate: GateDef | null = null;
   protected difficulty: GateDifficulty = GateDifficulty.NORMAL;
   protected wave = -1;
@@ -270,16 +276,24 @@ export class RaidRoom extends GateRoom {
     if (this.participants.has(p.userId)) return; // re-join of the same instance
     const dayStart = new Date();
     dayStart.setUTCHours(0, 0, 0, 0);
+    // Cheap fast-path rejection (no match row is created for a capped pilot); NOT the authoritative check.
     const entries = await this.svc.db.gameMatchPlayer.count({ where: { userId: p.userId, joinedAt: { gte: dayStart }, match: { mode: MatchMode.RAID } } });
     if (entries >= this.rules.raidDailyEntries) throw new ServerError(4403, "RAID_DAILY_LIMIT");
     this.participants.add(p.userId);
-    // Record the entry before admission so the daily limit cannot be bypassed by leaving early.
+    // Authoritative: count + entry-row insert in one transaction under a user-row lock, so concurrent joins
+    // to different raid instances/processes cannot exceed the limit. Recorded before admission, so leaving
+    // early does not refund the entry.
+    let admitted: boolean;
     try {
       const id = await this.ensureMatch();
-      await this.svc.persistence.joinMatch(id, p.userId, 0);
+      admitted = await this.svc.persistence.claimDailyMatchEntry(id, p.userId, MatchMode.RAID, dayStart, this.rules.raidDailyEntries);
     } catch (e) {
       this.participants.delete(p.userId);
       throw e;
+    }
+    if (!admitted) {
+      this.participants.delete(p.userId);
+      throw new ServerError(4403, "RAID_DAILY_LIMIT");
     }
   }
 

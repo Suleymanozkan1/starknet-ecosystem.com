@@ -7,6 +7,7 @@ import type { Logger } from "@nebula/telemetry";
 import type { Redis } from "ioredis";
 import type { GameServerConfig } from "../config.js";
 import type { Persistence } from "../persistence/writer.js";
+import type { FinalFlushRetryQueue } from "../persistence/retry-queue.js";
 import type { RiskReporter } from "./risk.js";
 import type { TicketService } from "./tickets.js";
 import type { EventEngine } from "./events.js";
@@ -19,6 +20,8 @@ export interface GameServices {
   log: Logger;
   tickets: TicketService;
   persistence: Persistence;
+  /** Failed final (post-leave) flushes, retried with backoff and drained on dispose/shutdown. */
+  flushRetry: FinalFlushRetryQueue;
   risk: RiskReporter;
   events: EventEngine;
   clanMissions: ClanMissionReporter;

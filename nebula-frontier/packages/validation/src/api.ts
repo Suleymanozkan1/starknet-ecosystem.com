@@ -297,6 +297,7 @@ export const gameplayEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ESCORT"), mapId: gid }),
 ]);
 export const clanMissionProgressSchema = z.object({
-  events: z.array(z.object({ userId: idSchema, event: gameplayEventSchema })).min(1).max(500),
+  /** `eventId`: stable per-event id assigned by the game server before its retry loop (replay = no-op). */
+  events: z.array(z.object({ eventId: z.uuid(), userId: idSchema, event: gameplayEventSchema })).min(1).max(500),
 });
 export const adminAnalyticsQuerySchema = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) });

@@ -37,7 +37,7 @@ import { EventEngine, type ActiveEvent } from "../services/events.js";
 import { loadRules, DEFAULT_RULES, type GameRules } from "../services/rules.js";
 import { TicketError } from "../services/tickets.js";
 import { JoinError, loadActiveQuests, loadPlayer } from "../persistence/player.js";
-import { DuplicateLootError, PendingDelta } from "../persistence/writer.js";
+import { DuplicateLootError, PendingDelta, type FlushContext, type FlushResult } from "../persistence/writer.js";
 import { activeSeasonId, bossEventId } from "../persistence/catalog.js";
 import type { ActorBase, AsteroidActor, LootActor, NpcActor, ParsedInput, PetActor, PlayerActor, ShipActor } from "./actors.js";
 
@@ -80,6 +80,8 @@ const ROOM_FOR_MAP_TYPE: Record<MapDef["roomType"], RoomName> = {
 export const CHAT_TOPIC_GLOBAL = "nf:chat:global";
 const PRESENCE_TTL_SEC = 60;
 const PRESENCE_REFRESH_MS = 20_000;
+/** Prune stale PvP anti-farming pair entries every N simulation ticks. */
+const PVP_KILL_LOG_PRUNE_TICKS = 200;
 const chatTopicFaction = (f: string) => `nf:chat:faction:${f}`;
 const chatTopicClan = (c: string) => `nf:chat:clan:${c}`;
 
@@ -381,6 +383,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
 
   override async onDispose(): Promise<void> {
     for (const p of [...this.players.values()]) await this.removePlayer(p);
+    // Give failed final flushes (e.g. this room's last leaver) an immediate retry; survivors stay queued.
+    await this.svc.flushRetry.drain();
     await this.flushChat();
     if (this.eventListeners) {
       this.svc.events.off("started", this.eventListeners.started);
@@ -395,7 +399,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
 
   override onBeforeShutdown(): void {
     // Persist everything before clients are disconnected (graceful shutdown).
-    void this.flushAll(true).finally(() => {
+    void this.flushAll(true).then(() => this.svc.flushRetry.drain()).finally(() => {
       void this.disconnect(CloseCode.SERVER_SHUTDOWN).catch(() => undefined);
     });
   }
@@ -498,7 +502,12 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.onPlayerRemoved(p);
     this.state.online = this.players.size;
     activePlayers.set({ room: this.roomKind, map: this.map.id }, this.players.size);
-    await this.flushPlayer(p, true);
+    if (!(await this.flushPlayer(p, true))) {
+      // The actor is gone from `players`, so flushAll would never retry it: hand the delta to the
+      // process-level retry queue (backoff; drained on dispose/shutdown; drops are metered).
+      this.svc.flushRetry.enqueue(p.userId, p.pending, p.profile.quests.values(), p.profile.achievements, this.flushContext(p));
+      p.pending = new PendingDelta();
+    }
     this.log.info({ userId: p.userId }, "player left");
   }
 
@@ -1308,6 +1317,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       await this.svc.persistence.grantLoot(p.userId, { lootId, items: items.map((i) => ({ itemId: i.itemId, quantity: i.quantity, affixes: i.affixes })), credits, gems, resources });
     } catch (e) {
       if (e instanceof DuplicateLootError) {
+        this.processedLoot.delete(lootId); // loot stays removed from `this.loot`, so repeats are still rejected
         this.flag(p, "DUPLICATE_LOOT", 20, { lootId });
         return this.error(p, "DUPLICATE_LOOT", "Loot already claimed");
       }
@@ -1318,6 +1328,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       this.state.entities.set(l.id, l.entity);
       return this.error(p, "LOOT_FAILED", "Could not collect loot, try again");
     }
+    // Granted: the id is out of `this.loot` (repeat pickups hit `!l`) and the DB originRef is unique,
+    // so the in-flight guard is no longer needed — keep the set bounded in long-lived rooms.
+    this.processedLoot.delete(lootId);
     const evt: ServerEvents["item_pickup"] = {
       lootId, byEntityId: p.id, items: items.map((i) => ({ itemId: i.itemId, name: i.name, quantity: i.quantity, rarity: i.rarity })), credits, gems, resources,
     };
@@ -1918,6 +1931,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   }
 
   private tickWorld(): void {
+    if (this.tickCount % PVP_KILL_LOG_PRUNE_TICKS === 0) this.prunePvpKillLog();
     for (const rp of this.riftPortals.values()) if (this.now >= rp.expiresAt) this.closeRiftPortal(rp);
     for (const l of this.loot.values()) if (this.now >= l.expiresAt) this.removeLoot(l);
     for (const a of this.asteroids.values()) {
@@ -1928,6 +1942,12 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         a.entity.hull = a.initialAmount;
       }
     }
+  }
+
+  /** Drop PvP pair entries that can no longer affect anti-farming checks (window / 60s flag horizon). */
+  protected prunePvpKillLog(): void {
+    const horizon = Math.max(this.rules.pvpSameVictimWindowMs, 60_000);
+    for (const [k, t] of this.pvpKillLog) if (this.now - t >= horizon) this.pvpKillLog.delete(k);
   }
 
   // ------------------------------------------------------------------------
@@ -2239,25 +2259,42 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     void this.svc.clanMissions.flush();
   }
 
-  protected async flushPlayer(p: PlayerActor, final: boolean, waitInFlight = final): Promise<void> {
+  private flushContext(p: PlayerActor): FlushContext {
+    return {
+      factionId: p.profile.factionId,
+      pet: p.pet ? { rowId: p.pet.rowId, def: p.pet.def } : p.profile.pet ? { rowId: p.profile.pet.rowId, def: p.profile.pet.def } : null,
+    };
+  }
+
+  /** Returns false only when the persistence transaction itself failed (delta restored into `p.pending`). */
+  protected async flushPlayer(p: PlayerActor, final: boolean, waitInFlight = final): Promise<boolean> {
     this.accruePlaytime(p);
     if (final && !p.pending.position) p.pending.position = p.jumpedTo ?? this.exitPosition(p);
     const hasQuestChanges = [...p.profile.quests.values()].some((q) => q.dirty);
-    if (p.pending.isEmpty() && !hasQuestChanges && !final) return;
+    if (p.pending.isEmpty() && !hasQuestChanges && !final) return true;
     if (p.flushing) {
       if (waitInFlight) {
         // wait for the in-flight flush then flush the rest
         for (let i = 0; i < 100 && p.flushing; i++) await new Promise((r) => setTimeout(r, 50));
-      } else return;
+      } else return true;
     }
     p.flushing = true;
     const delta = p.pending;
     p.pending = new PendingDelta();
+    let res: FlushResult;
     try {
-      const res = await this.svc.persistence.flush(p.userId, delta, p.profile.quests.values(), p.profile.achievements, {
-        factionId: p.profile.factionId,
-        pet: p.pet ? { rowId: p.pet.rowId, def: p.pet.def } : p.profile.pet ? { rowId: p.profile.pet.rowId, def: p.profile.pet.def } : null,
-      });
+      res = await this.svc.persistence.flush(p.userId, delta, p.profile.quests.values(), p.profile.achievements, this.flushContext(p));
+    } catch (e) {
+      // Only an uncommitted transaction may restore the delta (it will be re-applied by the next flush).
+      errorsTotal.inc({ component: "persistence", code: "flush" });
+      this.log.error({ err: e, userId: p.userId }, "flush failed; will retry");
+      delta.mergeFrom(p.pending);
+      p.pending = delta;
+      p.flushing = false;
+      return false;
+    }
+    // Post-commit bookkeeping: failures here must NEVER re-queue the committed delta (double increments).
+    try {
       if (res.level > p.level && !p.left) {
         p.level = res.level;
         this.sendNear(p.x, p.y, ServerEvent.PLAYER_LEVEL_UP, { userId: p.userId, level: p.level, entityId: p.id });
@@ -2273,13 +2310,12 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         for (const [id, q] of fresh) if (!p.profile.quests.has(id)) p.profile.quests.set(id, q);
       }
     } catch (e) {
-      errorsTotal.inc({ component: "persistence", code: "flush" });
-      this.log.error({ err: e, userId: p.userId }, "flush failed; will retry");
-      delta.mergeFrom(p.pending);
-      p.pending = delta;
+      errorsTotal.inc({ component: "persistence", code: "post_flush" });
+      this.log.warn({ err: e, userId: p.userId }, "post-flush sync failed (delta already committed)");
     } finally {
       p.flushing = false;
     }
+    return true;
   }
 
   // ------------------------------------------------------------------------

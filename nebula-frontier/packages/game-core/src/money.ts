@@ -8,7 +8,8 @@
 export function toMoney(value: number): bigint {
   if (!Number.isFinite(value)) throw new RangeError(`Invalid money amount: ${value}`);
   if (value < 0) throw new RangeError(`Money amount cannot be negative: ${value}`);
-  const rounded = Math.floor(value + 0.5);
+  // Integers pass through unchanged: near 2^53, `value + 0.5` itself rounds up and would corrupt them.
+  const rounded = Number.isInteger(value) ? value : Math.floor(value + 0.5);
   if (!Number.isSafeInteger(rounded)) throw new RangeError(`Money amount exceeds safe integer range: ${value}`);
   return BigInt(rounded);
 }

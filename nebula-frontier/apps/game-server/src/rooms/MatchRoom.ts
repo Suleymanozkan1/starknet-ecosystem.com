@@ -226,6 +226,11 @@ export abstract class MatchRoom extends BaseGameRoom {
 export class PvPRoom extends MatchRoom {
   readonly roomKind = RoomName.PVP;
   protected mode: MatchMode = MatchMode.CASUAL;
+
+  /** Portal/rift jumps issue a ticket for exactly this map; a ticket for another map must not enter. */
+  protected override requireTicketMap(): boolean {
+    return true;
+  }
   override async onCreate(options: Record<string, unknown>): Promise<void> {
     const d = String(options.difficulty ?? "").toUpperCase();
     this.mode = d === "RANKED" ? MatchMode.RANKED : d === "LARGE_SCALE" ? MatchMode.LARGE_SCALE : MatchMode.CASUAL;

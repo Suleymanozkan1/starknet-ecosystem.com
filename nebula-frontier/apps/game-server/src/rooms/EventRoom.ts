@@ -13,6 +13,11 @@ import type { ActiveEvent } from "../services/events.js";
 export class EventRoom extends BaseGameRoom {
   readonly roomKind = RoomName.EVENT;
 
+  /** Portal/rift jumps issue a ticket for exactly this map; a ticket for another map must not enter. */
+  protected override requireTicketMap(): boolean {
+    return true;
+  }
+
   protected override setupWorld(): void {
     // Event instances only contain event spawns (boss via onEventStarted) + asteroids.
     this.spawnAsteroids();

@@ -124,7 +124,7 @@ describe("clan missions", () => {
     expect((await leader.req("POST", `/api/clans/${clanId}/missions/q_clan_founding/start`)).statusCode).toBe(409);
     expect(code(await leader.req("POST", `/api/clans/${clanId}/missions/${missionId}/claim`))).toBe("MISSION_INCOMPLETE");
 
-    const kill = (npcId: string) => ({ userId: member.userId, event: { type: "KILL", npcId, boss: false, mapId: "map_helios_frontier" } });
+    const kill = (npcId: string) => ({ eventId: randomUUID(), userId: member.userId, event: { type: "KILL", npcId, boss: false, mapId: "map_helios_frontier" } });
     const noToken = await ctx.app.inject({ method: "POST", url: "/api/internal/clan-missions/progress", payload: { events: [kill("npc_xyrr_fighter")] } });
     expect(noToken.statusCode).toBe(401);
     // Player credentials are not accepted on internal endpoints.
@@ -132,9 +132,16 @@ describe("clan missions", () => {
     const post = (events: unknown[]) =>
       ctx.app.inject({ method: "POST", url: "/api/internal/clan-missions/progress", headers: { "x-internal-token": INTERNAL }, payload: { events } });
     expect((await post([kill("npc_pirate_raider"), kill("npc_pirate_raider")])).statusCode).toBe(200); // wrong target: no progress
-    expect((await post(Array.from({ length: 29 }, () => kill("npc_xyrr_fighter")))).statusCode).toBe(200);
+    const batch = Array.from({ length: 29 }, () => kill("npc_xyrr_fighter"));
+    expect((await post(batch)).statusCode).toBe(200);
     let m = await ctx.db.clanMission.findUniqueOrThrow({ where: { id: missionId } });
     expect(m.progress[0]).toBe(29);
+    // A retried request (same event ids, e.g. response lost) is a no-op; events without an id are rejected.
+    expect((await post(batch)).statusCode).toBe(200);
+    expect((await post([{ userId: member.userId, event: batch[0]!.event }])).statusCode).toBe(400);
+    m = await ctx.db.clanMission.findUniqueOrThrow({ where: { id: missionId } });
+    expect(m.progress[0]).toBe(29);
+    expect(await ctx.db.clanMissionEventReceipt.count({ where: { missionId } })).toBe(29);
     expect(m.status).toBe("ACTIVE");
     await post([kill("npc_xyrr_fighter"), kill("npc_xyrr_fighter")]);
     m = await ctx.db.clanMission.findUniqueOrThrow({ where: { id: missionId } });

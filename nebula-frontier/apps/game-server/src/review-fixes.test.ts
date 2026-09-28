@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./bots/behaviors.js";
 import { deadlinePassed, parseArgs } from "./bots/cli.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, resolveApiInternalUrl } from "./config.js";
 import { sanitizeChat } from "./protocol/messages.js";
 import { applyOverrides, DEFAULT_RULES } from "./services/rules.js";
 
@@ -58,6 +58,18 @@ describe("#4 production requires REDIS_URL", () => {
     expect(() => loadConfig()).toThrow(/REDIS_URL/);
     process.env.NODE_ENV = "development";
     expect(loadConfig().redisUrl).toBeNull();
+  });
+});
+
+describe("round 3: internal API URL requires TLS when the service token is set", () => {
+  it("rejects remote plain http with a token, allows loopback / https / no token", () => {
+    expect(() => resolveApiInternalUrl("http://api.internal:8080", "t".repeat(32))).toThrow(/https/);
+    expect(() => resolveApiInternalUrl("http://10.0.0.5:8080/", "t".repeat(32))).toThrow(/https/);
+    expect(() => resolveApiInternalUrl("ftp://api.internal", null)).toThrow();
+    expect(resolveApiInternalUrl("https://api.internal:8443/", "t".repeat(32))).toBe("https://api.internal:8443");
+    for (const u of ["http://localhost:8080", "http://127.0.0.1:9000", "http://[::1]:8080"]) expect(resolveApiInternalUrl(u, "t".repeat(32))).toBe(u);
+    expect(resolveApiInternalUrl("http://api.internal:8080", null)).toBe("http://api.internal:8080");
+    expect(resolveApiInternalUrl(undefined, "t".repeat(32))).toBe("http://localhost:8080");
   });
 });
 
