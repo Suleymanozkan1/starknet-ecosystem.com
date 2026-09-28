@@ -3,7 +3,8 @@
  *
  * Bots are real WebSocket clients (@colyseus/sdk). They authenticate with game
  * tickets signed with the active GAME_TICKET_SECRETS / GAME_TICKET_SECRET key for DB users named `bot_*` (created on
- * first run, reused afterwards).
+ * first run, reused afterwards). The `bot_` prefix is reserved: player register/rename schemas
+ * (`playerUsernameSchema` in @nebula/validation) reject it, so players cannot claim a bot-controlled account.
  */
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
@@ -12,13 +13,15 @@ import { FACTIONS, FACTIONS_BY_ID, MAPS_BY_ID } from "@nebula/config";
 import { keyRingFromEnv, signGameTicket, type KeyRing } from "@nebula/authentication";
 import { createDb, type Db } from "@nebula/database";
 import { mulberry32, RoomName } from "@nebula/shared";
+import { RESERVED_BOT_USERNAME_PREFIX } from "@nebula/validation";
+import { z } from "zod";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./behaviors.js";
 
 export interface Args { count: number; map: string | null; url: string; type: string | null; durationSec: number }
 
 const FLAGS = new Set(["count", "map", "url", "type", "duration"]);
 
-/** Strict flag parsing: unknown flags, missing operands and out-of-range numbers are rejected. */
+/** Strict flag parsing: unknown flags and missing operands are rejected here; values/defaults are validated by a zod schema. */
 export function parseArgs(argv: string[]): Args {
   const vals = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
@@ -32,28 +35,40 @@ export function parseArgs(argv: string[]): Args {
     vals.set(name, v);
     i++;
   }
-  const int = (name: string, def: number, min: number, max: number): number => {
-    const raw = vals.get(name);
-    if (raw === undefined) return def;
-    const n = Number(raw);
-    if (!Number.isInteger(n) || n < min || n > max) throw new Error(`--${name} must be an integer in ${min}..${max}`);
-    return n;
-  };
-  const type = vals.get("type") ?? null;
-  if (type !== null && !Object.keys(ARCHETYPES).includes(type)) throw new Error(`--type must be one of ${Object.keys(ARCHETYPES).join(", ")}`);
-  const map = vals.get("map") ?? null;
-  if (map !== null && MAPS_BY_ID.get(map)?.roomType !== "sector") throw new Error(`--map must be a sector map id`);
-  const url = vals.get("url") ?? process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${process.env.GAME_PORT ?? 2567}`;
-  if (!/^wss?:\/\//.test(url)) throw new Error("--url must be a ws:// or wss:// URL");
-  return { count: int("count", 10, 1, 500), map, url, type, durationSec: int("duration", 0, 0, 86_400) };
+  const intFlag = (name: string, def: number, min: number, max: number) =>
+    z.string()
+      .regex(/^\d+$/, `--${name} must be an integer in ${min}..${max}`)
+      .transform(Number)
+      .pipe(z.number().int().min(min, `--${name} must be an integer in ${min}..${max}`).max(max, `--${name} must be an integer in ${min}..${max}`))
+      .default(def);
+  const archetypes = Object.keys(ARCHETYPES);
+  const schema = z.object({
+    count: intFlag("count", 10, 1, 500),
+    duration: intFlag("duration", 0, 0, 86_400),
+    type: z.string().refine((t) => archetypes.includes(t), `--type must be one of ${archetypes.join(", ")}`).nullable().default(null),
+    map: z.string().refine((m) => MAPS_BY_ID.get(m)?.roomType === "sector", "--map must be a sector map id").nullable().default(null),
+    url: z.string().regex(/^wss?:\/\/\S+$/, "--url must be a ws:// or wss:// URL").pipe(z.url()),
+  });
+  const parsed = schema.safeParse({
+    ...Object.fromEntries(vals),
+    url: vals.get("url") ?? process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${process.env.GAME_PORT ?? 2567}`,
+  });
+  if (!parsed.success) throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  const { count, duration, type, map, url } = parsed.data;
+  return { count, map, url, type, durationSec: duration };
+}
+
+/** True once a finite run (`stopAt > 0`) has reached its deadline: no further bots may be launched. */
+export function deadlinePassed(stopAt: number, now: number = Date.now()): boolean {
+  return stopAt > 0 && now >= stopAt;
 }
 
 async function ensureBots(db: Db, n: number): Promise<{ id: string; username: string; faction: string; lastMapId: string | null }[]> {
-  const existing = await db.user.findMany({ where: { username: { startsWith: "bot_" } }, include: { playerFaction: true }, take: n, orderBy: { createdAt: "asc" } });
+  const existing = await db.user.findMany({ where: { username: { startsWith: RESERVED_BOT_USERNAME_PREFIX } }, include: { playerFaction: true }, take: n, orderBy: { createdAt: "asc" } });
   const out = existing.map((u) => ({ id: u.id, username: u.username, faction: u.playerFaction?.factionId ?? "", lastMapId: u.lastMapId }));
   for (let i = out.length; i < n; i++) {
     const faction = FACTIONS[i % FACTIONS.length]!.id;
-    const username = `bot_${randomUUID().replace(/-/g, "").slice(0, 10)}`;
+    const username = `${RESERVED_BOT_USERNAME_PREFIX}${randomUUID().replace(/-/g, "").slice(0, 10)}`;
     const u = await db.user.create({ data: { username, playerFaction: { create: { factionId: faction } } } });
     out.push({ id: u.id, username, faction, lastMapId: null });
   }
@@ -175,13 +190,15 @@ async function main(): Promise<void> {
     return (async () => {
       await new Promise((r) => setTimeout(r, i * 100));
       for (let attempt = 0; attempt < 3; attempt++) {
+        // Never open a new connection once the run's deadline has passed (staggered or retrying bots).
+        if (deadlinePassed(stopAt)) return;
         try {
           await runBot(args.url, secret, b, args.map, type, i + 1, stopAt);
           console.info(`bot ${b.username} (${type}) left`);
           return;
         } catch (e) {
           console.error(`bot ${b.username} (${type}) error: ${(e as Error).message}`);
-          if (stopAt > 0 && Date.now() > stopAt) return;
+          if (deadlinePassed(stopAt)) return;
           await new Promise((r) => setTimeout(r, 2000));
         }
       }

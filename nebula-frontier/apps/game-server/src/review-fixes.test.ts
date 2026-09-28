@@ -1,7 +1,7 @@
 /** Unit regression tests for CodeRabbit PR #2 round 1 findings (game-server, no DB). */
 import { afterEach, describe, expect, it } from "vitest";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./bots/behaviors.js";
-import { parseArgs } from "./bots/cli.js";
+import { deadlinePassed, parseArgs } from "./bots/cli.js";
 import { loadConfig } from "./config.js";
 import { sanitizeChat } from "./protocol/messages.js";
 import { applyOverrides, DEFAULT_RULES } from "./services/rules.js";
@@ -24,17 +24,32 @@ describe("#2 bots CLI flag validation", () => {
   it.each([
     [["--count"]], [["--count", "--map", "map_aurora_prime"]], [["--count", "abc"]], [["--count", "0"]], [["--count", "501"]],
     [["--duration", "-1"]], [["--type", "wizard"]], [["--map", "map_gate_alpha"]], [["--url", "http://x"]], [["--bogus", "1"]], [["stray"]],
+    [["--count", "1.5"]], [["--count", "1e2"]], [["--url", "ws://"]],
   ])("rejects %j", (argv) => {
     expect(() => parseArgs(argv)).toThrow();
+  });
+  it("keeps explicit unknown-flag / missing-operand errors and reports schema messages", () => {
+    expect(() => parseArgs(["--bogus", "1"])).toThrow("Unknown flag --bogus");
+    expect(() => parseArgs(["--count"])).toThrow("Flag --count requires a value");
+    expect(() => parseArgs(["--count", "0"])).toThrow("--count must be an integer in 1..500");
+    expect(parseArgs(["--url", "wss://game.example/ws", "--map", "map_aurora_prime"])).toMatchObject({ url: "wss://game.example/ws", map: "map_aurora_prime", durationSec: 0 });
+  });
+  it("stops launching bots once the run deadline has passed", () => {
+    expect(deadlinePassed(0, 10_000)).toBe(false); // unlimited run
+    expect(deadlinePassed(5_000, 4_999)).toBe(false);
+    expect(deadlinePassed(5_000, 5_000)).toBe(true);
+    expect(deadlinePassed(5_000, 49_900)).toBe(true); // e.g. bot #500 after its stagger on a 1s run
   });
 });
 
 describe("#4 production requires REDIS_URL", () => {
-  const saved = { NODE_ENV: process.env.NODE_ENV, REDIS_URL: process.env.REDIS_URL };
+  const saved = { NODE_ENV: process.env.NODE_ENV, REDIS_URL: process.env.REDIS_URL, GAME_TICKET_SECRET: process.env.GAME_TICKET_SECRET };
   afterEach(() => {
     process.env.NODE_ENV = saved.NODE_ENV;
     if (saved.REDIS_URL === undefined) delete process.env.REDIS_URL;
     else process.env.REDIS_URL = saved.REDIS_URL;
+    if (saved.GAME_TICKET_SECRET === undefined) delete process.env.GAME_TICKET_SECRET;
+    else process.env.GAME_TICKET_SECRET = saved.GAME_TICKET_SECRET;
   });
   it("fails fast in production without Redis, stays optional in development", () => {
     process.env.GAME_TICKET_SECRET ||= "x".repeat(40);
