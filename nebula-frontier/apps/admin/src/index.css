@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-display: var(--nf-font-display);
+  --font-ui: var(--nf-font-ui);
+  --font-sans: var(--nf-font-body);
+  --color-accent: var(--nf-accent);
+  --color-ink: var(--nf-text);
+  --color-dim: var(--nf-text-dim);
+  --color-mute: var(--nf-text-mute);
+  --color-line: var(--nf-line);
+  --color-good: var(--nf-good);
+  --color-warn: var(--nf-warn);
+  --color-bad: var(--nf-bad);
+}
+:root {
+  --nf-accent: #6ee7ff;
+  /* Chart categorical slots (validated dark steps, fixed order). */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+}
+html, body, #root { height: 100%; }
+body {
+  margin: 0; font-family: var(--nf-font-body); color: var(--nf-text); color-scheme: dark;
+  background: radial-gradient(ellipse at 10% 0%, rgba(57,135,229,0.12), transparent 50%), radial-gradient(ellipse at 90% 100%, rgba(167,139,250,0.08), transparent 50%), var(--nf-bg);
+  background-attachment: fixed; -webkit-font-smoothing: antialiased;
+}
+.adm-nav a { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 6px; color: var(--nf-text-dim); text-decoration: none; font: 600 14px/1.2 var(--nf-font-ui); letter-spacing: 0.08em; text-transform: uppercase; }
+.adm-nav a:hover { color: var(--nf-text); background: rgba(140,200,255,0.06); }
+.adm-nav a.active { color: var(--nf-text); background: color-mix(in oklab, var(--nf-accent) 16%, transparent); box-shadow: inset 3px 0 0 var(--nf-accent); }
+.adm-nav h3 { margin: 16px 12px 6px; font: 700 10.5px/1 var(--nf-font-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--nf-text-mute); }
+.nf-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+.nf-table th { text-align: left; font: 700 11px/1 var(--nf-font-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--nf-text-mute); padding: 9px 10px; border-bottom: 1px solid var(--nf-line); white-space: nowrap; }
+.nf-table td { padding: 9px 10px; border-bottom: 1px solid rgba(140,200,255,0.06); vertical-align: middle; }
+.nf-table tr:hover td { background: rgba(140,200,255,0.03); }
+.nf-mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.nf-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--nf-line-strong); font: 700 11px/1.4 var(--nf-font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--nf-text-dim); }
+.kpi-value { font-family: var(--nf-font-display); font-weight: 700; font-size: 24px; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }

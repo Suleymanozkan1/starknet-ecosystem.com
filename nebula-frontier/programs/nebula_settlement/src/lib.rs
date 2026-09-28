@@ -98,13 +98,17 @@ pub mod nebula_settlement {
     pub fn open_escrow(ctx: Context<OpenEscrow>, escrow_id: u64, amount: u64, expires_at: i64) -> Result<()> {
         require!(amount > 0, SettlementError::InvalidAmount);
         require!(expires_at > Clock::get()?.unix_timestamp, SettlementError::InvalidExpiry);
-        let e = &mut ctx.accounts.escrow;
-        e.escrow_id = escrow_id;
-        e.maker = ctx.accounts.maker.key();
-        e.taker = ctx.accounts.taker.key();
-        e.amount = amount;
-        e.expires_at = expires_at;
-        e.bump = ctx.bumps.escrow;
+        let maker = ctx.accounts.maker.key();
+        let taker = ctx.accounts.taker.key();
+        {
+            let e = &mut ctx.accounts.escrow;
+            e.escrow_id = escrow_id;
+            e.maker = maker;
+            e.taker = taker;
+            e.amount = amount;
+            e.expires_at = expires_at;
+            e.bump = ctx.bumps.escrow;
+        }
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.key(),
@@ -112,7 +116,7 @@ pub mod nebula_settlement {
             ),
             amount,
         )?;
-        emit!(EscrowOpened { escrow_id, maker: e.maker, taker: e.taker, amount });
+        emit!(EscrowOpened { escrow_id, maker, taker, amount });
         Ok(())
     }
 
