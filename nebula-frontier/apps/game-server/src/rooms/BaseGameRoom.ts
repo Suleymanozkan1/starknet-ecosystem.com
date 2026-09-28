@@ -57,6 +57,18 @@ export interface RoomMeta {
 }
 
 type Msg = keyof typeof Schemas;
+
+/** Temporary EVENT_GATE portal opened by a GLOBAL_RIFT event. */
+export interface RiftPortal {
+  id: string;
+  x: number;
+  y: number;
+  eventId: string;
+  windowStart: number;
+  expiresAt: number;
+  targetMap: string;
+  entity: Entity;
+}
 type GridItem = { id: string; x: number; y: number; ref: PlayerActor | NpcActor | LootActor | AsteroidActor };
 
 const ROOM_FOR_MAP_TYPE: Record<MapDef["roomType"], RoomName> = {
@@ -99,6 +111,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   protected xpMultiplier = 1;
   protected dropMultiplier = 1;
   protected riftBossIds = new Set<string>();
+  protected riftPortals = new Map<string, RiftPortal>();
 
   // ------------------------------------------------------------------------
   // Hooks for subclasses
@@ -286,7 +299,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     this.questEvent(p, { type: "LEVEL", level: p.level });
     this.emitTo(client, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name, self: this.selfInfo(p) });
     this.sendNear(p.x, p.y, ServerEvent.PLAYER_JOIN, { entityId: p.id, name: p.name }, p);
-    for (const ae of this.svc.events.activeFor(this.map.id)) this.emitTo(client, ServerEvent.EVENT_STARTED, EventEngine.notice(ae));
+    for (const ae of this.svc.events.allActive()) {
+      if (ae.def.maps.includes(this.map.id) || ae.def.type === "GLOBAL_RIFT") this.emitTo(client, ServerEvent.EVENT_STARTED, EventEngine.notice(ae));
+    }
     this.state.online = this.players.size;
     activePlayers.set({ room: this.roomKind, map: this.map.id }, this.players.size);
     void this.setMatchmaking({ metadata: { ...this.metadata } }).catch(() => undefined);
@@ -529,15 +544,24 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       case "ping": return this.emitTo(p.client, ServerEvent.PONG, { t: (m as ParsedMessages["ping"]).t, server: Date.now() });
       case "marker": {
         const mk = m as ParsedMessages["marker"];
-        for (const o of this.players.values()) {
-          if (o !== p && (o.team === p.team && this.isTeamRoom() ? true : o.faction === p.faction)) {
-            this.emitTo(o.client, ServerEvent.NOTICE, { level: "info", text: `${p.name} marked ${mk.kind} at ${Math.round(mk.x)},${Math.round(mk.y)}` });
-          }
-        }
+        if (p.dead) return;
+        const evt = { x: Math.max(0, Math.min(this.map.width, mk.x)), y: Math.max(0, Math.min(this.map.height, mk.y)), kind: mk.kind, fromId: p.id, fromName: p.name };
+        for (const o of this.players.values()) if (o.connected && this.isAlly(p, o)) this.emitTo(o.client, ServerEvent.MARKER, evt);
         return;
       }
       default: return;
     }
+  }
+
+  /**
+   * Allies for tactical markers: same team in team rooms; otherwise clan mates
+   * anywhere in the room, or same-faction pilots within 2× AOI (open-world squad).
+   */
+  protected isAlly(a: PlayerActor, b: PlayerActor): boolean {
+    if (this.isTeamRoom()) return a.team === b.team;
+    if (a.profile.clanId && a.profile.clanId === b.profile.clanId) return true;
+    const r = this.svc.config.aoiRadius * 2;
+    return !!a.profile.factionId && a.profile.factionId === b.profile.factionId && (a.x - b.x) ** 2 + (a.y - b.y) ** 2 <= r * r;
   }
 
   protected isTeamRoom(): boolean {
@@ -1527,6 +1551,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   }
 
   private tickWorld(): void {
+    for (const rp of this.riftPortals.values()) if (this.now >= rp.expiresAt) this.closeRiftPortal(rp);
     for (const l of this.loot.values()) if (this.now >= l.expiresAt) this.removeLoot(l);
     for (const a of this.asteroids.values()) {
       if (a.depleted && this.now >= a.respawnAt) {
@@ -1575,6 +1600,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
 
   private async onJump(p: PlayerActor, portalId: string): Promise<void> {
     if (p.dead || p.docked) return this.error(p, "CANNOT_JUMP", "Cannot jump now");
+    const rift = this.riftPortals.get(portalId);
+    if (rift) return this.jumpRift(p, rift);
     const portal = this.map.portals.find((x) => x.id === portalId);
     const near = nearestPortal(this.map, p.x, p.y, this.rules.portalRange);
     if (!portal || !near || near.id !== portal.id) return this.error(p, "PORTAL_OUT_OF_RANGE", "Fly into the portal to jump");
@@ -1596,6 +1623,27 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     } catch (e) {
       this.log.error({ err: e, portalId }, "jump failed");
       this.error(p, "JUMP_FAILED", "Jump failed, try again");
+    }
+  }
+
+  private async jumpRift(p: PlayerActor, rp: RiftPortal): Promise<void> {
+    if (Math.hypot(rp.x - p.x, rp.y - p.y) > this.rules.portalRange) return this.error(p, "PORTAL_OUT_OF_RANGE", "Fly into the rift gate to jump");
+    if (this.now - p.lastDamagedAt < this.rules.combatLockMs) return this.error(p, "IN_COMBAT", "Jump drive locked during combat");
+    const target = MAPS_BY_ID.get(rp.targetMap);
+    if (!target) return this.error(p, "BAD_PORTAL", "Rift destination offline");
+    try {
+      const ticket = await this.svc.tickets.issue(p.userId, p.name, target.id);
+      const instanceKey = `${rp.eventId}:${rp.windowStart}`;
+      const reservation = await matchMaker.joinOrCreate(RoomName.EVENT, { ticket, mapId: target.id, instanceKey });
+      // The rift instance is temporary: persist the player at the gate they entered from.
+      p.jumpedTo = { mapId: this.map.id, x: rp.x, y: rp.y };
+      p.pending.position = p.jumpedTo;
+      this.emitTo(p.client, ServerEvent.JUMP, { mapId: target.id, portalId: rp.id, roomName: RoomName.EVENT, reservation });
+      this.sendNear(p.x, p.y, ServerEvent.EFFECT, { kind: "WARP", x: p.x, y: p.y, radius: 10, sourceId: p.id });
+      this.requestFlush(p);
+    } catch (e) {
+      this.log.error({ err: e, portalId: rp.id }, "rift jump failed");
+      this.error(p, "JUMP_FAILED", "Rift jump failed, try again");
     }
   }
 
@@ -1688,16 +1736,22 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       this.state.eventName = act?.def.name ?? "";
       this.state.eventEndsAt = act?.window.end ?? 0;
     };
+    // Global rifts are announced in every room (notice carries the affected map list);
+    // map-local effects (multipliers, portals, bosses) only apply on the listed maps.
     const started = (a: ActiveEvent) => {
-      if (!a.def.maps.includes(this.map.id)) return;
-      apply();
+      const here = a.def.maps.includes(this.map.id);
+      if (!here && a.def.type !== "GLOBAL_RIFT") return;
       this.broadcast(ServerEvent.EVENT_STARTED, EventEngine.notice(a));
+      if (!here) return;
+      apply();
       this.onEventStarted(a);
     };
     const finished = (a: ActiveEvent) => {
-      if (!a.def.maps.includes(this.map.id)) return;
-      apply();
+      const here = a.def.maps.includes(this.map.id);
+      if (!here && a.def.type !== "GLOBAL_RIFT") return;
       this.broadcast(ServerEvent.EVENT_FINISHED, EventEngine.notice(a));
+      if (!here) return;
+      apply();
       this.onEventFinished(a);
     };
     this.eventListeners = { started, finished };
@@ -1707,8 +1761,17 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const a of this.svc.events.activeFor(this.map.id)) this.onEventStarted(a);
   }
 
-  /** Default: world-boss style events spawn their boss (e.g. VOID RIFT OPENED). */
+  /**
+   * Default event handling on a listed map:
+   * - GLOBAL_RIFT in open-world rooms: a temporary EVENT_GATE portal opens (despawns at event end)
+   *   leading into the shared rift instance (EventRoom) where the rift boss lives.
+   * - Other boss events (and the rift instance itself): the event boss spawns here.
+   */
   protected onEventStarted(a: ActiveEvent): void {
+    if (a.def.type === "GLOBAL_RIFT" && (this.roomKind === RoomName.SECTOR || this.roomKind === RoomName.BOSS)) {
+      this.openRiftPortal(a);
+      return;
+    }
     if (!a.def.boss || this.riftBossIds.has(`${a.def.id}:${a.window.start}`)) return;
     if (this.roomKind !== RoomName.SECTOR && this.roomKind !== RoomName.BOSS && this.roomKind !== RoomName.EVENT) return;
     if ([...this.npcs.values()].some((n) => n.def.id === a.def.boss && !n.dead)) return;
@@ -1724,12 +1787,53 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   }
 
   protected onEventFinished(a: ActiveEvent): void {
+    for (const rp of [...this.riftPortals.values()]) if (rp.eventId === a.def.id && rp.windowStart === a.window.start) this.closeRiftPortal(rp);
     for (const n of [...this.npcs.values()]) {
       if (n.tag === `event:${a.def.id}:${a.window.start}` && !n.dead) {
         this.broadcast(ServerEvent.NOTICE, { level: "info", text: `${n.name} retreated into the rift` });
         this.removeNpc(n);
       }
     }
+  }
+
+  /** Map hosting a rift instance: the event map whose roomType is "boss", else the first listed map. */
+  static riftTargetMap(def: EventDef): string {
+    return def.maps.find((m) => MAPS_BY_ID.get(m)?.roomType === "boss") ?? def.maps[0] ?? "";
+  }
+
+  protected openRiftPortal(a: ActiveEvent): void {
+    const id = `rift:${a.def.id}:${a.window.start}`;
+    if (this.riftPortals.has(id)) return;
+    const x = this.map.width * (0.3 + this.rng() * 0.4);
+    const y = this.map.height * (0.3 + this.rng() * 0.4);
+    const entity = new Entity();
+    entity.id = id;
+    entity.kind = "PORTAL";
+    entity.name = a.def.name;
+    entity.defId = "EVENT_GATE";
+    entity.x = x;
+    entity.y = y;
+    entity.hull = 1;
+    entity.maxHull = 1;
+    entity.team = -1;
+    entity.aiState = a.def.id;
+    const rp: RiftPortal = { id, x, y, eventId: a.def.id, windowStart: a.window.start, expiresAt: a.window.end, targetMap: BaseGameRoom.riftTargetMap(a.def), entity };
+    this.riftPortals.set(id, rp);
+    this.state.entities.set(id, entity);
+    for (const p of this.players.values()) this.updateAoiFor(p);
+    this.broadcast(ServerEvent.NOTICE, { level: "warn", text: `${a.def.name}: a rift gate has opened in ${this.map.name}!` });
+    this.broadcast(ServerEvent.EFFECT, { kind: "WARP", x, y, radius: 40, sourceId: id });
+  }
+
+  protected closeRiftPortal(rp: RiftPortal): void {
+    this.riftPortals.delete(rp.id);
+    this.state.entities.delete(rp.id);
+    for (const p of this.players.values()) p.visible.delete(rp.id);
+    this.broadcast(ServerEvent.NOTICE, { level: "info", text: "The rift gate collapsed" });
+  }
+
+  getRiftPortals(): RiftPortal[] {
+    return [...this.riftPortals.values()];
   }
 
   // ------------------------------------------------------------------------
@@ -1826,6 +1930,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     }
     // Keep the room's boss always visible (large fights: boss is the objective).
     if (this.state.bossId && this.npcs.has(this.state.bossId)) want.add(this.state.bossId);
+    // Rift gates are map-wide objectives: visible to everyone on the map.
+    for (const id of this.riftPortals.keys()) want.add(id);
     for (const id of p.visible) {
       if (want.has(id)) continue;
       const e = this.state.entities.get(id);

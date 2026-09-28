@@ -137,7 +137,7 @@ varying float vN;
 void main() {
   float a = pow(1.0 - vT, 1.6) * uIntensity;
   vec3 core = mix(vec3(1.0), uColor, smoothstep(0.0, 0.45, vT));
-  gl_FragColor = vec4(core * (1.6 + vN * 2.0), a);
+  gl_FragColor = vec4(core * (1.1 + vN * 1.5), a * 0.85);
 }`;
 
 export interface ShipModelOptions {
@@ -368,9 +368,9 @@ export class ShipModel {
     for (let i = 0; i < this.flames.length; i++) {
       const f = this.flames[i];
       const r = this.sockets.nozzleRadius[i] ?? 0.1;
-      if (f) f.scale.set(r * (0.8 + k * 0.3), r * (0.8 + k * 0.3), r * (1 + k * 5));
+      if (f) f.scale.set(r * (0.75 + k * 0.2), r * (0.75 + k * 0.2), r * (0.8 + k * 3.2));
       const g = this.glows[i];
-      if (g) g.scale.setScalar(r * (2.5 + k * 3));
+      if (g) g.scale.setScalar(r * (2 + k * 1.6));
     }
   }
 

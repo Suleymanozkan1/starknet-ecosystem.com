@@ -2,7 +2,8 @@
  * XP curve, levels, ranks, prestige and equipment upgrade (+1..+N) costs,
  * all driven by `progression.json` (ProgressionConfig).
  */
-import type { ProgressionConfig, ResourceId } from "@nebula/shared";
+import { FACTIONS } from "@nebula/config";
+import type { FactionDef, ProgressionConfig, ResourceId } from "@nebula/shared";
 import type { Rng } from "./tuning.js";
 
 /**
@@ -115,3 +116,20 @@ export function deathRepairCost(maxHull: number, cfg: ProgressionConfig): number
 export function repairCost(missingHull: number, cfg: ProgressionConfig): number {
   return Math.max(0, Math.ceil(missingHull * cfg.repair.creditsPerHullPoint));
 }
+
+/**
+ * Starter consumables (e.g. missile ammo) granted with a faction's starter ship.
+ * Single source of truth for the API (/api/me/faction) and the game server:
+ * data lives in factions.json `starterLoadout.ammo`.
+ */
+export function starterAmmoFor(faction: Pick<FactionDef, "starterLoadout">): { itemId: string; quantity: number }[] {
+  return (faction.starterLoadout.ammo ?? []).filter((a) => a.quantity > 0).map((a) => ({ itemId: a.itemId, quantity: Math.floor(a.quantity) }));
+}
+
+/** Faction id → starter ammo stacks, from factions.json. */
+export const STARTER_AMMO: ReadonlyMap<string, readonly { itemId: string; quantity: number }[]> = new Map(
+  FACTIONS.map((f) => [f.id, starterAmmoFor(f)] as const),
+);
+
+/** originRef for a starter ammo grant (unique per user & item → idempotent). */
+export const starterAmmoOriginRef = (userId: string, itemId: string): string => `starter-ammo:${userId}:${itemId}`;

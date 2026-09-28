@@ -45,7 +45,9 @@ export interface HangarViewer {
 
 interface Bay {
   root: Group;
+  /** Rotating turntable (unscaled) holding the disc and the ship. */
   platform: Group;
+  disc: Group;
   model: ShipModel | null;
   def: ShipDef | null;
   shield: ShieldHandle | null;
@@ -81,7 +83,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   if (!opts.transparent) scene.background = new Color("#05070d");
   if (backend.environment) {
     scene.environment = backend.environment;
-    scene.environmentIntensity = 0.9;
+    scene.environmentIntensity = 0.55;
   }
   const camera = new PerspectiveCamera(35, 1, 0.1, 500);
   camera.position.set(9, 5.5, 11);
@@ -95,7 +97,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   controls.target.set(0, 0.8, 0);
 
   // --- studio lighting -----------------------------------------------------------------
-  const key = new SpotLight("#ffffff", 900, 80, Math.PI / 5, 0.5, 1.6);
+  const key = new SpotLight("#ffffff", 260, 120, Math.PI / 5, 0.5, 1.4);
   key.position.set(8, 16, 10);
   key.castShadow = tier.shadows;
   key.shadow.mapSize.set(tier.shadowMapSize, tier.shadowMapSize);
@@ -118,7 +120,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     reflector.position.y = -0.02;
     floorGroup.add(reflector);
   }
-  const floorMat = new MeshStandardMaterial({ color: "#0b0e15", roughness: 0.35, metalness: 0.6, transparent: !!reflector, opacity: reflector ? 0.82 : 1 });
+  const floorMat = new MeshStandardMaterial({ color: "#0b0e15", roughness: 0.6, metalness: 0.4, envMapIntensity: 0.05, transparent: !!reflector, opacity: reflector ? 0.88 : 1 });
   const floorGeo = new CircleGeometry(60, 64);
   const floor = new Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -137,7 +139,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   scene.add(fx.group);
 
   const platformGeo = new CylinderGeometry(1, 1.06, 0.18, 64);
-  const platformMat = new MeshStandardMaterial({ color: "#1c222d", metalness: 0.85, roughness: 0.3 });
+  const platformMat = new MeshStandardMaterial({ color: "#1c222d", metalness: 0.85, roughness: 0.45, envMapIntensity: 0.3 });
   const ringGeo = new TorusGeometry(1.04, 0.012, 6, 96).rotateX(Math.PI / 2);
   const ringMat = new MeshBasicMaterial({ color: new Color("#6ee7ff").multiplyScalar(2), toneMapped: false });
   const haloGeo = new CircleGeometry(1.4, 64).rotateX(-Math.PI / 2);
@@ -146,6 +148,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   const makeBay = (): Bay => {
     const root = new Group();
     const platform = new Group();
+    const discGroup = new Group();
     const disc = new Mesh(platformGeo, platformMat);
     disc.receiveShadow = true;
     disc.position.y = 0.09;
@@ -153,10 +156,11 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     ring.position.y = 0.19;
     const halo = new Mesh(haloGeo, haloMat);
     halo.position.y = 0.01;
-    platform.add(disc, ring, halo);
+    discGroup.add(disc, ring, halo);
+    platform.add(discGroup);
     root.add(platform);
     scene.add(root);
-    return { root, platform, model: null, def: null, shield: null, damage: 0 };
+    return { root, platform, disc: discGroup, model: null, def: null, shield: null, damage: 0 };
   };
   const main = makeBay();
   let compare: Bay | null = null;
@@ -171,7 +175,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     const model = factory.createFromDef(def, { cosmetics: cos });
     const L = model.length;
     const s = Math.max(L * 0.62, model.radius * 1.05);
-    bay.platform.scale.set(s, 1, s);
+    bay.disc.scale.set(s, 1, s);
     model.root.position.y = 0.2 + Math.max(0.3, L * 0.09);
     model.root.traverse((o) => {
       const m = o as Mesh;
@@ -201,9 +205,9 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   };
 
   const resetView = (): void => {
-    const L = main.model?.length ?? 3;
+    const L = Math.max(main.model?.length ?? 3, (main.model?.radius ?? 1.5) * 1.6);
     const ext = compare ? L * 2.6 : L;
-    const d = Math.max(6, ext * 1.9);
+    const d = Math.max(9, ext * 2.7);
     camera.position.set(d * 0.72, d * 0.42, d * 0.85);
     controls.target.set(0, Math.max(0.6, L * 0.1), 0);
     controls.update();
@@ -291,13 +295,14 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
         if (!bay || !m) continue;
         if (!bay.shield) {
           const size = new Vector3(Math.max(m.radius * 0.9, m.length * 0.45), Math.max(0.6, m.radius * 0.45), m.length * 0.62);
-          bay.shield = fx.shields.attach(m.root, size, m.look.shield?.color ?? m.palette.accent, m.look.shield?.effect, true);
+          bay.shield = fx.shields.attach(m.root, size, m.look.shield?.color ?? m.palette.accent, m.look.shield?.effect, false);
         }
         m.root.updateMatrixWorld(true);
         m.socketWorld([m.radius * 0.5, 0, m.length * 0.4], tmpA);
         bay.shield?.hit(tmpA, time);
         m.socketWorld([-m.radius * 0.5, 0.2, -m.length * 0.2], tmpA);
         bay.shield?.hit(tmpA, time + 0.25);
+        bay.shield?.show(3);
       }
     },
     previewDamage(pct) {

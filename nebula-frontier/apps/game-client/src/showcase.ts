@@ -205,7 +205,7 @@ async function hangarView(): Promise<void> {
   const iv = setInterval(() => {
     n++;
     if (n % 3 === 0) viewer.fireWeapons();
-    if (n === 4) viewer.previewShield();
+    if (n === 12) viewer.previewShield();
     if (n === 20) window.__showcaseReady = true;
   }, 100);
   window.addEventListener("beforeunload", () => { clearInterval(iv); viewer.dispose(); });

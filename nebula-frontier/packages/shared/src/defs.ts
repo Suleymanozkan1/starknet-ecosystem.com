@@ -329,7 +329,8 @@ export interface FactionDef {
   homeSector: string;
   homeMap: string;
   starterShip: string;
-  starterLoadout: { weapons: string[]; modules: string[]; drones: string[] };
+  /** `ammo` (optional): starter consumable stacks granted with the starter ship (e.g. missile ammo). */
+  starterLoadout: { weapons: string[]; modules: string[]; drones: string[]; ammo?: { itemId: string; quantity: number }[] };
   bonus: Partial<Record<StatKey, number>>;
 }
 

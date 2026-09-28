@@ -314,10 +314,15 @@ export class Persistence {
     });
   }
 
-  async finishMatch(matchId: string, winnerTeam: number | null, players: { userId: string; kills: number; deaths: number; damage: number; score: number; ratingDelta: number; won: boolean; left: boolean }[], metadata: Record<string, unknown>): Promise<void> {
+  /**
+   * Finish a match idempotently. `extra` runs inside the SAME transaction, only
+   * when this call actually transitioned the match (e.g. ClanWar scoring).
+   */
+  async finishMatch(matchId: string, winnerTeam: number | null, players: { userId: string; kills: number; deaths: number; damage: number; score: number; ratingDelta: number; won: boolean; left: boolean }[], metadata: Record<string, unknown>, extra?: (tx: Tx) => Promise<void>): Promise<void> {
     await this.db.$transaction(async (tx) => {
       const upd = await tx.gameMatch.updateMany({ where: { id: matchId, status: "RUNNING" }, data: { status: "FINISHED", winnerTeam, endedAt: new Date(), metadata: metadata as object } });
       if (upd.count !== 1) return; // already finished (idempotent)
+      if (extra) await extra(tx);
       for (const p of players) {
         await tx.gameMatchPlayer.upsert({
           where: { matchId_userId: { matchId, userId: p.userId } },

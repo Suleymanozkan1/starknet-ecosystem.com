@@ -78,6 +78,8 @@ class Bubble {
 
 export interface ShieldHandle {
   hit(worldPoint: Vector3, time: number): void;
+  /** Keep the bubble visible for `seconds`. */
+  show(seconds: number): void;
   setLevel(fraction: number): void;
   release(): void;
 }
@@ -129,8 +131,9 @@ export class ShieldSystem {
         const h = hits[b.hitIndex % hits.length];
         if (h) h.set(tmp.x, tmp.y, tmp.z, time);
         b.hitIndex++;
-        b.visibleFor = 1.0;
+        b.visibleFor = Math.max(b.visibleFor, 1.0);
       },
+      show: (seconds) => { b.visibleFor = Math.max(b.visibleFor, seconds); },
       setLevel: (f) => { b.level = Math.max(0, Math.min(1, f)); },
       release: () => this.pool.release(b),
     };

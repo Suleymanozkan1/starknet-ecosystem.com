@@ -9,7 +9,7 @@ import {
   itemIdForDef,
 } from "@nebula/config";
 import type { Db } from "@nebula/database";
-import { clampAffixes, levelForXp, type Equipped, type LoadoutInput } from "@nebula/game-core";
+import { STARTER_AMMO, clampAffixes, levelForXp, starterAmmoOriginRef, type Equipped, type LoadoutInput } from "@nebula/game-core";
 import type { DroneDef, ModuleDef, QuestDef, WeaponDef } from "@nebula/shared";
 
 export interface QuestRuntime {
@@ -124,6 +124,15 @@ export async function ensureStarterKit(db: Db, userId: string, preferredMap: str
       .filter((x) => x.g.slot === "drones" && x.row)
       .map((x) => ({ userId, droneId: x.g.defId, inventoryItemId: x.row!.id }));
     if (droneRows.length) await tx.droneInstance.createMany({ data: droneRows, skipDuplicates: true });
+    // Starter consumables (missile ammo) from factions.json via the shared STARTER_AMMO source.
+    const ammo = (STARTER_AMMO.get(faction.id) ?? []).filter((a) => ITEMS_BY_ID.has(a.itemId));
+    if (ammo.length) {
+      await tx.inventoryItem.createMany({
+        data: ammo.map((a) => ({ userId, itemId: a.itemId, quantity: a.quantity, originRef: starterAmmoOriginRef(userId, a.itemId) })),
+        skipDuplicates: true,
+      });
+      cfg.ammo = ammo[0]?.itemId ?? null;
+    }
     const loadout = await tx.shipLoadout.create({ data: { shipInstanceId: ship.id, name: "Starter", preset: "CUSTOM", config: cfg as object } });
     await tx.shipInstance.update({ where: { id: ship.id }, data: { activeLoadoutId: loadout.id } });
     await tx.user.update({ where: { id: userId }, data: { activeShipId: ship.id } });

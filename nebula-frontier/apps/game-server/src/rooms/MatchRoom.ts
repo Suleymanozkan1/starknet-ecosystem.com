@@ -7,6 +7,7 @@
 import { MatchMode, RoomName, ServerEvent, type RewardSource } from "@nebula/shared";
 import { teamRatingDeltas } from "@nebula/game-core";
 import { ServerError } from "@colyseus/core";
+import type { Tx } from "@nebula/database";
 import { BaseGameRoom } from "./BaseGameRoom.js";
 import type { PlayerActor, ShipActor } from "./actors.js";
 
@@ -189,6 +190,7 @@ export abstract class MatchRoom extends BaseGameRoom {
         winnerTeam,
         roster.map((r) => ({ userId: r.userId, kills: r.kills, deaths: r.deaths, damage: r.damage, score: r.score, ratingDelta: deltas.get(r.userId) ?? 0, won: winnerTeam !== null && r.team === winnerTeam && !r.left, left: r.left })),
         { reason, teamScores: this.teamScores, mode: this.mode },
+        (tx) => this.onMatchFinishedTx(tx, winnerTeam),
       );
     } catch (e) {
       this.log.error({ err: e, matchId }, "finishMatch failed");
@@ -202,6 +204,11 @@ export abstract class MatchRoom extends BaseGameRoom {
     }
     await this.lock();
     this.clock.setTimeout(() => void this.disconnect(), 15_000);
+  }
+
+  /** Extra writes committed atomically with the GameMatch result. */
+  protected async onMatchFinishedTx(_tx: Tx, _winnerTeam: number | null): Promise<void> {
+    // default: nothing
   }
 
   protected syncMatchState(): void {
@@ -258,4 +265,39 @@ export class ClanWarRoom extends MatchRoom {
   protected override teamFor(p: PlayerActor): number {
     return Math.max(0, this.clanTeams.indexOf(p.profile.clanId ?? ""));
   }
+
+  /**
+   * Record the battle on the ClanWar row (scores, winner, SCORING → REWARDED)
+   * and add clan score, in the same transaction as the GameMatch result.
+   * The war is `instanceKey` (ClanWar id) when given, else the open war
+   * between the two clans; an ad-hoc war row is created otherwise.
+   */
+  protected override async onMatchFinishedTx(tx: Tx, winnerTeam: number | null): Promise<void> {
+    const [clanA, clanB] = this.clanTeams;
+    if (!clanA || !clanB) return;
+    const scoreA = this.teamScores[0] ?? 0;
+    const scoreB = this.teamScores[1] ?? 0;
+    const winnerId = winnerTeam === null ? null : winnerTeam === 0 ? clanA : clanB;
+    const byKey = this.options.instanceKey ? await tx.clanWar.findUnique({ where: { id: this.options.instanceKey } }) : null;
+    let war = byKey && [byKey.clanAId, byKey.clanBId].includes(clanA) && [byKey.clanAId, byKey.clanBId].includes(clanB) ? byKey : null;
+    war ??= await tx.clanWar.findFirst({
+      where: { phase: { notIn: ["REWARDED"] }, OR: [{ clanAId: clanA, clanBId: clanB }, { clanAId: clanB, clanBId: clanA }] },
+      orderBy: { createdAt: "desc" },
+    });
+    const now = new Date();
+    if (!war) {
+      war = await tx.clanWar.create({ data: { clanAId: clanA, clanBId: clanB, mapId: this.map.id, phase: "BATTLE", startsAt: new Date(this.phaseEndsAt - this.rules.arenaMatchMs), endsAt: now } });
+    }
+    // Scores are stored relative to the war's own A/B orientation.
+    const aIsTeam0 = war.clanAId === clanA;
+    await tx.clanWar.update({ where: { id: war.id }, data: { phase: "SCORING", scoreA: aIsTeam0 ? scoreA : scoreB, scoreB: aIsTeam0 ? scoreB : scoreA, winnerId, endsAt: now } });
+    const add = (team: number) => BigInt((this.teamScores[team] ?? 0) * this.rules.clanWarKillScore + (winnerTeam === team ? this.rules.clanWarWinScore : 0));
+    await tx.clan.update({ where: { id: clanA }, data: { score: { increment: add(0) } } });
+    await tx.clan.update({ where: { id: clanB }, data: { score: { increment: add(1) } } });
+    await tx.clanWar.update({ where: { id: war.id }, data: { phase: "REWARDED" } });
+    this.clanWarId = war.id;
+  }
+
+  /** ClanWar row updated by the last finished match (tests / diagnostics). */
+  clanWarId: string | null = null;
 }

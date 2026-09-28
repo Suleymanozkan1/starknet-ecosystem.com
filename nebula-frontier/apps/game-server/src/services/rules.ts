@@ -44,6 +44,9 @@ export interface GameRules {
   arenaScoreToWin: number;
   gateWaveDelayMs: number;
   reconnectSeconds: number;
+  /** Clan score added per enemy kill in a clan war, and bonus for the winning clan. */
+  clanWarKillScore: number;
+  clanWarWinScore: number;
 }
 
 export const DEFAULT_RULES: GameRules = {
@@ -75,6 +78,8 @@ export const DEFAULT_RULES: GameRules = {
   arenaScoreToWin: 25,
   gateWaveDelayMs: 4_000,
   reconnectSeconds: 20,
+  clanWarKillScore: 10,
+  clanWarWinScore: 100,
 };
 
 export async function loadRules(db: Db | null): Promise<{ rules: GameRules; tuning: SimTuning }> {

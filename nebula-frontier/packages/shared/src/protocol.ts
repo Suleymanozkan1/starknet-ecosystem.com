@@ -140,6 +140,7 @@ export const ServerEvent = {
   EFFECT: "effect",
   WAVE: "wave",
   KILL_FEED: "kill_feed",
+  MARKER: "marker",
   ERROR: "error",
 } as const;
 export type ServerEvent = (typeof ServerEvent)[keyof typeof ServerEvent];
@@ -220,6 +221,7 @@ export interface SelfJoinInfo {
   skills: { slot: number; id: string; name: string; cooldownMs: number; energyCost: number }[];
   modules: { slot: number; id: string; name: string; cooldownMs: number; energyCost: number }[];
 }
+export interface MarkerEvent { x: number; y: number; kind: "ATTACK" | "DEFEND" | "MOVE"; fromId: string; fromName: string }
 export interface KillFeedEvent { killer: string; victim: string; weapon: string; pvp: boolean }
 
 export interface ServerEvents {
@@ -249,6 +251,7 @@ export interface ServerEvents {
   effect: EffectEvent;
   wave: WaveEvent;
   kill_feed: KillFeedEvent;
+  marker: MarkerEvent;
   error: { code: string; message: string };
 }
 
