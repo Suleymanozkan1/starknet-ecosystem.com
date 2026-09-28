@@ -1,0 +1,21 @@
+{
+  "name": "@nebula/economy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nebula/config": "workspace:*",
+    "@nebula/database": "workspace:*",
+    "@nebula/shared": "workspace:*"
+  }
+}
