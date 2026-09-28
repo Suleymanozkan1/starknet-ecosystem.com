@@ -143,7 +143,7 @@ export async function flagSpoofedPayout(deps: ProcessorDeps, w: WithdrawalRow, s
   }
   // Check-and-insert under a per-signature advisory lock so concurrent workers record it exactly once.
   await deps.db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`spoof:${signature}`}))`;
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtext(${`spoof:${signature}`}))`;
     const seen = await tx.riskSignal.count({ where: { type: "FAKE_TRANSACTION", source: "withdrawal", details: { path: ["signature"], equals: signature } } });
     if (seen) return;
     await recordRiskSignal(tx, {
