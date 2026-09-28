@@ -12,6 +12,8 @@ export const API_RULE_DEFAULTS = {
   clanCreateCost: 250_000,
   clanMaxMembers: 50,
   clanStationBuildCost: 1_000_000,
+  clanStationHull: 500_000,
+  clanStationShield: 250_000,
   /** Clan station module upgrade cost = base * growth^(level-1), paid from the clan treasury. */
   clanModuleBaseCost: 150_000,
   clanModuleGrowth: 1.6,

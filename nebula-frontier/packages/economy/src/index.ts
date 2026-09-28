@@ -11,3 +11,6 @@ export * from "./risk.js";
 export * from "./rewards.js";
 export * from "./controller.js";
 export * from "./simulation.js";
+export * from "./withdrawals.js";
+export * from "./deposits.js";
+export * from "./bootstrap.js";

@@ -6,13 +6,13 @@ import type {
   AuthResponse, DepositDto, DepositPrepareRequest, DepositPrepareResponse, DepositVerifyRequest, EconomyStatusResponse,
   EquipRequest, FeesResponse, InventoryResponse, LeaderboardResponse, LedgerEntryDto, LoginRequest, MeResponse,
   NonceRequest, NonceResponse, ProfileResponse, PurchaseRequest, PurchaseResponse, QuestDto, RegisterRequest,
-  RewardsResponse, ShipInstanceDto, ShopProductDto, UnequipRequest, VerifyRequest, WalletResponse, WithdrawQuoteDto,
-  WithdrawRequest, WithdrawalDto,
+  RewardsResponse, ShipInstanceDto, UnequipRequest, VerifyRequest, WalletResponse, WithdrawQuoteDto,
+  WithdrawRequest, WithdrawalDto, LoadoutDto, BlueprintDef,
 } from "@nebula/shared";
 import { http } from "./http.js";
 import type {
-  AchievementDto, AuctionsResponse, BattlePassResponse, BountyDto, ChatMessageDto, ClanDetailDto, ClanSummaryDto,
-  CraftBlueprintDto, CraftJobDto, EventsResponse, FactionDto, FriendDto, GalaxyResponse, GameTicketResponse, MailDto,
+  AchievementDto, AuctionsResponse, MarketListingDto, ShopProductView, UpgradeCostResponse, UpgradeResult, BattlePassResponse, BountyDto, ChatMessageDto, ClanDetailDto, ClanSummaryDto,
+  CraftJobDto, EventsResponse, FactionDto, FriendDto, GalaxyResponse, GameTicketResponse, MailDto,
   MarketResponse, NotificationDto, SeasonDto, ShipsResponse, SquadDto,
 } from "./dto.js";
 
@@ -51,43 +51,47 @@ export const api = {
     ticket: (body: { mapId?: string; portalId?: string } = {}) => http.post<GameTicketResponse>("/api/game/ticket", body),
   },
   ships: {
-    list: () => http.get<ShipsResponse | ShipInstanceDto[]>("/api/ships").then((d): ShipsResponse => (Array.isArray(d) ? { ships: d } : d)),
-    unlock: (defId: string, idempotencyKey: string) => http.post<ShipInstanceDto>("/api/ships/unlock", { defId, idempotencyKey }),
-    activate: (shipInstanceId: string) => http.post<ShipInstanceDto>("/api/ships/activate", { shipInstanceId }),
-    upgrade: (shipInstanceId: string, idempotencyKey: string) => http.post<ShipInstanceDto & { success?: boolean }>("/api/ships/upgrade", { shipInstanceId, idempotencyKey }),
-    createLoadout: (shipInstanceId: string, body: { name: string; preset: string }) => http.post<ShipInstanceDto>(`/api/ships/${shipInstanceId}/loadouts`, body),
-    activateLoadout: (shipInstanceId: string, loadoutId: string) => http.post<ShipInstanceDto>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}/activate`, {}),
-    setCosmetic: (shipInstanceId: string, slot: string, inventoryItemId: string | null) => http.post<ShipInstanceDto>(`/api/ships/${shipInstanceId}/cosmetics`, { slot, inventoryItemId }),
+    list: () => http.get<ShipsResponse>("/api/ships"),
+    unlock: (shipId: string, idempotencyKey: string) => http.post<{ purchaseId: string; ships: ShipInstanceDto[] }>("/api/ships/unlock", { shipId, idempotencyKey }),
+    activate: (shipInstanceId: string) => http.post<{ ships: ShipInstanceDto[] }>("/api/ships/activate", { shipInstanceId }),
+    upgradeCost: (shipInstanceId: string) => http.get<UpgradeCostResponse>(`/api/ships/${shipInstanceId}/upgrade-cost`),
+    upgrade: (shipInstanceId: string, idempotencyKey: string) => http.post<UpgradeResult & { ships: ShipInstanceDto[] }>("/api/ships/upgrade", { shipInstanceId, idempotencyKey }),
+    createLoadout: (shipInstanceId: string, body: { name: string; preset: LoadoutDto["preset"]; copyFromLoadoutId?: string }) => http.post<LoadoutDto>(`/api/ships/${shipInstanceId}/loadouts`, body),
+    updateLoadout: (shipInstanceId: string, loadoutId: string, body: { name?: string; preset?: LoadoutDto["preset"]; formation?: string; ammo?: string | null }) =>
+      http.put<LoadoutDto>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}`, body),
+    activateLoadout: (shipInstanceId: string, loadoutId: string) => http.post<{ ships: ShipInstanceDto[] }>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}/activate`, {}),
+    deleteLoadout: (shipInstanceId: string, loadoutId: string) => http.del<{ ok: boolean }>(`/api/ships/${shipInstanceId}/loadouts/${loadoutId}`),
+    setCosmetic: (shipInstanceId: string, slot: string, inventoryItemId: string | null) => http.post<{ ships: ShipInstanceDto[] }>("/api/ships/cosmetics", { shipInstanceId, slot, inventoryItemId }),
   },
   inventory: {
-    get: () => http.get<InventoryResponse>("/api/inventory"),
-    equip: (body: EquipRequest) => http.post<ShipInstanceDto>("/api/inventory/equip", body),
-    unequip: (body: UnequipRequest) => http.post<ShipInstanceDto>("/api/inventory/unequip", body),
-    upgrade: (inventoryItemId: string, idempotencyKey: string) => http.post<{ success: boolean; upgradeLevel: number }>("/api/inventory/upgrade", { inventoryItemId, idempotencyKey }),
+    get: (q: { category?: string; rarity?: string; sort?: string; search?: string } = {}) => http.get<InventoryResponse>("/api/inventory", q),
+    equip: (body: EquipRequest) => http.post<{ loadout: LoadoutDto }>("/api/inventory/equip", body),
+    unequip: (body: UnequipRequest) => http.post<{ loadout: LoadoutDto }>("/api/inventory/unequip", body),
+    upgrade: (inventoryItemId: string, idempotencyKey: string) => http.post<UpgradeResult>("/api/inventory/upgrade", { inventoryItemId, idempotencyKey }),
   },
   shop: {
-    list: () => http.get<unknown>("/api/shop").then(list<ShopProductDto>("products")),
+    list: () => http.get<unknown>("/api/shop").then(list<ShopProductView>("products")),
     purchase: (body: PurchaseRequest) => http.post<PurchaseResponse>("/api/shop/purchase", body),
   },
   crafting: {
-    blueprints: () => http.get<unknown>("/api/crafting/blueprints").then(list<CraftBlueprintDto>("blueprints")),
-    jobs: () => http.get<unknown>("/api/crafting/jobs").then(list<CraftJobDto>("jobs")),
-    craft: (blueprintId: string, idempotencyKey: string) => http.post<CraftJobDto>("/api/crafting/craft", { blueprintId, idempotencyKey }),
-    collect: (jobId: string) => http.post<CraftJobDto>(`/api/crafting/jobs/${jobId}/collect`, {}),
+    blueprints: () => http.get<{ blueprints: BlueprintDef[]; jobs: CraftJobDto[] }>("/api/crafting/blueprints"),
+    start: (blueprintId: string, idempotencyKey: string) => http.post<CraftJobDto>("/api/crafting/start", { blueprintId, idempotencyKey }),
+    claim: (jobId: string) => http.post<{ success: boolean; outputItem: string; quantity: number }>(`/api/crafting/${jobId}/claim`, {}),
   },
   quests: {
-    list: () => http.get<unknown>("/api/quests").then(list<QuestDto>("quests")),
-    available: () => http.get<unknown>("/api/quests/available").then(list<QuestDto>("quests")),
-    accept: (questId: string) => http.post<QuestDto>("/api/quests/accept", { questId }),
-    claim: (questId: string) => http.post<QuestDto>("/api/quests/claim", { questId }),
+    list: () => http.get<{ active: QuestDto[]; available: QuestDto[] }>("/api/quests"),
+    accept: (questId: string) => http.post<unknown>("/api/quests/accept", { questId }),
+    claim: (userQuestId: string) => http.post<unknown>("/api/quests/claim", { userQuestId }),
   },
   leaderboard: {
     get: (board: string) => http.get<LeaderboardResponse>("/api/leaderboard", { board }),
   },
   market: {
-    list: (q: { itemId?: string; category?: string; rarity?: string; sort?: string; mine?: boolean } = {}) => http.get<MarketResponse>("/api/market", q),
-    create: (body: { inventoryItemId: string; quantity: number; price: string; currency: string; idempotencyKey: string }) => http.post<unknown>("/api/market/list", body),
-    buy: (id: string, idempotencyKey: string) => http.post<unknown>(`/api/market/buy/${id}`, { idempotencyKey }),
+    list: (q: { itemId?: string; category?: string; rarity?: string; currency?: string; sort?: "price_asc" | "price_desc" | "recent" } = {}) => http.get<MarketResponse>("/api/market", q),
+    mine: () => http.get<MarketResponse>("/api/market/mine"),
+    create: (body: { inventoryItemId: string; quantity: number; price: string; currency: "CREDITS" | "GEMS" | "NEBX"; durationHours: number }) =>
+      http.post<{ listing: MarketListingDto; feeRate: number }>("/api/market/list", body),
+    buy: (id: string) => http.post<unknown>(`/api/market/buy/${id}`, {}),
     cancel: (id: string) => http.post<unknown>(`/api/market/cancel/${id}`, {}),
   },
   auctions: {
@@ -161,8 +165,9 @@ export const api = {
   },
   wallet: {
     get: () => http.get<WalletResponse>("/api/wallet"),
-    connect: (body: { address: string; nonce: string; signature: string }) => http.post<WalletResponse>("/api/wallet/connect", body),
-    depositPrepare: (body: DepositPrepareRequest) => http.post<DepositPrepareResponse>("/api/wallet/deposit/prepare", body),
+    /** Link an additional wallet (nonce purpose LINK_WALLET). */
+    link: (body: { address: string; nonce: string; signature: string }) => http.post<MeResponse>("/api/auth/link-wallet", body),
+    depositPrepare: (body: DepositPrepareRequest & { productId?: string }) => http.post<DepositPrepareResponse>("/api/wallet/deposit/prepare", body),
     depositVerify: (body: DepositVerifyRequest) => http.post<DepositDto>("/api/wallet/deposit/verify", body),
     withdrawQuote: (amount: string) => http.get<WithdrawQuoteDto>("/api/wallet/withdraw/quote", { amount }),
     withdraw: (body: WithdrawRequest) => http.post<WithdrawalDto>("/api/wallet/withdraw", body),

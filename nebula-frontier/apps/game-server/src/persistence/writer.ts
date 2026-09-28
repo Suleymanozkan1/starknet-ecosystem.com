@@ -337,15 +337,4 @@ export class Persistence {
   async saveChat(rows: { channel: string; channelKey: string; senderId: string; text: string }[]): Promise<void> {
     if (rows.length) await this.db.chatMessage.createMany({ data: rows });
   }
-
-  /** Persist a risk signal and bump the user's risk score / level. */
-  async recordRisk(userId: string, type: string, score: number, details: Record<string, unknown>, source: string): Promise<void> {
-    await this.db.$transaction(async (tx) => {
-      await tx.riskSignal.create({ data: { userId, type, score: Math.round(score), details: details as object, source } });
-      const u = await tx.user.update({ where: { id: userId }, data: { riskScore: { increment: Math.round(score) } }, select: { riskScore: true, riskLevel: true } });
-      const level = u.riskScore >= 300 ? "CRITICAL" : u.riskScore >= 150 ? "HIGH" : u.riskScore >= 60 ? "MEDIUM" : "LOW";
-      const order = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
-      if (order.indexOf(level) > order.indexOf(u.riskLevel)) await tx.user.update({ where: { id: userId }, data: { riskLevel: level } });
-    });
-  }
 }

@@ -2,7 +2,7 @@
  * Client-side view of REST payloads that are not (yet) part of @nebula/shared/api.ts.
  * Shapes mirror apps/api/src/routes/* responses; every optional field is rendered defensively.
  */
-import type { Currency, Rarity } from "@nebula/shared";
+import type { Currency, Rarity, ShipDef, ShipInstanceDto, ShopProductDto } from "@nebula/shared";
 
 export interface FactionDto {
   id: string;
@@ -23,66 +23,66 @@ export interface FactionDto {
 export interface GameTicketResponse { ticket: string; mapId: string; gameServerUrl: string; roomName?: string }
 
 export interface ShipCatalogEntry {
-  defId: string;
+  id: string;
   name: string;
   class: string;
   tier: number;
   rarity: Rarity;
-  faction?: string | null;
-  requiredLevel: number;
+  faction: string | null;
+  description: string;
+  stats: ShipDef["stats"];
+  slots: ShipDef["slots"];
+  visual: ShipDef["visual"];
+  abilities: ShipDef["abilities"];
   owned: boolean;
-  instanceId?: string | null;
-  unlock?: { currency: Currency; price: string; productId?: string | null } | null;
+  unlock: {
+    requiredLevel: number;
+    product: { productId: string; currency: Currency; price: string } | null;
+    method: "SHOP" | "FACTION_STARTER" | "CRAFT_OR_EVENT" | string;
+  };
 }
-export interface ShipsResponse {
-  ships: import("@nebula/shared").ShipInstanceDto[];
-  catalog?: ShipCatalogEntry[];
+export interface ShipsResponse { owned: ShipInstanceDto[]; catalog: ShipCatalogEntry[] }
+
+export interface UpgradeCost { toLevel: number; credits: number; gems: number; resources: Record<string, number>; successChance: number }
+export interface UpgradeCostResponse { maxed: boolean; cost: UpgradeCost | null }
+export interface UpgradeResult { success: boolean; fromLevel: number; toLevel: number; cost: UpgradeCost }
+
+export interface ShopProductView extends ShopProductDto {
+  stock?: number | null;
+  limitPerUser?: number | null;
+  /** SOL/NEBX-priced products are bought through the on-chain deposit flow. */
+  purchaseFlow?: "LEDGER" | "DEPOSIT";
 }
 
-export interface CraftBlueprintDto {
-  id: string;
-  name: string;
-  tier: string;
-  outputItem: string;
-  outputName?: string;
-  outputQuantity: number;
-  requiredLevel: number;
-  craftTimeSec: number;
-  successChance: number;
-  credits: number;
-  resources: Record<string, number>;
-  items?: { itemId: string; quantity: number }[];
-  canCraft?: boolean;
-  missing?: string[];
-}
 export interface CraftJobDto {
   id: string;
   blueprintId: string;
   status: string;
-  startedAt: string;
+  startedAt?: string;
   completesAt: string;
-  success?: boolean | null;
-  outputItem?: string;
+  ready?: boolean;
 }
 
 export interface MarketListingDto {
   id: string;
   sellerId: string;
-  sellerName?: string;
+  seller: string | null;
   itemId: string;
   name: string;
-  category?: string;
-  rarity: Rarity;
+  category: string | null;
+  rarity: Rarity | null;
   quantity: number;
+  upgradeLevel: number;
+  affixes: { stat: string; value: number }[];
   price: string;
   currency: Currency;
-  fee?: string;
+  fee: string;
+  sellerReceives: string;
   status: string;
   expiresAt: string;
   createdAt: string;
-  mine?: boolean;
 }
-export interface MarketResponse { listings: MarketListingDto[]; feePercent?: number; total?: number }
+export interface MarketResponse { listings: MarketListingDto[]; feeRate?: number }
 
 export interface AuctionDto {
   id: string;

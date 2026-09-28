@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import type { ClientMessages } from "@nebula/shared";
+import { hasControlChars } from "./common.js";
 
 const finite = (min: number, max: number) => z.number().finite().min(min).max(max);
 const entityId = z.string().min(1).max(64).regex(/^[A-Za-z0-9_:-]+$/);
@@ -42,7 +43,7 @@ export const chatMsgSchema = z.object({
     .trim()
     .min(1)
     .max(240)
-    .refine((s) => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(s), "control characters are not allowed"),
+    .refine((s) => !hasControlChars(s), "control characters are not allowed"),
 });
 export const formationMsgSchema = z.object({ formation: z.enum(["STANDARD", "ARROW", "TURTLE", "DIAMOND", "WHEEL"]) });
 export const pingMsgSchema = z.object({ t: finite(0, Number.MAX_SAFE_INTEGER) });

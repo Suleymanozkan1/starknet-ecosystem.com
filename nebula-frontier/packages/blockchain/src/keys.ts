@@ -6,6 +6,7 @@ import {
   type Address,
   type KeyPairSigner
 } from "@solana/kit";
+import type { webcrypto } from "node:crypto";
 
 /**
  * Treasury key handling.
@@ -110,7 +111,7 @@ export function getRewardMint(env: NodeJS.ProcessEnv = process.env): { mint: Add
  * Exports an EXTRACTABLE CryptoKeyPair to the 64-byte solana-keygen format (seed || pubkey).
  * Only used by devnet tooling (scripts/devnet-setup.ts) to persist a freshly generated key.
  */
-export async function exportKeyPairBytes(keyPair: CryptoKeyPair): Promise<Uint8Array> {
+export async function exportKeyPairBytes(keyPair: { privateKey: webcrypto.CryptoKey; publicKey: webcrypto.CryptoKey }): Promise<Uint8Array> {
   const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", keyPair.privateKey));
   const pub = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
   const seed = pkcs8.slice(pkcs8.length - 32);

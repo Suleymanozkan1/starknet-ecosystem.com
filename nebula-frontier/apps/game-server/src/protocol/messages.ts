@@ -58,13 +58,16 @@ export const JoinOptionsSchema = z.object({
 });
 export type ParsedJoinOptions = z.output<typeof JoinOptionsSchema>;
 
-/** Strip control characters / zero-width chars and collapse whitespace in chat. */
+function isInvisible(cp: number): boolean {
+  return cp <= 0x1f || (cp >= 0x7f && cp <= 0x9f) || (cp >= 0x200b && cp <= 0x200f) || (cp >= 0x2028 && cp <= 0x202e) || (cp >= 0x2060 && cp <= 0x206f) || cp === 0xfeff;
+}
+
+/** Strip control characters / zero-width / bidi-override chars and collapse whitespace in chat. */
 export function sanitizeChat(text: string): string {
-  return text
-    .normalize("NFKC")
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\u0000-\u001f\u007f-\u009f​-‏ -‮⁠-⁯﻿]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 280);
+  let out = "";
+  for (const ch of text.normalize("NFKC")) {
+    const cp = ch.codePointAt(0) ?? 0;
+    out += cp === 0x09 || cp === 0x0a ? " " : isInvisible(cp) ? "" : ch;
+  }
+  return out.replace(/\s+/g, " ").trim().slice(0, 280);
 }

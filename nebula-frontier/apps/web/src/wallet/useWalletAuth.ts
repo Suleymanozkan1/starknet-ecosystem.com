@@ -46,7 +46,7 @@ export function useWalletAuth(onDone: (user: MeResponse | null) => void) {
         setPhase("done");
         onDoneRef.current(res.user);
       } else {
-        await api.wallet.connect({ address, nonce, signature });
+        await api.wallet.link({ address, nonce, signature });
         setPhase("done");
         onDoneRef.current(null);
       }

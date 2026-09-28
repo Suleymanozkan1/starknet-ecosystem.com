@@ -27,9 +27,7 @@ export const qk = {
   inventory: ["inventory"] as const,
   shop: ["shop"] as const,
   blueprints: ["crafting", "blueprints"] as const,
-  craftJobs: ["crafting", "jobs"] as const,
   quests: ["quests"] as const,
-  questsAvailable: ["quests", "available"] as const,
   leaderboard: (board: string) => ["leaderboard", board] as const,
   market: (q: Record<string, unknown>) => ["market", q] as const,
   auctions: (q: Record<string, unknown>) => ["auctions", q] as const,
@@ -71,14 +69,13 @@ export function useMe() {
 
 export const useFactions = () => useQuery({ queryKey: qk.factions, queryFn: api.factions.list, staleTime: 10 * 60_000 });
 export const useShips = () => useQuery({ queryKey: qk.ships, queryFn: api.ships.list });
-export const useInventory = () => useQuery({ queryKey: qk.inventory, queryFn: api.inventory.get });
+export const useInventory = () => useQuery({ queryKey: qk.inventory, queryFn: () => api.inventory.get() });
 export const useShop = () => useQuery({ queryKey: qk.shop, queryFn: api.shop.list, staleTime: 60_000 });
-export const useBlueprints = () => useQuery({ queryKey: qk.blueprints, queryFn: api.crafting.blueprints });
-export const useCraftJobs = () => useQuery({ queryKey: qk.craftJobs, queryFn: api.crafting.jobs, refetchInterval: 15_000 });
+export const useCrafting = () => useQuery({ queryKey: qk.blueprints, queryFn: api.crafting.blueprints, refetchInterval: 15_000 });
 export const useQuests = () => useQuery({ queryKey: qk.quests, queryFn: api.quests.list });
-export const useAvailableQuests = () => useQuery({ queryKey: qk.questsAvailable, queryFn: api.quests.available });
 export const useLeaderboard = (board: string) => useQuery({ queryKey: qk.leaderboard(board), queryFn: () => api.leaderboard.get(board) });
 export const useMarket = (q: Parameters<typeof api.market.list>[0] = {}) => useQuery({ queryKey: qk.market(q), queryFn: () => api.market.list(q) });
+export const useMyListings = () => useQuery({ queryKey: ["market", "mine"], queryFn: api.market.mine });
 export const useAuctions = (q: Parameters<typeof api.auctions.list>[0] = {}) => useQuery({ queryKey: qk.auctions(q), queryFn: () => api.auctions.list(q), refetchInterval: 10_000 });
 export const useClans = (search = "") => useQuery({ queryKey: qk.clans(search), queryFn: () => api.clans.list(search ? { search } : {}) });
 export const useMyClan = (enabled = true) => useQuery({ queryKey: qk.myClan, queryFn: api.clans.mine, enabled });

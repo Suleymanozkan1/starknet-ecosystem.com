@@ -5,7 +5,7 @@
  * request/correlation ids, the uniform ApiError handler, the core decorators (see types.ts) and
  * every route module. `index.ts` only adds `listen()` and background jobs.
  */
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
@@ -15,7 +15,8 @@ import { Redis } from "ioredis";
 import { createDb, type Db } from "@nebula/database";
 import { loadEnv, type Env } from "./env.js";
 import { sendError } from "./errors.js";
-import { loggerOptions } from "./lib/logger.js";
+import { createLogger } from "@nebula/telemetry";
+import { REDACT_PATHS } from "./lib/logger.js";
 import { createMetrics } from "./lib/metrics.js";
 import { registerCore } from "./plugins/core.js";
 import "./types.js";
@@ -68,7 +69,12 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const metrics = createMetrics(ownsDb);
 
   const app = Fastify({
-    logger: opts.logger === false || env.NODE_ENV === "test" ? false : loggerOptions(env.LOG_LEVEL),
+    ...(opts.logger === false || env.NODE_ENV === "test"
+      ? { logger: false }
+      : {
+          // pino Logger is structurally a FastifyBaseLogger; the generic is widened for route typing.
+          loggerInstance: createLogger({ name: "api", level: env.LOG_LEVEL, base: { region: env.REGION }, redact: REDACT_PATHS }) as FastifyBaseLogger,
+        }),
     trustProxy: env.TRUST_PROXY,
     bodyLimit: 256 * 1024,
     requestIdHeader: false,

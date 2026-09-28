@@ -64,6 +64,15 @@ export const chatChannelSchema = z.enum(vals(ChatChannel));
 export const breakerModeSchema = z.enum(vals(CircuitBreakerMode));
 export const adminRoleSchema = z.enum(vals(AdminRole));
 
+/** True if the string contains C0 control characters (except tab/newline/CR) or DEL. */
+export function hasControlChars(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if ((c < 32 && c !== 9 && c !== 10 && c !== 13) || c === 127) return true;
+  }
+  return false;
+}
+
 /** Free text shown to other players: trimmed, no control characters. */
 export const safeTextSchema = (max: number, min = 0) =>
   z
@@ -71,7 +80,7 @@ export const safeTextSchema = (max: number, min = 0) =>
     .trim()
     .min(min)
     .max(max)
-    .refine((s) => !/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(s), "control characters are not allowed");
+    .refine((s) => !hasControlChars(s), "control characters are not allowed");
 
 export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
