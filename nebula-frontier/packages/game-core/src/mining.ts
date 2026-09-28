@@ -43,7 +43,10 @@ export function pickAsteroidResource(resources: { id: ResourceId; weight: number
   return resources[Math.max(0, idx)]?.id ?? "TITANIUM";
 }
 
-/** Relative hardness per resource rarity (rarer = slower). */
-export const RESOURCE_HARDNESS: Record<ResourceId, number> = {
-  TITANIUM: 8, PLASMA_ORE: 12, CRYONITE: 16, DARK_MATTER: 30, QUANTUM_SHARD: 40, AETHER_CRYSTAL: 50, VOID_ESSENCE: 70,
-};
+/**
+ * Hardness derived from the resource's catalog value (items.json `res_*`
+ * baseValue): rarer, more valuable resources extract more slowly.
+ */
+export function resourceHardness(baseValue: number): number {
+  return 4 + Math.sqrt(Math.max(0, baseValue));
+}
