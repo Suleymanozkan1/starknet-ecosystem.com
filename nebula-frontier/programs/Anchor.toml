@@ -1,0 +1,25 @@
+[toolchain]
+anchor_version = "1.2.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+# NOT deployed in the MVP (see docs/BLOCKCHAIN.md). Devnet id reserved for a future deployment.
+[programs.devnet]
+nebula_settlement = "Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH"
+
+[programs.localnet]
+nebula_settlement = "Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH"
+
+# Devnet only. The provider wallet is a dedicated deployer / upgrade-authority key — never the
+# treasury key, which is held exclusively by apps/blockchain-service. The upgrade authority is also
+# the only key allowed to call `initialize` (config.authority); rotate it via propose/accept_authority.
+[provider]
+cluster = "devnet"
+wallet = "../.secrets/program-deployer-devnet.json"
+
+[scripts]
+# Rust unit tests of the program's validation/cap logic (fails on any test failure).
+# On-chain integration tests (bankrun / anchor localnet) are not written yet.
+test = "cargo test --manifest-path Cargo.toml -p nebula_settlement"
