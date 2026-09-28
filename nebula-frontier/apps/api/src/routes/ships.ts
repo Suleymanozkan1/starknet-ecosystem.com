@@ -12,7 +12,7 @@ import { getCatalog } from "../lib/catalog.js";
 import { consumeResources } from "../lib/grants.js";
 import { withIdempotency } from "../lib/idempotency.js";
 import { emptyLoadout, loadoutDto, parseLoadout } from "../lib/inventory.js";
-import { asRecord } from "../lib/json.js";
+import { asRecord, toJsonValue } from "../lib/json.js";
 import { MAX_UPGRADE_LEVEL, secureRoll, upgradeCostFor } from "../lib/progression.js";
 import { purchaseProduct } from "../lib/purchase.js";
 import { refreshShipStats } from "../lib/ships.js";
@@ -113,17 +113,17 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
         if (inst.upgradeLevel >= MAX_UPGRADE_LEVEL) throw badRequest("MAX_LEVEL", `Ship is already +${MAX_UPGRADE_LEVEL}`);
         const cost = upgradeCostFor(inst.upgradeLevel);
         const ref = `ship-upgrade:${userId}:${body.idempotencyKey}`;
-        if (cost.credits > 0) {
+        if (cost.credits > 0n) {
           await post(tx, {
             from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
-            amount: BigInt(cost.credits), type: LedgerTxType.GAME_SINK, reference: inst.id, idempotencyKey: `${ref}:credits`, userId,
+            amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: inst.id, idempotencyKey: `${ref}:credits`, userId,
             metadata: { kind: "SHIP_UPGRADE", from: inst.upgradeLevel },
           });
         }
-        if (cost.gems > 0) {
+        if (cost.gems > 0n) {
           await post(tx, {
             from: userWallet(userId, Currency.GEMS), to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.GEMS),
-            amount: BigInt(cost.gems), type: LedgerTxType.PURCHASE, reference: inst.id, idempotencyKey: `${ref}:gems`, userId,
+            amount: cost.gems, type: LedgerTxType.PURCHASE, reference: inst.id, idempotencyKey: `${ref}:gems`, userId,
             metadata: { kind: "SHIP_UPGRADE", from: inst.upgradeLevel },
           });
         }
@@ -134,7 +134,7 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
           if (upd.count !== 1) throw conflict("CONCURRENT_UPGRADE", "Ship was upgraded concurrently");
         }
         await tx.shipUpgrade.create({
-          data: { shipInstanceId: inst.id, fromLevel: inst.upgradeLevel, toLevel: success ? cost.toLevel : inst.upgradeLevel, success, cost: { ...cost } },
+          data: { shipInstanceId: inst.id, fromLevel: inst.upgradeLevel, toLevel: success ? cost.toLevel : inst.upgradeLevel, success, cost: toJsonValue(cost) },
         });
         return { success, fromLevel: inst.upgradeLevel, toLevel: success ? cost.toLevel : inst.upgradeLevel, cost, shipInstanceId: inst.id };
       });

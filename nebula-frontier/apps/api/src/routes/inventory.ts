@@ -137,17 +137,17 @@ export default async function inventoryRoutes(app: FastifyInstance): Promise<voi
         if (item.upgradeLevel >= MAX_UPGRADE_LEVEL) throw badRequest("MAX_LEVEL", `Item is already +${MAX_UPGRADE_LEVEL}`);
         const cost = upgradeCostFor(item.upgradeLevel);
         const ref = `item-upgrade:${userId}:${body.idempotencyKey}`;
-        if (cost.credits > 0) {
+        if (cost.credits > 0n) {
           await post(tx, {
             from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
-            amount: BigInt(cost.credits), type: LedgerTxType.GAME_SINK, reference: item.id, idempotencyKey: `${ref}:credits`, userId,
+            amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: item.id, idempotencyKey: `${ref}:credits`, userId,
             metadata: { kind: "ITEM_UPGRADE", from: item.upgradeLevel },
           });
         }
-        if (cost.gems > 0) {
+        if (cost.gems > 0n) {
           await post(tx, {
             from: userWallet(userId, Currency.GEMS), to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.GEMS),
-            amount: BigInt(cost.gems), type: LedgerTxType.PURCHASE, reference: item.id, idempotencyKey: `${ref}:gems`, userId,
+            amount: cost.gems, type: LedgerTxType.PURCHASE, reference: item.id, idempotencyKey: `${ref}:gems`, userId,
             metadata: { kind: "ITEM_UPGRADE", from: item.upgradeLevel },
           });
         }

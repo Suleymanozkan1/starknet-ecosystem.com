@@ -47,10 +47,10 @@ export default async function craftingRoutes(app: FastifyInstance): Promise<void
         const cost = craftCost(bp);
         const now = new Date();
         const created = await tx.craftJob.create({ data: { userId, blueprintId: bp.id, completesAt: craftCompletesAt(bp, now) } });
-        if (cost.credits > 0) {
+        if (cost.credits > 0n) {
           await post(tx, {
             from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
-            amount: BigInt(cost.credits), type: LedgerTxType.GAME_SINK, reference: created.id, idempotencyKey: `craft:${created.id}:credits`, userId,
+            amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: created.id, idempotencyKey: `craft:${created.id}:credits`, userId,
             metadata: { kind: "CRAFT", blueprintId: bp.id },
           });
         }

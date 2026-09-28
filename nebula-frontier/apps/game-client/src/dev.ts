@@ -3,6 +3,8 @@
  * Log in through the web app first (cookies are shared on localhost); the page
  * requests a game ticket from the API (proxied /api) and joins the game server.
  *   ?server=ws://localhost:2567&map=map_aurora_prime&gfx=HIGH|MEDIUM|LOW|ULTRA|AUTO
+ * Local e2e only: `&ticketUrl=http://localhost:5199/ticket` fetches tickets from a dev ticket
+ * minter (see docs) instead of the API — the game server still verifies every ticket.
  */
 import { createGame, type GameUiEvent, type HudState } from "./index.js";
 import type { GraphicsTier } from "@nebula/shared";
@@ -20,6 +22,12 @@ function cookie(name: string): string {
 const gameServerUrl = params.get("server") ?? (import.meta.env.VITE_GAME_SERVER_URL as string | undefined) ?? `ws://${location.hostname}:2567`;
 
 async function getTicket(mapId: string): Promise<{ ticket: string; mapId: string }> {
+  const devUrl = import.meta.env.DEV ? params.get("ticketUrl") : null;
+  if (devUrl) {
+    const r = await fetch(`${devUrl}?map=${encodeURIComponent(mapId)}`);
+    if (!r.ok) throw new Error(`Dev ticket request failed (${r.status})`);
+    return (await r.json()) as { ticket: string; mapId: string };
+  }
   const res = await fetch("/api/game/ticket", {
     method: "POST",
     credentials: "include",

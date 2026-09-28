@@ -29,7 +29,7 @@ if (page.url().includes("onboarding/faction")) {
 }
 for (const p of pages) {
   await page.goto("http://localhost:5173" + p);
-  await page.waitForTimeout(p === "/home" || p === "/hangar" ? 15000 : 5000);
+  await page.waitForTimeout(p === "/play" ? 30000 : p === "/home" || p === "/hangar" ? 15000 : 5000);
   const name = p.replace(/\W+/g, "_");
   await page.screenshot({ path: `${out}/${mode}${name}.png`, timeout: 60000 });
   console.log("shot", p);
