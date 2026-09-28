@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Nebula Frontier — Game Client (dev)</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #02030a; color: #cfe3ff; font: 13px/1.4 system-ui, sans-serif; overflow: hidden; }
+      #game { position: fixed; inset: 0; }
+      #hud { position: fixed; left: 12px; bottom: 12px; width: 300px; padding: 10px 12px; border-radius: 10px; background: rgba(5, 11, 24, .72); border: 1px solid #1f3b5f; pointer-events: none; }
+      .bar { height: 7px; border-radius: 4px; background: #0d1a2e; margin: 3px 0 7px; overflow: hidden; }
+      .bar > i { display: block; height: 100%; }
+      #log { position: fixed; left: 12px; top: 12px; width: 360px; max-height: 40vh; overflow: hidden; font-size: 12px; pointer-events: none; text-shadow: 0 1px 2px #000; }
+      #status { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); font-size: 16px; text-align: center; max-width: 520px; }
+      .prompt { display: inline-block; margin: 2px 4px 0 0; padding: 2px 6px; border: 1px solid #2f5a8a; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="log"></div>
+    <div id="hud"></div>
+    <div id="status">Connecting…</div>
+    <script type="module" src="/src/dev.ts"></script>
+  </body>
+</html>
