@@ -134,21 +134,25 @@ async function preflightGate(deps: ProcessorDeps, w: WithdrawalRow): Promise<Ste
  * counts against the player when THEIR linked wallet paid for it, and each signature is recorded once
  * (findGenuinePayout runs on every submit pass and every EXPIRED re-check).
  */
-async function flagSpoofedPayout(deps: ProcessorDeps, w: WithdrawalRow, signature: string, v: { reason: string; message: string }): Promise<void> {
+export async function flagSpoofedPayout(deps: ProcessorDeps, w: WithdrawalRow, signature: string, v: { reason: string; message: string }): Promise<void> {
   const feePayer = await getTransactionFeePayer(deps.rpc, signature);
   const linked = feePayer ? await deps.db.wallet.count({ where: { userId: w.userId, address: feePayer } }) : 0;
   if (!linked) {
     log.warn("spoofed memo sent by an unlinked wallet; not attributed to the player", { withdrawalId: w.id, signature, feePayer });
     return;
   }
-  const seen = await deps.db.riskSignal.count({ where: { type: "FAKE_TRANSACTION", source: "withdrawal", details: { path: ["signature"], equals: signature } } });
-  if (seen) return;
-  await recordRiskSignal(deps.db, {
-    userId: w.userId,
-    type: "FAKE_TRANSACTION",
-    score: 10,
-    details: { withdrawalId: w.id, signature, feePayer, reason: v.reason, message: v.message },
-    source: "withdrawal"
+  // Check-and-insert under a per-signature advisory lock so concurrent workers record it exactly once.
+  await deps.db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`spoof:${signature}`}))`;
+    const seen = await tx.riskSignal.count({ where: { type: "FAKE_TRANSACTION", source: "withdrawal", details: { path: ["signature"], equals: signature } } });
+    if (seen) return;
+    await recordRiskSignal(tx, {
+      userId: w.userId,
+      type: "FAKE_TRANSACTION",
+      score: 10,
+      details: { withdrawalId: w.id, signature, feePayer, reason: v.reason, message: v.message },
+      source: "withdrawal"
+    });
   });
 }
 

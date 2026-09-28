@@ -7,7 +7,7 @@ import { bootstrapTreasury, createWithdrawal, withdrawalMemo } from "@nebula/eco
 import { createIsolatedDb, createTestUser } from "@nebula/economy/testing";
 import { sendSolWithMemo, type SolanaRpcClient } from "@nebula/blockchain";
 import { createMockSolanaRpc, type MockChainState } from "@nebula/blockchain/testing";
-import { processWithdrawal, type ProcessorDeps } from "./processor.js";
+import { flagSpoofedPayout, processWithdrawal, type ProcessorDeps } from "./processor.js";
 import { createWithdrawalQueue, createWithdrawalWorker, enqueueWithdrawal, recoverQueue } from "./queue.js";
 
 const SOL = 1_000_000_000n;
@@ -179,6 +179,18 @@ describe("withdrawal payout pipeline", () => {
     const signals = await db.riskSignal.findMany({ where: { userId: w.userId, type: "FAKE_TRANSACTION", source: "withdrawal" } });
     expect(signals).toHaveLength(1);
     expect((signals[0]?.details as { signature?: string }).signature).toBe(spoof.signature);
+  });
+
+  it("concurrent workers record one signal per spoof signature", async () => {
+    const { rpc, state } = chain();
+    const w = await newWithdrawal();
+    const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    state.balances.set(w.wallet, SOL);
+    const spoof = await sendSolWithMemo({ rpc, signer: w.player, destination: treasury.address, amount: row.final, memo: withdrawalMemo(w.id) });
+    const v = { reason: "WRONG_SENDER", message: "spoof" };
+    await Promise.all(Array.from({ length: 6 }, () => flagSpoofedPayout(deps(rpc), row, spoof.signature, v)));
+    const signals = await db.riskSignal.findMany({ where: { userId: w.userId, type: "FAKE_TRANSACTION", source: "withdrawal" } });
+    expect(signals).toHaveLength(1);
   });
 
   it("max attempts → FAILED with a compensating refund (never COMPLETED)", async () => {
