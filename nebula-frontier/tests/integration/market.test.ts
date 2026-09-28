@@ -5,6 +5,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { settleAuction } from "../../apps/api/src/lib/auction.js";
 import { verifyLedgerIntegrity } from "../../packages/database/src/index.js";
+import { FACTIONS_BY_ID } from "../../packages/config/src/index.js";
+import { starterAmmoFor, starterAmmoOriginRef } from "../../packages/game-core/src/index.js";
 import { credits, fund, giveItem, key, registerUser, setup, teardown, type TestCtx } from "./helpers.js";
 
 let ctx: TestCtx;
@@ -32,15 +34,31 @@ describe("faction onboarding", () => {
     const me = res.json() as { faction: string; activeShipInstanceId: string };
     expect(me.faction).toBe("aurora");
     const items = await ctx.db.inventoryItem.findMany({ where: { userId: s.userId } });
-    expect(items.length).toBe(7);
-    expect(items.every((i) => i.originRef?.startsWith(`starter:${s.userId}:`))).toBe(true);
+    const gear = items.filter((i) => i.originRef?.startsWith(`starter:${s.userId}:`));
+    expect(gear.length).toBe(7);
+    // Starter ammo from factions.json (shared game-core source) with the game server's originRef.
+    const expectedAmmo = starterAmmoFor(FACTIONS_BY_ID.get("aurora")!);
+    expect(expectedAmmo.length).toBeGreaterThan(0);
+    for (const a of expectedAmmo) {
+      const row = items.find((i) => i.originRef === starterAmmoOriginRef(s.userId, a.itemId));
+      expect(row?.itemId).toBe(a.itemId);
+      expect(row?.quantity).toBe(a.quantity);
+    }
+    expect(items.length).toBe(7 + expectedAmmo.length);
+    // The game-server fallback kit writing the same originRefs is a no-op.
+    await ctx.db.inventoryItem.createMany({
+      data: expectedAmmo.map((a) => ({ userId: s.userId, itemId: a.itemId, quantity: a.quantity, originRef: starterAmmoOriginRef(s.userId, a.itemId) })),
+      skipDuplicates: true,
+    });
+    expect(await ctx.db.inventoryItem.count({ where: { userId: s.userId } })).toBe(items.length);
     const again = await s.req("POST", "/api/me/faction", { factionId: "vortex" });
     expect(again.statusCode).toBe(409);
     const ticket = await s.req("POST", "/api/game/ticket", {});
     expect(ticket.statusCode).toBe(200);
     expect((ticket.json() as { mapId: string }).mapId).toBe("map_aurora_prime");
-    const ships = (await s.req("GET", "/api/ships")).json() as { owned: { loadouts: { weapons: (string | null)[] }[] }[] };
+    const ships = (await s.req("GET", "/api/ships")).json() as { owned: { loadouts: { weapons: (string | null)[]; ammo: string | null }[] }[] };
     expect(ships.owned[0]?.loadouts[0]?.weapons.filter(Boolean)).toHaveLength(2);
+    expect(ships.owned[0]?.loadouts[0]?.ammo).toBe(expectedAmmo[0]?.itemId);
   });
 });
 
