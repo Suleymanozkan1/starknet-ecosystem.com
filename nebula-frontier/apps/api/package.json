@@ -1,0 +1,35 @@
+{
+  "name": "@nebula/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "start": "node --enable-source-maps dist/index.js",
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nebula/shared": "workspace:*",
+    "@nebula/config": "workspace:*",
+    "@nebula/validation": "workspace:*",
+    "@nebula/game-core": "workspace:*",
+    "@nebula/economy": "workspace:*",
+    "@nebula/authentication": "workspace:*",
+    "@nebula/telemetry": "workspace:*",
+    "@nebula/database": "workspace:*",
+    "@nebula/blockchain": "workspace:*",
+    "fastify": "^5.6.0",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/sensible": "^6.0.3",
+    "fastify-plugin": "^5.1.0",
+    "zod": "^4.1.0",
+    "ioredis": "^5.8.0",
+    "bullmq": "^5.61.0",
+    "jose": "^6.1.0",
+    "@solana/kit": "^8.4.0"
+  }
+}

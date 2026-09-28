@@ -1,0 +1,24 @@
+{
+  "name": "@nebula/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@nebula/shared": "workspace:*",
+    "@nebula/config": "workspace:*",
+    "@nebula/validation": "workspace:*",
+    "@nebula/game-core": "workspace:*",
+    "@nebula/economy": "workspace:*",
+    "@nebula/authentication": "workspace:*",
+    "@nebula/database": "workspace:*",
+    "@nebula/blockchain": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@solana/kit": "^8.4.0"
+  }
+}

@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+coverage
+.env
+.env.*
+!.env.example
+*.log
+.turbo
+tools/reference-repos/*
+!tools/reference-repos/README.md
+apps/mobile/android/app/build
+apps/mobile/ios/App/Pods
+.secrets
+*.keypair.json
+packages/database/src/generated
