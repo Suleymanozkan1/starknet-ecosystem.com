@@ -1,4 +1,5 @@
 /** Environment configuration for the game server (validated once at boot). */
+import { keyRingFromEnv, type KeyRing } from "@nebula/authentication";
 import { Region } from "@nebula/shared";
 
 function num(name: string, def: number): number {
@@ -17,15 +18,18 @@ export interface GameServerConfig {
   maxPlayersPerRoom: number;
   aoiRadius: number;
   redisUrl: string | null;
-  gameTicketSecret: string;
+  /** GAME_TICKET_SECRETS (`kid:secret,…`, first = active) with fallback GAME_TICKET_SECRET — supports rotation. */
+  gameTicketKeys: KeyRing;
+  /** Internal API for clan-mission progress (`API_INTERNAL_URL`, `INTERNAL_SERVICE_TOKEN`); null token = disabled. */
+  apiInternalUrl: string;
+  internalServiceToken: string | null;
   publicUrl: string;
   flushIntervalMs: number;
   nodeEnv: string;
 }
 
 export function loadConfig(): GameServerConfig {
-  const secret = process.env.GAME_TICKET_SECRET ?? "";
-  if (secret.length < 32) throw new Error("GAME_TICKET_SECRET must be set (>= 32 chars)");
+  const gameTicketKeys = keyRingFromEnv("GAME_TICKET");
   const region = (process.env.REGION ?? "EU").toUpperCase();
   return {
     port: num("GAME_PORT", 2567),
@@ -35,7 +39,9 @@ export function loadConfig(): GameServerConfig {
     maxPlayersPerRoom: Math.max(2, num("MAX_PLAYERS_PER_ROOM", 100)),
     aoiRadius: Math.max(20, num("AOI_RADIUS", 140)),
     redisUrl: process.env.REDIS_URL ? process.env.REDIS_URL : null,
-    gameTicketSecret: secret,
+    gameTicketKeys,
+    apiInternalUrl: (process.env.API_INTERNAL_URL || "http://localhost:8080").replace(/\/$/, ""),
+    internalServiceToken: process.env.INTERNAL_SERVICE_TOKEN || null,
     publicUrl: process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${num("GAME_PORT", 2567)}`,
     flushIntervalMs: Math.max(1000, num("GAME_FLUSH_INTERVAL_MS", 5000)),
     nodeEnv: process.env.NODE_ENV ?? "development",

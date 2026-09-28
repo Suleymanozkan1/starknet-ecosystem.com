@@ -3,13 +3,17 @@
  * real PostgreSQL, real WebSocket clients (@colyseus/sdk) — direct room tests.
  */
 import { existsSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { clanMissionProgressSchema } from "@nebula/validation";
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { matchMaker } from "@colyseus/core";
 import { Client as SdkClient } from "@colyseus/sdk";
-import { EVENTS_BY_ID, NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
+import { EVENTS_BY_ID, QUESTS_BY_ID, NPCS_BY_ID, MAPS_BY_ID, LOOT_TABLES_BY_ID } from "@nebula/config";
+import type { KeyRing } from "@nebula/authentication";
 import { createDb, getBalance, post, system, userWallet, type Db } from "@nebula/database";
-import { STARTER_AMMO, isPvpAllowedAt, starterAmmoOriginRef, type HitResult, type LootDrop } from "@nebula/game-core";
+import { STARTER_AMMO, isPvpAllowedAt, objectiveIncrement, starterAmmoOriginRef, type HitResult, type LootDrop } from "@nebula/game-core";
 import { LedgerAccountType, RoomName, type MapDef } from "@nebula/shared";
 
 import { loadConfig } from "./config.js";
@@ -54,15 +58,39 @@ async function until(fn: () => boolean | Promise<boolean>, timeoutMs = 8000, ste
 let colyseus: { sdk: SdkClient; shutdown: () => Promise<void> };
 let db: Db;
 let svc: GameServices;
-let secret: string;
+let secret: KeyRing;
+let mockApi: Server;
+const clanEvents: { userId: string; event: { type: string; npcId?: string } }[] = [];
 
 beforeAll(async () => {
   shieldTestIpcFromPm2();
   process.env.GAME_TICK_RATE = "20";
   process.env.LOG_LEVEL = "warn";
   // Redis is used for ticket jti / presence / mutes (as in production); matchmaking stays in-process.
+  // Mock of the API internal endpoint (validates with the real shared zod schema + token).
+  mockApi = createServer((req, res) => {
+    let body = "";
+    req.on("data", (c: Buffer) => { body += c.toString(); });
+    req.on("end", () => {
+      if (req.url !== "/api/internal/clan-missions/progress" || req.headers["x-internal-token"] !== process.env.INTERNAL_SERVICE_TOKEN) {
+        res.statusCode = 401;
+        return res.end();
+      }
+      const parsed = clanMissionProgressSchema.safeParse(JSON.parse(body));
+      if (!parsed.success) {
+        res.statusCode = 400;
+        return res.end();
+      }
+      clanEvents.push(...parsed.data.events);
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ ok: true, missionsUpdated: 0 }));
+    });
+  });
+  await new Promise<void>((r) => mockApi.listen(0, "127.0.0.1", () => r()));
+  process.env.INTERNAL_SERVICE_TOKEN ||= "test-internal-service-token-0123456789";
+  process.env.API_INTERNAL_URL = `http://127.0.0.1:${(mockApi.address() as AddressInfo).port}`;
   const config = loadConfig();
-  secret = config.gameTicketSecret;
+  secret = config.gameTicketKeys;
   db = createDb();
   svc = buildServices(config, { db, useRedis: true, logLevel: "warn", rngSeed: 1234 });
   await ensureCatalog(db);
@@ -76,6 +104,7 @@ afterAll(async () => {
   svc?.events.stop();
   await colyseus?.shutdown();
   await db?.$disconnect();
+  mockApi?.close();
 });
 
 async function joinSector(mapId: string, o: { faction?: string; level?: number; credits?: number } = {}) {
@@ -549,5 +578,35 @@ describe("clan war", () => {
     expect(Number(sb.score)).toBe(0);
     await ca.leave().catch(() => undefined);
     await cb.leave().catch(() => undefined);
+  });
+});
+
+describe("clan missions", () => {
+  it("reports targeted objective events of clan members to the API (q_clan_founding progresses)", async () => {
+    const clan = await db.clan.create({ data: { name: `Mission ${Date.now()}`, tag: `M${Math.random().toString(36).slice(2, 6).toUpperCase()}` } });
+    const u = await createPlayerUser(db, { faction: "aurora", level: 10 });
+    await db.clanMember.create({ data: { userId: u.id, clanId: clan.id, role: "LEADER" } });
+    const ticket = await ticketFor(secret, u, "map_aurora_prime");
+    const c = await colyseus.sdk.joinOrCreate(RoomName.SECTOR, { ticket, mapId: "map_aurora_prime" });
+    const r = matchMaker.getLocalRoomById(c.roomId);
+    await until(() => !!I(r).getPlayerByUser(u.id));
+    const me = I(r).getPlayerByUser(u.id)!;
+    const fighter = I(r).spawnNpc(NPCS_BY_ID.get("npc_xyrr_fighter")!, me.x + 10, me.y, { spawnIndex: null });
+    I(r).applyHit(me, fighter, bigHit(fighter), "LASER");
+    expect(fighter.dead).toBe(true);
+    await I(r).flushAll(false);
+    await until(() => clanEvents.some((e) => e.userId === u.id && e.event.type === "KILL" && e.event.npcId === "npc_xyrr_fighter"));
+    const ev = clanEvents.find((e) => e.userId === u.id && e.event.type === "KILL")!.event;
+    const q = QUESTS_BY_ID.get("q_clan_founding")!;
+    expect(objectiveIncrement(q.objectives[0]!, ev as Parameters<typeof objectiveIncrement>[1])).toBe(1);
+    // Non-clan players are never reported (the reporter drops events without a clan).
+    const loner = await joinSector("map_aurora_prime");
+    const other = I(loner.room).spawnNpc(NPCS_BY_ID.get("npc_xyrr_fighter")!, loner.actor.x + 10, loner.actor.y, { spawnIndex: null });
+    I(loner.room).applyHit(loner.actor, other, bigHit(other), "LASER");
+    await I(loner.room).flushAll(false);
+    await sleep(300);
+    expect(clanEvents.some((e) => e.userId === loner.user.id)).toBe(false);
+    await loner.client.leave();
+    await c.leave();
   });
 });

@@ -2,13 +2,13 @@
  * Dev bot runner: `pnpm --filter @nebula/game-server bots -- --count 10 [--map map_aurora_prime] [--url ws://localhost:2567] [--type fighter]`
  *
  * Bots are real WebSocket clients (@colyseus/sdk). They authenticate with game
- * tickets signed by GAME_TICKET_SECRET for DB users named `bot_*` (created on
+ * tickets signed with the active GAME_TICKET_SECRETS / GAME_TICKET_SECRET key for DB users named `bot_*` (created on
  * first run, reused afterwards).
  */
 import { randomUUID } from "node:crypto";
 import { Client, type Room } from "@colyseus/sdk";
 import { FACTIONS, FACTIONS_BY_ID, MAPS_BY_ID } from "@nebula/config";
-import { signGameTicket } from "@nebula/authentication";
+import { keyRingFromEnv, signGameTicket, type KeyRing } from "@nebula/authentication";
 import { createDb, type Db } from "@nebula/database";
 import { mulberry32, RoomName } from "@nebula/shared";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./behaviors.js";
@@ -61,7 +61,7 @@ function snapshot(room: Room): { self: EntityView | null; entities: EntityView[]
   return { self, entities };
 }
 
-async function runBot(url: string, secret: string, bot: { id: string; username: string; faction: string; lastMapId: string | null }, mapOverride: string | null, type: string, seed: number, stopAt: number): Promise<void> {
+async function runBot(url: string, secret: KeyRing, bot: { id: string; username: string; faction: string; lastMapId: string | null }, mapOverride: string | null, type: string, seed: number, stopAt: number): Promise<void> {
   const home = FACTIONS_BY_ID.get(bot.faction)?.homeMap ?? "map_aurora_prime";
   const mapId = mapOverride ?? (bot.lastMapId && MAPS_BY_ID.get(bot.lastMapId)?.roomType === "sector" ? bot.lastMapId : home);
   const map = MAPS_BY_ID.get(mapId);
@@ -131,8 +131,7 @@ async function runBot(url: string, secret: string, bot: { id: string; username: 
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const secret = process.env.GAME_TICKET_SECRET;
-  if (!secret) throw new Error("GAME_TICKET_SECRET is required");
+  const secret = keyRingFromEnv("GAME_TICKET");
   const db = createDb();
   const bots = await ensureBots(db, args.count);
   await db.$disconnect();

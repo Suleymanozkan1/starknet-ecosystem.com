@@ -1,6 +1,6 @@
 /** Helpers shared by game-server tests and the bot runner. */
 import { randomUUID } from "node:crypto";
-import { signGameTicket } from "@nebula/authentication";
+import { signGameTicket, type KeyRing } from "@nebula/authentication";
 import { post, system, userWallet, type Db } from "@nebula/database";
 import { LedgerAccountType } from "@nebula/shared";
 
@@ -17,7 +17,7 @@ export async function createPlayerUser(db: Db, o: { prefix?: string; faction?: s
   return { id: user.id, username };
 }
 
-export async function ticketFor(secret: string, user: { id: string; username: string }, mapId: string): Promise<string> {
+export async function ticketFor(secret: string | KeyRing, user: { id: string; username: string }, mapId: string): Promise<string> {
   return signGameTicket({ sub: user.id, username: user.username, mapId, jti: randomUUID() }, secret);
 }
 

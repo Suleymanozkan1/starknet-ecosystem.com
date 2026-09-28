@@ -10,6 +10,7 @@ import type { Persistence } from "../persistence/writer.js";
 import type { RiskReporter } from "./risk.js";
 import type { TicketService } from "./tickets.js";
 import type { EventEngine } from "./events.js";
+import type { ClanMissionReporter } from "./clan-missions.js";
 
 export interface GameServices {
   config: GameServerConfig;
@@ -20,6 +21,7 @@ export interface GameServices {
   persistence: Persistence;
   risk: RiskReporter;
   events: EventEngine;
+  clanMissions: ClanMissionReporter;
   /** Deterministic RNG seed override for tests (undefined = crypto seeded). */
   rngSeed?: number;
 }

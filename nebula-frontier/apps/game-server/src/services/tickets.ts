@@ -3,7 +3,7 @@
  * jti is stored with SET NX EX in Redis (shared across processes) or, when
  * Redis is not configured, in a process-local TTL map.
  */
-import { verifyGameTicket, signGameTicket, type GameTicketClaims } from "@nebula/authentication";
+import { verifyGameTicket, signGameTicket, type GameTicketClaims, type KeyRing } from "@nebula/authentication";
 import { randomUUID } from "node:crypto";
 import type { Redis } from "ioredis";
 
@@ -19,12 +19,13 @@ export class TicketError extends Error {
 const JTI_TTL_SEC = 120;
 
 export class TicketService {
-  private readonly secret: string;
+  /** Verification accepts every key in the ring (rotation); new tickets are signed with the active key. */
+  private readonly keys: KeyRing;
   private readonly redis: Redis | null;
   private readonly memory = new Map<string, number>();
 
-  constructor(secret: string, redis: Redis | null) {
-    this.secret = secret;
+  constructor(keys: KeyRing, redis: Redis | null) {
+    this.keys = keys;
     this.redis = redis;
   }
 
@@ -32,7 +33,7 @@ export class TicketService {
   async verifyAndConsume(ticket: string): Promise<GameTicketClaims> {
     let claims: GameTicketClaims;
     try {
-      claims = await verifyGameTicket(ticket, this.secret);
+      claims = await verifyGameTicket(ticket, this.keys);
     } catch (e) {
       throw new TicketError("INVALID_TICKET", `Invalid game ticket: ${(e as Error).message}`);
     }
@@ -58,6 +59,6 @@ export class TicketService {
 
   /** Server-issued ticket for portal jumps (new jti, target map). */
   async issue(userId: string, username: string, mapId: string): Promise<string> {
-    return signGameTicket({ sub: userId, username, mapId, jti: randomUUID() }, this.secret);
+    return signGameTicket({ sub: userId, username, mapId, jti: randomUUID() }, this.keys);
   }
 }

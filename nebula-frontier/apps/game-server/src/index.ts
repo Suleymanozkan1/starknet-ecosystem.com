@@ -17,12 +17,15 @@ async function main(): Promise<void> {
   server.onShutdown(async () => {
     svc.log.info("shutting down: rooms persisted, closing connections");
     svc.events.stop();
+    svc.clanMissions.stop();
+    await svc.clanMissions.flush();
     await disconnectDb().catch(() => undefined);
     await svc.db.$disconnect().catch(() => undefined);
     if (svc.redis) await svc.redis.quit().catch(() => undefined);
   });
   await server.listen(config.port);
   svc.events.start(matchMaker.presence);
+  svc.clanMissions.start(config.flushIntervalMs);
   svc.log.info({ port: config.port, region: config.region, tickRate: config.tickRate, redis: !!config.redisUrl }, "game server listening");
 }
 

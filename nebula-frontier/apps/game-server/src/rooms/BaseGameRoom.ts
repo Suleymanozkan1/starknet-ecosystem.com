@@ -368,6 +368,11 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   }
 
   override onUncaughtException(err: Error, methodName: string): void {
+    // Rejected joins (bad/replayed ticket, level, entry cost) surface here too: expected, not errors.
+    if (methodName === "onAuth" || methodName === "onJoin") {
+      this.log.info({ reason: err.message, methodName }, "join rejected");
+      return;
+    }
     errorsTotal.inc({ component: "room", code: methodName });
     this.log.error({ err, methodName }, "uncaught room exception");
   }
@@ -1947,6 +1952,8 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   protected async flushAll(final: boolean): Promise<void> {
     await Promise.all([...this.players.values()].map((p) => this.flushPlayer(p, final)));
     await this.flushChat();
+    // Clan-mission progress rides along with the persistence flush (fire-and-forget, own retries).
+    void this.svc.clanMissions.flush();
   }
 
   protected async flushPlayer(p: PlayerActor, final: boolean, waitInFlight = final): Promise<void> {
@@ -1993,6 +2000,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   // ------------------------------------------------------------------------
 
   protected questEvent(p: PlayerActor, ev: GameplayEvent): void {
+    this.svc.clanMissions.report(p.userId, p.profile.clanId, ev);
     for (const q of p.profile.quests.values()) {
       if (q.status !== "ACTIVE") continue;
       const r = applyQuestEvent(q.def, q.progress, ev);

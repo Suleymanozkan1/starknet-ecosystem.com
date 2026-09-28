@@ -5,6 +5,7 @@ import type { GameServerConfig } from "./config.js";
 import { Persistence } from "./persistence/writer.js";
 import { setServices, type GameServices } from "./services/context.js";
 import { EventEngine } from "./services/events.js";
+import { ClanMissionReporter } from "./services/clan-missions.js";
 import { createRedis } from "./services/redis.js";
 import { RiskReporter } from "./services/risk.js";
 import { TicketService } from "./services/tickets.js";
@@ -19,10 +20,11 @@ export function buildServices(config: GameServerConfig, opts: { db?: Db; useRedi
     db,
     redis,
     log,
-    tickets: new TicketService(config.gameTicketSecret, redis),
+    tickets: new TicketService(config.gameTicketKeys, redis),
     persistence: new Persistence(db),
     risk: new RiskReporter(db, log),
     events: new EventEngine(),
+    clanMissions: new ClanMissionReporter({ baseUrl: config.apiInternalUrl, token: config.internalServiceToken, log }),
     rngSeed: opts.rngSeed,
   };
   setServices(svc);
