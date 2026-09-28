@@ -1,6 +1,7 @@
+import { type BufferGeometry, Shape } from "three";
 import type { ShipVisualDef } from "@nebula/shared";
 import {
-  type PartCollector, type V2, type V3, box, chamferBox, cyl, cylZ, extrudeTopView, latheZ, mirroredShape, octa,
+  type PartCollector, type V2, type V3, box, chamferBox, cyl, cylZ, extrudeTopView, latheZ, octa,
   sphere, torus, transform,
 } from "./geometry.js";
 import type { Detail, HullInfo } from "./hulls.js";
@@ -151,17 +152,15 @@ export function buildEngines(v: Pick<ShipVisualDef, "engine" | "nozzles" | "leng
 // ---------------------------------------------------------------------------------------
 
 /** Planform in wing-local space: x outward from root (≥ 0), z forward. Returns full closed polygon. */
-function wingSlab(pts: readonly V2[], thickness: number, d: Detail): import("three").BufferGeometry {
+function wingSlab(pts: readonly V2[], thickness: number, d: Detail): BufferGeometry {
   // Build a closed shape directly (not mirrored).
   const half: V2[] = [...pts];
   const shape = mirroredShapeFromPolygon(half);
   return extrudeTopView(shape, { thickness, bevel: thickness * 0.3, bevelSegments: d > 1 ? 2 : 1, curveSegments: 2 });
 }
 
-function mirroredShapeFromPolygon(poly: readonly V2[]): import("three").Shape {
-  // mirroredShape expects a half outline; for a free polygon we can reuse it by
-  // passing points and skipping the mirror — emulate by building a Shape manually.
-  const s = mirroredShape([]);
+function mirroredShapeFromPolygon(poly: readonly V2[]): Shape {
+  const s = new Shape();
   const first = poly[0];
   if (!first) return s;
   s.moveTo(first[0], first[1]);
