@@ -1,0 +1,31 @@
+{
+  "name": "@nebula/game-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nebula/shared": "workspace:*",
+    "@nebula/config": "workspace:*",
+    "@nebula/game-core": "workspace:*",
+    "@nebula/game-network": "workspace:*",
+    "@nebula/game-renderer": "workspace:*",
+    "three": "^0.186.0",
+    "phaser": "^4.2.1",
+    "@colyseus/sdk": "^0.18.4"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "vite": "^7.1.0"
+  }
+}
