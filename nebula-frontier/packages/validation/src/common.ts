@@ -45,6 +45,13 @@ export const usernameSchema = z
   .min(3)
   .max(20)
   .regex(/^[A-Za-z0-9_]+$/, "username may only contain letters, digits and underscores");
+/** Username prefix reserved for server-owned dev/load-test bot accounts (the bot runner selects them by it). */
+export const RESERVED_BOT_USERNAME_PREFIX = "bot_";
+export function isReservedUsername(username: string): boolean {
+  return username.toLowerCase().startsWith(RESERVED_BOT_USERNAME_PREFIX);
+}
+/** Username a player may choose (registration / rename): the `bot_` namespace is reserved. */
+export const playerUsernameSchema = usernameSchema.refine((u) => !isReservedUsername(u), `usernames starting with "${RESERVED_BOT_USERNAME_PREFIX}" are reserved`);
 export const emailSchema = z.string().trim().toLowerCase().max(254).pipe(z.email());
 export const passwordSchema = z
   .string()

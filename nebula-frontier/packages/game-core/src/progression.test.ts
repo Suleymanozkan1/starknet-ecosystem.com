@@ -62,6 +62,9 @@ describe("upgrades & repair", () => {
     expect(() => toMoney(Number.NaN)).toThrow();
     expect(() => toMoney(Infinity)).toThrow();
     expect(() => toMoney(-1)).toThrow();
+    expect(toMoney(Number.MAX_SAFE_INTEGER)).toBe(BigInt(Number.MAX_SAFE_INTEGER));
+    expect(() => toMoney(Number.MAX_SAFE_INTEGER + 2)).toThrow(RangeError);
+    expect(() => toMoney(1e300)).toThrow(RangeError);
   });
 });
 

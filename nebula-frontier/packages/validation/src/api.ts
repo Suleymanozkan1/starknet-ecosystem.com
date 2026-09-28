@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   amountSchema, base58SignatureSchema, breakerModeSchema, chatChannelSchema, clanRoleSchema, adminRoleSchema,
   currencySchema, defIdSchema, deviceIdSchema, emailSchema, idSchema, idempotencyKeySchema, itemCategorySchema,
-  passwordSchema, raritySchema, safeTextSchema, solanaAddressSchema, tradeCurrencySchema, usernameSchema,
+  passwordSchema, raritySchema, safeTextSchema, solanaAddressSchema, tradeCurrencySchema, usernameSchema, playerUsernameSchema,
 } from "./common.js";
 
 // ---------------- Auth ----------------
@@ -23,7 +23,7 @@ export const verifyRequestSchema = z.object({
 export const registerRequestSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  username: usernameSchema,
+  username: playerUsernameSchema,
   deviceId: deviceIdSchema.optional(),
 });
 export const loginRequestSchema = z.object({
@@ -33,7 +33,7 @@ export const loginRequestSchema = z.object({
 });
 
 // ---------------- User ----------------
-export const updateMeSchema = z.object({ username: usernameSchema });
+export const updateMeSchema = z.object({ username: playerUsernameSchema });
 export const chooseFactionSchema = z.object({ factionId: defIdSchema });
 export const gameTicketSchema = z.object({ mapId: defIdSchema.optional() }).default({});
 

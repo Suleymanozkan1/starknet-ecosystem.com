@@ -2,6 +2,7 @@
  * Gameplay REST flows: quests, crafting, ships/loadouts/upgrades, clans + treasury, social,
  * mail/achievement/battle-pass idempotent claims, bounties, world data, feature flags, admin CRUD.
  */
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { verifyGameTicket } from "../../packages/authentication/src/index.js";
 import { WEAPONS_BY_ID } from "../../packages/config/src/index.js";
@@ -41,6 +42,17 @@ describe("world & public data", () => {
 });
 
 describe("pilot progression", () => {
+  it("reserves the bot_ username namespace on register and rename", async () => {
+    const tag = randomUUID().replace(/-/g, "").slice(0, 10);
+    for (const username of [`bot_${tag}`, `BOT_${tag}`]) {
+      const r = await ctx.app.inject({ method: "POST", url: "/api/auth/register", payload: { email: `r_${tag}_${username.slice(0, 1)}@test.local`, password: "correct-horse-42", username } });
+      expect(r.statusCode, username).toBe(400);
+    }
+    const s = await registerUser(ctx.app);
+    expect((await s.req("PATCH", "/api/me", { username: `bot_${tag}` })).statusCode).toBe(400);
+    expect((await ctx.db.user.findUniqueOrThrow({ where: { id: s.userId } })).username.startsWith("bot_")).toBe(false);
+  });
+
   it("game ticket is a valid 60s JWT for the server-chosen map", async () => {
     const s = await registerUser(ctx.app);
     await s.req("POST", "/api/me/faction", { factionId: "vortex" });

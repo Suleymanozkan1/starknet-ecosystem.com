@@ -8,6 +8,7 @@ import {
 } from "@nebula/authentication";
 import type { Db, Tx } from "@nebula/database";
 import type { AuthResponse } from "@nebula/shared";
+import { isReservedUsername } from "@nebula/validation";
 import type { Env } from "../env.js";
 import { forbidden } from "../errors.js";
 import { setAuthCookies } from "./cookies.js";
@@ -29,6 +30,8 @@ export function platformOf(req: FastifyRequest): string {
 
 /** Create a user with an auto-generated `pilot_<8 hex>` username (retries on collision). */
 export async function createUserWithUniqueName(tx: Tx, data: { email?: string; passwordHash?: string; username?: string }) {
+  // Invariant (schemas already reject it): the `bot_` namespace belongs to server-owned bot accounts.
+  if (data.username !== undefined && isReservedUsername(data.username)) throw new Error("Reserved username prefix");
   for (let i = 0; i < 6; i++) {
     const username = data.username ?? `pilot_${randomBytes(4).toString("hex")}`;
     const exists = await tx.user.findUnique({ where: { username }, select: { id: true } });
