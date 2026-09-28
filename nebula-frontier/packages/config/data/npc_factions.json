@@ -1,0 +1,34 @@
+[
+  {
+    "id": "npcf_crimson_wake",
+    "name": "Crimson Wake Corsairs",
+    "color": "#d00000",
+    "weakness": "EM",
+    "resistance": "KINETIC",
+    "lore": "Deserters, debtors and exiles from all three great factions, the Corsairs paint their hulls with the red wake of burning plasma. They raid ore convoys along the Helios lanes and sell stolen hulls in the lawless docks of the Vanta Rift. Their ships are patched with scavenged kinetic plating but their cheap shield emitters buckle under electromagnetic fire."
+  },
+  {
+    "id": "npcf_xyrr_hive",
+    "name": "Xyrr Hive",
+    "color": "#70e000",
+    "weakness": "THERMAL",
+    "resistance": "PLASMA",
+    "lore": "The Xyrr are a chitinous hive-species whose living ships are grown rather than built. Their scouts first appeared at the edge of the Helios Sector after the Rift opened, and their swarms have grown bolder every cycle since. Xyrr carapaces shrug off plasma but blister and crack under sustained thermal beams."
+  },
+  {
+    "id": "npcf_null_choir",
+    "name": "Null Choir",
+    "color": "#8d99ae",
+    "weakness": "KINETIC",
+    "resistance": "EM",
+    "lore": "Once a network of automated mining and defence platforms, the Null Choir woke up during the Rift's first pulse and began singing to itself in a language no one can decode. Its drones strip-mine the Orion Belt and its war engines guard the Astra Graveyard. Choir machines are hardened against EM but their frames shatter under heavy kinetic impacts."
+  },
+  {
+    "id": "npcf_leviathan_brood",
+    "name": "Leviathan Brood",
+    "color": "#00b4d8",
+    "weakness": "VOID",
+    "resistance": "THERMAL",
+    "lore": "Vast space-dwelling organisms that migrate between nebulae, the Leviathans feed on stellar radiation and the wrecks of the Graveyard. Their spawnlings swarm anything that glows, and the adults are large enough to swallow a frigate. Their thick blubber insulates them from heat, but Rift-born void energy tears through their cells."
+  }
+]

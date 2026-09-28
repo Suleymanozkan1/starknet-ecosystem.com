@@ -1,0 +1,134 @@
+{
+  "maxLevel": 50,
+  "xpBase": 1000,
+  "xpExponent": 1.8,
+  "ranks": [
+    {
+      "id": "rank_cadet",
+      "name": "Cadet",
+      "minHonor": 0,
+      "minLevel": 1
+    },
+    {
+      "id": "rank_drifter",
+      "name": "Drifter",
+      "minHonor": 100,
+      "minLevel": 3
+    },
+    {
+      "id": "rank_spacer",
+      "name": "Spacer",
+      "minHonor": 500,
+      "minLevel": 6
+    },
+    {
+      "id": "rank_wingman",
+      "name": "Wingman",
+      "minHonor": 1500,
+      "minLevel": 10
+    },
+    {
+      "id": "rank_lancer",
+      "name": "Lancer",
+      "minHonor": 4000,
+      "minLevel": 14
+    },
+    {
+      "id": "rank_vanguard",
+      "name": "Vanguard",
+      "minHonor": 9000,
+      "minLevel": 18
+    },
+    {
+      "id": "rank_sentinel",
+      "name": "Sentinel",
+      "minHonor": 18000,
+      "minLevel": 22
+    },
+    {
+      "id": "rank_warden",
+      "name": "Warden",
+      "minHonor": 35000,
+      "minLevel": 27
+    },
+    {
+      "id": "rank_commodore",
+      "name": "Commodore",
+      "minHonor": 60000,
+      "minLevel": 32
+    },
+    {
+      "id": "rank_starmarshal",
+      "name": "Starmarshal",
+      "minHonor": 100000,
+      "minLevel": 37
+    },
+    {
+      "id": "rank_archon",
+      "name": "Archon",
+      "minHonor": 160000,
+      "minLevel": 42
+    },
+    {
+      "id": "rank_nebula_sovereign",
+      "name": "Nebula Sovereign",
+      "minHonor": 250000,
+      "minLevel": 48
+    }
+  ],
+  "prestigeLevel": 50,
+  "upgrade": {
+    "maxLevel": 20,
+    "statPercentPerLevel": 0.02,
+    "creditsBase": 1000,
+    "creditsGrowth": 1.35,
+    "resourceBase": {
+      "TITANIUM": 10,
+      "PLASMA_ORE": 5,
+      "QUANTUM_SHARD": 1
+    },
+    "resourceGrowth": 1.25,
+    "successChanceBase": 1,
+    "successChanceDecay": 0.04,
+    "gemsFromLevel": 15,
+    "gemsPerLevel": 20
+  },
+  "repair": {
+    "creditsPerHullPoint": 0.5,
+    "deathRepairPercent": 0.1
+  },
+  "respawnMs": 10000,
+  "gearScoreWeights": {
+    "ship": 3,
+    "weapon": 1.5,
+    "generator": 1,
+    "module": 1,
+    "drone": 1.2,
+    "upgradeLevel": 0.5,
+    "rarity": 2,
+    "affix": 0.3
+  },
+  "reputation": {
+    "friendlyKarma": 50,
+    "hostileKarma": -30,
+    "outlawKarma": -100,
+    "minKarma": -500,
+    "maxKarma": 500,
+    "unprovokedAttackPenalty": 5,
+    "unprovokedAttackWindowSec": 60,
+    "unprovokedKillPenalty": 25,
+    "outlawKillReward": 15,
+    "decayPerHour": 10,
+    "selfDefenseWindowSec": 30,
+    "outlawLosesSafeZone": true,
+    "outlawSystemBountyCredits": 5000,
+    "systemBountyHours": 72
+  },
+  "factionWar": {
+    "npcKillPoints": 1,
+    "pvpKillPoints": 10,
+    "resourcePointsPer100": 1,
+    "bossKillPoints": 250,
+    "territoryPoints": 500
+  }
+}

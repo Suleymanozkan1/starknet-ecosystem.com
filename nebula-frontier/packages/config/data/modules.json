@@ -1,0 +1,408 @@
+[
+  {
+    "id": "gen_shield_s1",
+    "name": "Aegis Cell Mk I",
+    "kind": "SHIELD_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "COMMON",
+    "requiredLevel": 1,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "shield": 600,
+      "shieldRegen": 2
+    },
+    "description": "Entry-level shield cell. +600 shield.",
+    "tradeable": false
+  },
+  {
+    "id": "gen_shield_s2",
+    "name": "Aegis Cell Mk II",
+    "kind": "SHIELD_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 10,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "shield": 1100,
+      "shieldRegen": 4
+    },
+    "description": "Refined capacitor lattice. +1100 shield.",
+    "tradeable": true
+  },
+  {
+    "id": "gen_shield_s3",
+    "name": "Bulwark Matrix",
+    "kind": "SHIELD_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "RARE",
+    "requiredLevel": 20,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "shield": 1800,
+      "shieldRegen": 6
+    },
+    "description": "Military-grade matrix. +1800 shield.",
+    "tradeable": true
+  },
+  {
+    "id": "gen_shield_s4",
+    "name": "Seraphim Ward",
+    "kind": "SHIELD_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "EPIC",
+    "requiredLevel": 32,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "shield": 2600,
+      "shieldRegen": 9
+    },
+    "description": "Crystal-focused ward. +2600 shield.",
+    "tradeable": true
+  },
+  {
+    "id": "gen_speed_s1",
+    "name": "Thrustcell Mk I",
+    "kind": "SPEED_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "COMMON",
+    "requiredLevel": 1,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "speed": 1
+    },
+    "description": "Basic thrust booster. +1.0 speed.",
+    "tradeable": false
+  },
+  {
+    "id": "gen_speed_s2",
+    "name": "Thrustcell Mk II",
+    "kind": "SPEED_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 10,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "speed": 1.6,
+      "acceleration": 2
+    },
+    "description": "Tuned injectors. +1.6 speed.",
+    "tradeable": true
+  },
+  {
+    "id": "gen_speed_s3",
+    "name": "Vector Surge Drive",
+    "kind": "SPEED_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "RARE",
+    "requiredLevel": 22,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "speed": 2.3,
+      "acceleration": 4
+    },
+    "description": "Vector-stabilised surge drive. +2.3 speed.",
+    "tradeable": true
+  },
+  {
+    "id": "gen_speed_s4",
+    "name": "Comet Heart",
+    "kind": "SPEED_GENERATOR",
+    "slot": "GENERATOR",
+    "rarity": "EPIC",
+    "requiredLevel": 34,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "speed": 3,
+      "acceleration": 6,
+      "turnRate": 0.1
+    },
+    "description": "A captured comet-core drive. +3.0 speed.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_shield_booster",
+    "name": "Shield Booster",
+    "kind": "SHIELD_BOOSTER",
+    "slot": "MODULE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 4,
+    "cooldownMs": 30000,
+    "durationMs": 0,
+    "energyCost": 40,
+    "passive": {},
+    "active": {
+      "type": "SHIELD_RESTORE",
+      "percent": 30
+    },
+    "description": "Instantly restores 30% shield.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_engine_overdrive",
+    "name": "Engine Overdrive",
+    "kind": "ENGINE_OVERDRIVE",
+    "slot": "MODULE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 6,
+    "cooldownMs": 25000,
+    "durationMs": 6000,
+    "energyCost": 30,
+    "passive": {},
+    "active": {
+      "type": "SPEED_BOOST",
+      "multiplier": 1.35
+    },
+    "description": "+35% speed for 6s.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_emergency_repair",
+    "name": "Emergency Repair Bots",
+    "kind": "EMERGENCY_REPAIR",
+    "slot": "MODULE",
+    "rarity": "RARE",
+    "requiredLevel": 12,
+    "cooldownMs": 60000,
+    "durationMs": 0,
+    "energyCost": 50,
+    "passive": {},
+    "active": {
+      "type": "HULL_REPAIR",
+      "percent": 25
+    },
+    "description": "Repairs 25% hull immediately.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_emp_burst",
+    "name": "EMP Burst Emitter",
+    "kind": "EMP_BURST",
+    "slot": "MODULE",
+    "rarity": "RARE",
+    "requiredLevel": 18,
+    "cooldownMs": 45000,
+    "durationMs": 0,
+    "energyCost": 60,
+    "passive": {},
+    "active": {
+      "type": "EMP",
+      "radius": 15,
+      "shieldDamagePercent": 20,
+      "stunMs": 1500
+    },
+    "description": "Short-range EMP pulse that strips shields and stuns.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_cloaking",
+    "name": "Veil Cloaking Device",
+    "kind": "CLOAKING",
+    "slot": "MODULE",
+    "rarity": "EPIC",
+    "requiredLevel": 24,
+    "cooldownMs": 90000,
+    "durationMs": 12000,
+    "energyCost": 80,
+    "passive": {},
+    "active": {
+      "type": "CLOAK"
+    },
+    "description": "Cloaks the ship until it fires or 12s pass.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_target_jammer",
+    "name": "Target Jammer",
+    "kind": "TARGET_JAMMER",
+    "slot": "MODULE",
+    "rarity": "RARE",
+    "requiredLevel": 16,
+    "cooldownMs": 40000,
+    "durationMs": 5000,
+    "energyCost": 50,
+    "passive": {},
+    "active": {
+      "type": "DAMAGE_REDUCTION",
+      "multiplier": 0.7
+    },
+    "description": "Scrambles incoming lock: -30% damage taken for 5s.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_cargo_booster",
+    "name": "Expanded Cargo Frame",
+    "kind": "CARGO_BOOSTER",
+    "slot": "MODULE",
+    "rarity": "COMMON",
+    "requiredLevel": 3,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "cargo": 80
+    },
+    "description": "+80 cargo capacity.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_mining_booster",
+    "name": "Resonant Mining Coil",
+    "kind": "MINING_BOOSTER",
+    "slot": "MODULE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 5,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "miningSpeed": 20
+    },
+    "description": "+20% mining speed.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_energy_converter",
+    "name": "Energy Converter",
+    "kind": "ENERGY_CONVERTER",
+    "slot": "MODULE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 8,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "energy": 60,
+      "energyRegen": 4
+    },
+    "description": "+60 energy, +4 energy regen.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_weapon_overcharger",
+    "name": "Weapon Overcharger",
+    "kind": "WEAPON_OVERCHARGER",
+    "slot": "MODULE",
+    "rarity": "EPIC",
+    "requiredLevel": 22,
+    "cooldownMs": 45000,
+    "durationMs": 8000,
+    "energyCost": 70,
+    "passive": {
+      "damage": 3
+    },
+    "active": {
+      "type": "DAMAGE_BOOST",
+      "multiplier": 1.25
+    },
+    "description": "+3% damage; activate for +25% damage for 8s.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_sensor_amplifier",
+    "name": "Sensor Amplifier",
+    "kind": "SENSOR_AMPLIFIER",
+    "slot": "MODULE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 9,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "range": 6,
+      "critChance": 2
+    },
+    "description": "+6% range and +2% crit chance.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_warp_stabilizer",
+    "name": "Warp Stabilizer",
+    "kind": "WARP_STABILIZER",
+    "slot": "MODULE",
+    "rarity": "RARE",
+    "requiredLevel": 14,
+    "cooldownMs": 35000,
+    "durationMs": 0,
+    "energyCost": 40,
+    "passive": {
+      "evasion": 3
+    },
+    "active": {
+      "type": "DASH",
+      "distance": 25
+    },
+    "description": "Stabilised micro-warp jump; +3% evasion passively.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_heat_sink",
+    "name": "Cryo Heat Sink",
+    "kind": "HEAT_SINK",
+    "slot": "MODULE",
+    "rarity": "UNCOMMON",
+    "requiredLevel": 7,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "heatCapacity": 30,
+      "fireRate": 3
+    },
+    "description": "+30 heat capacity and +3% fire rate.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_combat_ai",
+    "name": "Tactical Combat AI",
+    "kind": "COMBAT_AI",
+    "slot": "MODULE",
+    "rarity": "EPIC",
+    "requiredLevel": 26,
+    "cooldownMs": 0,
+    "durationMs": 0,
+    "energyCost": 0,
+    "passive": {
+      "critChance": 4,
+      "critDamage": 10,
+      "pveDamage": 4
+    },
+    "description": "Predictive targeting: +4% crit chance, +10% crit damage, +4% PvE damage.",
+    "tradeable": true
+  },
+  {
+    "id": "mod_repair_matrix",
+    "name": "Nanite Repair Matrix",
+    "kind": "REPAIR_MATRIX",
+    "slot": "MODULE",
+    "rarity": "EPIC",
+    "requiredLevel": 28,
+    "cooldownMs": 75000,
+    "durationMs": 0,
+    "energyCost": 90,
+    "passive": {
+      "armor": 20
+    },
+    "active": {
+      "type": "HULL_REPAIR",
+      "percent": 35
+    },
+    "description": "Nanite swarm restores 35% hull; +20 armor passively.",
+    "tradeable": true
+  }
+]

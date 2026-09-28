@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "scripts/*"
+  - "tests"
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - prisma
+  - esbuild
+  - msgpackr-extract
+  - bufferutil
+  - utf-8-validate
+  - "@parcel/watcher"

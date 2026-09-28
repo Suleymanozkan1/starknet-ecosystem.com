@@ -1,0 +1,389 @@
+[
+  {
+    "id": "bp_laser_mk2",
+    "name": "Photon Lance Mk II",
+    "tier": "STANDARD",
+    "outputItem": "item_wpn_laser_mk2",
+    "outputQuantity": 1,
+    "requiredLevel": 6,
+    "craftTimeSec": 300,
+    "successChance": 1,
+    "credits": 12000,
+    "resources": {
+      "TITANIUM": 60,
+      "PLASMA_ORE": 20
+    }
+  },
+  {
+    "id": "bp_laser_prism",
+    "name": "Prism Splitter",
+    "tier": "ADVANCED",
+    "outputItem": "item_wpn_laser_prism",
+    "outputQuantity": 1,
+    "requiredLevel": 14,
+    "craftTimeSec": 900,
+    "successChance": 0.9,
+    "credits": 45000,
+    "resources": {
+      "TITANIUM": 120,
+      "PLASMA_ORE": 60,
+      "QUANTUM_SHARD": 10
+    }
+  },
+  {
+    "id": "bp_laser_solaris",
+    "name": "Solaris Emitter",
+    "tier": "EXPERIMENTAL",
+    "outputItem": "item_wpn_laser_solaris",
+    "outputQuantity": 1,
+    "requiredLevel": 24,
+    "craftTimeSec": 2400,
+    "successChance": 0.75,
+    "credits": 140000,
+    "resources": {
+      "PLASMA_ORE": 200,
+      "QUANTUM_SHARD": 40,
+      "AETHER_CRYSTAL": 10
+    },
+    "items": [
+      {
+        "itemId": "item_part_reactor_core",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "bp_plasma_repeater",
+    "name": "Cinder Plasma Repeater",
+    "tier": "ADVANCED",
+    "outputItem": "item_wpn_plasma_repeater",
+    "outputQuantity": 1,
+    "requiredLevel": 12,
+    "craftTimeSec": 900,
+    "successChance": 0.9,
+    "credits": 40000,
+    "resources": {
+      "PLASMA_ORE": 120,
+      "CRYONITE": 30
+    }
+  },
+  {
+    "id": "bp_railgun_lance",
+    "name": "Longspine Railgun",
+    "tier": "PROTOTYPE",
+    "outputItem": "item_wpn_railgun_lance",
+    "outputQuantity": 1,
+    "requiredLevel": 24,
+    "craftTimeSec": 3600,
+    "successChance": 0.65,
+    "credits": 180000,
+    "resources": {
+      "TITANIUM": 400,
+      "DARK_MATTER": 20,
+      "QUANTUM_SHARD": 40
+    },
+    "items": [
+      {
+        "itemId": "item_part_reactor_core",
+        "quantity": 2
+      }
+    ]
+  },
+  {
+    "id": "bp_ammo_hornet",
+    "name": "Hornet Missile x100",
+    "tier": "STANDARD",
+    "outputItem": "item_ammo_hornet",
+    "outputQuantity": 100,
+    "requiredLevel": 1,
+    "craftTimeSec": 60,
+    "successChance": 1,
+    "credits": 1500,
+    "resources": {
+      "TITANIUM": 20,
+      "PLASMA_ORE": 5
+    }
+  },
+  {
+    "id": "bp_ammo_seeker",
+    "name": "Seeker Swarm Missile x50",
+    "tier": "ADVANCED",
+    "outputItem": "item_ammo_seeker",
+    "outputQuantity": 50,
+    "requiredLevel": 14,
+    "craftTimeSec": 180,
+    "successChance": 1,
+    "credits": 2500,
+    "resources": {
+      "TITANIUM": 30,
+      "QUANTUM_SHARD": 4
+    }
+  },
+  {
+    "id": "bp_ammo_torpedo",
+    "name": "Abyss Torpedo x10",
+    "tier": "EXPERIMENTAL",
+    "outputItem": "item_ammo_torpedo",
+    "outputQuantity": 10,
+    "requiredLevel": 24,
+    "craftTimeSec": 600,
+    "successChance": 0.95,
+    "credits": 3500,
+    "resources": {
+      "DARK_MATTER": 4,
+      "PLASMA_ORE": 40
+    }
+  },
+  {
+    "id": "bp_gen_shield_s2",
+    "name": "Aegis Cell Mk II",
+    "tier": "STANDARD",
+    "outputItem": "item_gen_shield_s2",
+    "outputQuantity": 1,
+    "requiredLevel": 8,
+    "craftTimeSec": 600,
+    "successChance": 1,
+    "credits": 20000,
+    "resources": {
+      "CRYONITE": 60,
+      "TITANIUM": 40
+    }
+  },
+  {
+    "id": "bp_gen_shield_s3",
+    "name": "Bulwark Matrix",
+    "tier": "ADVANCED",
+    "outputItem": "item_gen_shield_s3",
+    "outputQuantity": 1,
+    "requiredLevel": 18,
+    "craftTimeSec": 1800,
+    "successChance": 0.85,
+    "credits": 70000,
+    "resources": {
+      "CRYONITE": 140,
+      "QUANTUM_SHARD": 20
+    }
+  },
+  {
+    "id": "bp_gen_speed_s2",
+    "name": "Thrustcell Mk II",
+    "tier": "STANDARD",
+    "outputItem": "item_gen_speed_s2",
+    "outputQuantity": 1,
+    "requiredLevel": 8,
+    "craftTimeSec": 600,
+    "successChance": 1,
+    "credits": 20000,
+    "resources": {
+      "PLASMA_ORE": 50,
+      "TITANIUM": 40
+    }
+  },
+  {
+    "id": "bp_gen_speed_s3",
+    "name": "Vector Surge Drive",
+    "tier": "ADVANCED",
+    "outputItem": "item_gen_speed_s3",
+    "outputQuantity": 1,
+    "requiredLevel": 20,
+    "craftTimeSec": 1800,
+    "successChance": 0.85,
+    "credits": 75000,
+    "resources": {
+      "PLASMA_ORE": 120,
+      "AETHER_CRYSTAL": 8
+    },
+    "items": [
+      {
+        "itemId": "item_part_thruster_assembly",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "bp_mod_repair_matrix",
+    "name": "Nanite Repair Matrix",
+    "tier": "EXPERIMENTAL",
+    "outputItem": "item_mod_repair_matrix",
+    "outputQuantity": 1,
+    "requiredLevel": 26,
+    "craftTimeSec": 3000,
+    "successChance": 0.75,
+    "credits": 150000,
+    "resources": {
+      "QUANTUM_SHARD": 60,
+      "AETHER_CRYSTAL": 20,
+      "CRYONITE": 80
+    }
+  },
+  {
+    "id": "bp_drone_striker",
+    "name": "Striker Drone",
+    "tier": "STANDARD",
+    "outputItem": "item_drone_striker",
+    "outputQuantity": 1,
+    "requiredLevel": 4,
+    "craftTimeSec": 600,
+    "successChance": 1,
+    "credits": 15000,
+    "resources": {
+      "TITANIUM": 80,
+      "PLASMA_ORE": 20
+    }
+  },
+  {
+    "id": "bp_drone_seer",
+    "name": "Seer Drone",
+    "tier": "ADVANCED",
+    "outputItem": "item_drone_seer",
+    "outputQuantity": 1,
+    "requiredLevel": 16,
+    "craftTimeSec": 1800,
+    "successChance": 0.9,
+    "credits": 60000,
+    "resources": {
+      "QUANTUM_SHARD": 30,
+      "CRYONITE": 40
+    }
+  },
+  {
+    "id": "bp_drone_warden_elite",
+    "name": "Warden Prime Drone",
+    "tier": "LEGENDARY",
+    "outputItem": "item_drone_warden_elite",
+    "outputQuantity": 1,
+    "requiredLevel": 32,
+    "craftTimeSec": 14400,
+    "successChance": 0.5,
+    "credits": 600000,
+    "resources": {
+      "DARK_MATTER": 60,
+      "VOID_ESSENCE": 10,
+      "AETHER_CRYSTAL": 40
+    },
+    "items": [
+      {
+        "itemId": "item_part_void_lattice",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "bp_part_reinforced_plating",
+    "name": "Reinforced Hull Plating",
+    "tier": "STANDARD",
+    "outputItem": "item_part_reinforced_plating",
+    "outputQuantity": 1,
+    "requiredLevel": 5,
+    "craftTimeSec": 120,
+    "successChance": 1,
+    "credits": 2000,
+    "resources": {
+      "TITANIUM": 40,
+      "CRYONITE": 10
+    }
+  },
+  {
+    "id": "bp_part_reactor_core",
+    "name": "Stabilised Reactor Core",
+    "tier": "ADVANCED",
+    "outputItem": "item_part_reactor_core",
+    "outputQuantity": 1,
+    "requiredLevel": 12,
+    "craftTimeSec": 600,
+    "successChance": 0.9,
+    "credits": 8000,
+    "resources": {
+      "PLASMA_ORE": 60,
+      "QUANTUM_SHARD": 6
+    }
+  },
+  {
+    "id": "bp_part_thruster_assembly",
+    "name": "Vector Thruster Assembly",
+    "tier": "ADVANCED",
+    "outputItem": "item_part_thruster_assembly",
+    "outputQuantity": 1,
+    "requiredLevel": 12,
+    "craftTimeSec": 600,
+    "successChance": 0.9,
+    "credits": 7000,
+    "resources": {
+      "TITANIUM": 60,
+      "PLASMA_ORE": 30
+    }
+  },
+  {
+    "id": "bp_part_void_lattice",
+    "name": "Void Lattice Frame",
+    "tier": "LEGENDARY",
+    "outputItem": "item_part_void_lattice",
+    "outputQuantity": 1,
+    "requiredLevel": 35,
+    "craftTimeSec": 7200,
+    "successChance": 0.6,
+    "credits": 250000,
+    "resources": {
+      "VOID_ESSENCE": 8,
+      "DARK_MATTER": 40
+    }
+  },
+  {
+    "id": "bp_ship_umbra",
+    "name": "Umbra Hull",
+    "tier": "PROTOTYPE",
+    "outputItem": "item_ship_umbra",
+    "outputQuantity": 1,
+    "requiredLevel": 22,
+    "craftTimeSec": 21600,
+    "successChance": 0.8,
+    "credits": 900000,
+    "resources": {
+      "DARK_MATTER": 80,
+      "QUANTUM_SHARD": 120,
+      "CRYONITE": 200
+    },
+    "items": [
+      {
+        "itemId": "item_part_reinforced_plating",
+        "quantity": 10
+      },
+      {
+        "itemId": "item_part_reactor_core",
+        "quantity": 3
+      },
+      {
+        "itemId": "item_part_thruster_assembly",
+        "quantity": 3
+      }
+    ]
+  },
+  {
+    "id": "bp_repair_kit",
+    "name": "Field Repair Kit x5",
+    "tier": "STANDARD",
+    "outputItem": "item_repair_kit",
+    "outputQuantity": 5,
+    "requiredLevel": 1,
+    "craftTimeSec": 60,
+    "successChance": 1,
+    "credits": 500,
+    "resources": {
+      "TITANIUM": 10
+    }
+  },
+  {
+    "id": "bp_shield_cell",
+    "name": "Shield Cell x5",
+    "tier": "STANDARD",
+    "outputItem": "item_shield_cell",
+    "outputQuantity": 5,
+    "requiredLevel": 3,
+    "craftTimeSec": 60,
+    "successChance": 1,
+    "credits": 700,
+    "resources": {
+      "CRYONITE": 8
+    }
+  }
+]
