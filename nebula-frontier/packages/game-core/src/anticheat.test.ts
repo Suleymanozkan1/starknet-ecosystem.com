@@ -22,6 +22,22 @@ describe("speed hack", () => {
     expect(flagged).toBe(true);
   });
 
+  it("jittery honest delivery (1s stalls, then a clump) is never flagged; a 2x-rate client is", () => {
+    const honest = new MovementBudget(20, 0);
+    let t = 0, flagged = false;
+    for (let cycle = 0; cycle < 30; cycle++) {
+      // 1 s of silence, then the 20 buffered inputs arrive within 50 ms, then 1 s of normal pacing.
+      t += 1000;
+      for (let i = 0; i < 20; i++) if (honest.consume(t + i * 2).flag) flagged = true;
+      for (let i = 0; i < 20; i++) { t += 50; if (honest.consume(t).flag) flagged = true; }
+    }
+    expect(flagged).toBe(false);
+    const cheater = new MovementBudget(20, 0);
+    let cheatFlag = false;
+    for (let i = 0; i < 400; i++) if (cheater.consume(i * 25).flag) cheatFlag = true; // 40 inputs/s
+    expect(cheatFlag).toBe(true);
+  });
+
   it("an honest client at tick rate is never throttled", () => {
     const budget = new MovementBudget(20, 0);
     for (let i = 0; i < 400; i++) expect(budget.consume(i * 50).allowed).toBe(true);

@@ -109,7 +109,13 @@ export class MovementBudget {
   private excess: number[] = [];
   private readonly windowMs: number;
   private readonly flagAt: number;
-  constructor(tickRate: number, now: number, burstSteps = 10, windowMs = 5000, flagAt = 20) {
+  /**
+   * Defaults tolerate network jitter: inputs that arrive in a clump after a ~1 s stall are absorbed
+   * by a one-second burst, and the flag needs sustained excess (25% over the tick rate across the
+   * window). Excess inputs are always dropped, so tolerance never grants extra speed. A client
+   * sending at 2x the tick rate still accumulates tickRate × window excess and is flagged.
+   */
+  constructor(tickRate: number, now: number, burstSteps = tickRate, windowMs = 5000, flagAt = Math.ceil(tickRate * (windowMs / 1000) * 0.25)) {
     this.bucket = new TokenBucket(tickRate, burstSteps, now);
     this.windowMs = windowMs;
     this.flagAt = flagAt;

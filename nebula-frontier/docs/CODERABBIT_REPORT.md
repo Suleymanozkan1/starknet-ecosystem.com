@@ -18,7 +18,7 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 
 | PR | Slice | Files | Status |
 |---|---|---|---|
-| [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 72 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: re-review requested |
+| [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 queued |
 | [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Re-review scheduled (rate limit) |
 | [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API, auth, validation, shared, Prisma | 93 | Review requested |
 | [#5](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/5) | web app | 91 | Queued (rate limit) |
@@ -29,13 +29,13 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 
 | Metric | Count |
 |---|---|
-| Files reviewed | 157 (PR #2 72 + PR #3 85) |
-| Findings | 56 (22 + 2 + 32) |
+| Files reviewed | 160 (PR #2 75 + PR #3 85) |
+| Findings | 72 (PR #2: 22 + 2 + 16; PR #3: 32) |
 | Critical | 1 |
-| High (CodeRabbit "Major") | 25 |
-| Warning (CodeRabbit "Minor") | 24 |
-| Info (CodeRabbit "Trivial"/nitpick) | 6 |
-| Fixed | 55 |
+| High (CodeRabbit "Major") | 35 |
+| Warning (CodeRabbit "Minor") | 27 |
+| Info (CodeRabbit "Trivial"/nitpick) | 9 |
+| Fixed | 71 |
 | Accepted as already addressed | 1 (PR #3 BC-05/BC-07 audit paths, already correct) |
 | Remaining open | 0 from completed rounds |
 
@@ -97,6 +97,31 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
   - **Partial raids got unscaled loot.** Fixed in `dca30c3`/`a5935fa`: `rollLoot` gained a `scale` option that scales the number of rolls, and `npcDied` passes the raid reward scale. Test "#12 raid loot follows the raid reward scale".
 - **Round 3:** re-review requested on the refreshed branch.
 
+- **Round 3** (16 findings: 10 Major, 3 Minor, 3 Trivial) was fixed in `ebe3881`, and every thread got a reply. The Major findings:
+  - **Persistence durability:**
+    - A failed final flush after a player leaves goes into a process-wide retry queue with backoff. It is drained on dispose and shutdown, and a dropped delta is counted in a metric.
+    - Post-commit work can no longer merge a committed delta back, which had applied it twice.
+    - Pet writes are scoped to the owner.
+  - **Admission:**
+    - Portal and event tickets must match the target map (Event, Gate, Raid and PvP rooms).
+    - The raid daily limit is checked and claimed atomically under a user-row lock.
+  - **Clan missions:** bounded aggregates, and stable event IDs with a unique receipt table (migration), so retries are no-ops.
+  - **Security:**
+    - A remote plain-HTTP internal URL is rejected when a token is set.
+    - `bot_` usernames are reserved, because the bot runner selects accounts by that prefix.
+  - **Bots:** CLI input validated with zod; the run deadline is respected.
+
+  The Minor and Trivial findings:
+  - unbounded `processedLoot` and `pvpKillLog`;
+  - the `toMoney` safe-integer guard;
+  - a deterministic PvP test spot;
+  - restoring the environment in tests;
+  - a concurrent ticket-redemption test, in memory and in Redis.
+
+A **load test** after round 3 (100 bots, 50v50 scale) found two regressions, which I fixed myself:
+- **Anti-cheat false positives:** `MovementBudget` flagged honest input clumps after network jitter as SPEED_HACK. It now allows a 1-second burst and flags only sustained excess (25%). Test: honest jitter is not flagged, 2× rate is.
+- **Dropped risk signals:** the SERIALIZABLE transaction introduced for the PR #3 risk finding caused `TransactionWriteConflict` across users under load. It is now a per-user row lock (`FOR UPDATE`), which keeps the fix's guarantee without cross-user conflicts. Test: `risk.db.test.ts`.
+
 ## PR #3 — economy, ledger, blockchain
 
 32 findings: 1 Critical, 16 Major, 11 Minor, 4 Trivial. By category: 9 data integrity, 8 security, 8 correctness, 3 stability, 4 maintainability.
@@ -134,7 +159,7 @@ Verification after the fixes:
 
 ## Remaining / follow-up
 
-- PR #2 round 3 and PR #3 round 2: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).
+- PR #2 round 4 and PR #3 round 2: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).
 - PR #4–#7 cover the API, web, client and platform. Their results are added here as they arrive.
 
 ## History note

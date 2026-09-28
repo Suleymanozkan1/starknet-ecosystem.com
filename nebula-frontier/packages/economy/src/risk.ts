@@ -1,5 +1,5 @@
 import { RiskLevel, CheatType } from "@nebula/shared";
-import { inSerializableTx, type Db, type DbOrTx } from "@nebula/database";
+import { isRootClient, type Db, type DbOrTx, type Tx } from "@nebula/database";
 import { loadEconomyConfig, type EconomyConfig, type RiskConfig } from "./config.js";
 import { toJson, DAY_MS } from "./util.js";
 
@@ -31,9 +31,11 @@ export async function recordRiskSignal(
 ): Promise<{ signalId: string; riskScore: number; riskLevel: RiskLevel; changed: boolean }> {
   const c = cfg ?? (await loadEconomyConfig(db));
   const score = Math.max(0, Math.min(100, Math.round(input.score)));
-  // One SERIALIZABLE transaction (or the caller's): concurrent signals cannot both read the old
-  // level and let a stale, lower score overwrite a HIGH escalation.
-  return inSerializableTx(db, async (tx) => {
+  // One transaction (or the caller's) holding the user's row lock: concurrent signals for the SAME
+  // user are serialized, so neither can read the old level and let a stale, lower score overwrite a
+  // HIGH escalation. Signals for different users never conflict (SERIALIZABLE did, under load).
+  const run = async (tx: Tx) => {
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${input.userId} FOR UPDATE`;
     const sig = await tx.riskSignal.create({
       data: { userId: input.userId, type: String(input.type), score, details: toJson(input.details ?? {}), source: input.source }
     });
@@ -58,7 +60,8 @@ export async function recordRiskSignal(
       });
     }
     return { signalId: sig.id, riskScore, riskLevel, changed };
-  });
+  };
+  return isRootClient(db) ? db.$transaction(run) : run(db);
 }
 
 /** Coefficient of variation of intervals — scripted farming tends to be metronome-regular. */

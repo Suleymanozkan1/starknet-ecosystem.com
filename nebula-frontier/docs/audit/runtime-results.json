@@ -150,5 +150,9 @@
   "backup_drill": {
     "status": "PASS",
     "evidence": "scripts/backup/pg-backup.sh against local Postgres 16 (11.9 MB dump, pg_restore --list ok, sha256) + pg-restore-drill.sh restored into a scratch DB with identical row counts for User/BalanceLedger/BalanceAccount/Withdrawal/Reward/AuditLog, 2026-09-28"
+  },
+  "load_100": {
+    "status": "PASS",
+    "evidence": "100 fighter bots in one map_vanta_rift sector room (50v50-scale) on a 4-core sandbox, bots on the same machine; 60 s steady window: 1201 ticks (20 Hz held), mean 13.2 ms, p95 in (20,35] ms, 99.75% of ticks ≤ 50 ms budget, 0 errors. First run exposed and fixed: SPEED_HACK false positives from jittered input clumps (MovementBudget now 1 s burst + 25% sustained-excess flag) and TransactionWriteConflict in SERIALIZABLE recordRiskSignal (now per-user row lock), 2026-09-28"
   }
 }
