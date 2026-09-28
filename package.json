@@ -1,0 +1,8 @@
+{
+  "name": "starknet-ecosystem-root",
+  "private": true,
+  "description": "Deployment shim: the NEBULA FRONTIER workspace lives in nebula-frontier/. This file only pins the Node runtime for hosting platforms.",
+  "engines": {
+    "node": "22.x"
+  }
+}
