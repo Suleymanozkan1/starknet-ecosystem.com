@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { ACHIEVEMENTS_BY_ID, FACTIONS, FACTIONS_BY_ID, WEAPONS_BY_ID, MODULES_BY_ID, itemIdForDef } from "@nebula/config";
 import type { Tx } from "@nebula/database";
 import type { ProfileResponse } from "@nebula/shared";
+import { starterAmmoFor, starterAmmoOriginRef } from "@nebula/game-core";
 import { chooseFactionSchema, idSchema, updateMeSchema } from "@nebula/validation";
 import { badRequest, conflict, notFound } from "../errors.js";
 import { getCatalog } from "../lib/catalog.js";
@@ -86,7 +87,7 @@ export default async function meRoutes(app: FastifyInstance): Promise<void> {
           const def = catalog.items.get(itemId);
           if (!def) throw badRequest("UNKNOWN_ITEM", `Starter item ${itemId} missing`);
           const inv = await tx.inventoryItem.create({
-            data: { userId, itemId, quantity: 1, originRef: `starter:${userId}:${n++}`, boundAt: def.soulbound ? new Date() : null },
+            data: { userId, itemId, quantity: 1, originRef: `starter:${userId}:${n++}:${defId}`, boundAt: def.soulbound ? new Date() : null },
           });
           const place = (arr: (string | null)[]) => {
             const idx = arr.indexOf(null);
@@ -97,6 +98,17 @@ export default async function meRoutes(app: FastifyInstance): Promise<void> {
           if (w) place(w.slot === "MISSILE" ? loadout.missiles : loadout.weapons);
           else if (m) place(m.slot === "GENERATOR" ? loadout.generators : loadout.modules);
           else place(loadout.drones);
+        }
+        // Starter ammo from factions.json via the shared game-core source of truth. The originRef is the
+        // same one the game server's fallback starter kit uses, so whichever runs first wins and the
+        // other is a no-op (skipDuplicates on the unique originRef).
+        const ammo = starterAmmoFor(faction).filter((a) => catalog.items.has(a.itemId));
+        if (ammo.length) {
+          await tx.inventoryItem.createMany({
+            data: ammo.map((a) => ({ userId, itemId: a.itemId, quantity: a.quantity, originRef: starterAmmoOriginRef(userId, a.itemId) })),
+            skipDuplicates: true,
+          });
+          loadout.ammo = ammo[0]?.itemId ?? null;
         }
         const lo = await tx.shipLoadout.create({ data: { shipInstanceId: inst.id, name: "PVE", preset: "PVE", config: loadout as object } });
         await tx.shipInstance.update({ where: { id: inst.id }, data: { activeLoadoutId: lo.id } });
