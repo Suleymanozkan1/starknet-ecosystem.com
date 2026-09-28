@@ -105,3 +105,17 @@ export function getRewardMint(env: NodeJS.ProcessEnv = process.env): { mint: Add
   if (!isAddress(m)) throw new Error("REWARD_MINT is not a valid address");
   return { mint: toAddress(m), decimals: Number.isInteger(decimals) ? decimals : 9 };
 }
+
+/**
+ * Exports an EXTRACTABLE CryptoKeyPair to the 64-byte solana-keygen format (seed || pubkey).
+ * Only used by devnet tooling (scripts/devnet-setup.ts) to persist a freshly generated key.
+ */
+export async function exportKeyPairBytes(keyPair: CryptoKeyPair): Promise<Uint8Array> {
+  const pkcs8 = new Uint8Array(await crypto.subtle.exportKey("pkcs8", keyPair.privateKey));
+  const pub = new Uint8Array(await crypto.subtle.exportKey("raw", keyPair.publicKey));
+  const seed = pkcs8.slice(pkcs8.length - 32);
+  const out = new Uint8Array(64);
+  out.set(seed, 0);
+  out.set(pub, 32);
+  return out;
+}
