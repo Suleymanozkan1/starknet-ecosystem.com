@@ -198,6 +198,11 @@ describe("rewards & admin economy", () => {
     const dash = await s.req("GET", "/api/admin/economy");
     expect(dash.statusCode, dash.body).toBe(200);
     expect((dash.json() as { series: unknown[] }).series.length).toBe(30);
+    // Claim rate aggregates this session's rewards (claimed ÷ granted, rejected excluded).
+    const rc = (dash.json() as { rewardClaims: { granted: string; claimed: string; count: number; claimedCount: number; rate: number | null } }).rewardClaims;
+    expect(BigInt(rc.claimed)).toBeLessThanOrEqual(BigInt(rc.granted));
+    expect(rc.claimedCount).toBeLessThanOrEqual(rc.count);
+    if (rc.rate !== null) { expect(rc.rate).toBeGreaterThanOrEqual(0); expect(rc.rate).toBeLessThanOrEqual(1); }
     const on = await s.req("POST", "/api/admin/economy/circuit-breaker", { mode: "MARKET_PAUSE", active: true, reason: "integration test" });
     expect(on.statusCode).toBe(200);
     expect((on.json() as { activeBreakers: string[] }).activeBreakers).toContain("MARKET_PAUSE");

@@ -209,7 +209,7 @@ export function EconomyPage() {
         <Kpi label="Credit supply (stored)" value={int(e.supply.stored)} sub={`30d issued ${int(e.supply.issued)} · burned ${int(e.supply.burned)}`} />
         <Kpi label="Credits spent 30d" value={int(e.supply.spent)} />
         <Kpi label="Reward asset withdrawn 30d" value={sol(e.supply.withdrawn, 3)} />
-        <Kpi label="Reward claim rate" value={<NoData what="No data" />} sub="Claimed ÷ granted needs a reward-status aggregate (not exposed yet)" />
+        <Kpi label="Reward claim rate (30d)" value={e.rewardClaims.rate === null ? <NoData what="No rewards granted" /> : pct(e.rewardClaims.rate, 1)} sub={`${sol(e.rewardClaims.claimed, 3)} of ${sol(e.rewardClaims.granted, 3)} · ${e.rewardClaims.claimedCount}/${e.rewardClaims.count} rewards`} icon="trophy" />
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
         <TrendChart title="Revenue vs rewards (SOL)" data={s} series={[{ key: "revenueSol", label: "Revenue", format: fmtSol }, { key: "rewardsSol", label: "Rewards", format: fmtSol }]} />

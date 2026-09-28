@@ -272,6 +272,8 @@ export interface AdminEconomyResponse {
   supply: { issued: string; burned: string; spent: string; stored: string; withdrawn: string };
   revenue: { gross: string; net: string; bySource: Record<string, string> };
   rewardRate: number;
+  /** Rewards granted in the last 30d (excluding rejected) vs the part players actually claimed. */
+  rewardClaims: { granted: string; claimed: string; count: number; claimedCount: number; rate: number | null };
   activeBreakers: CircuitBreakerMode[];
   config: Record<string, unknown>;
   series: { date: string; revenue: number; rewards: number; deposits: number; withdrawals: number; dau: number; issued: number; burned: number; liability: number; treasury: number }[];

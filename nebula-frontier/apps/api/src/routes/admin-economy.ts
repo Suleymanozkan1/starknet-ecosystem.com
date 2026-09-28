@@ -6,7 +6,7 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { circuitBreakerSchema, economyConfigUpdateSchema, idSchema, rewardRateSchema, safeTextSchema } from "@nebula/validation";
-import { AdminRole, Currency, LedgerAccountType, type AdminEconomyResponse } from "@nebula/shared";
+import { AdminRole, Currency, LedgerAccountType, RewardStatus, type AdminEconomyResponse } from "@nebula/shared";
 import { createRpcFromEnv, explorerUrl, getSolanaNetwork, getTreasuryAddress, type SolanaRpcClient } from "@nebula/blockchain";
 import {
   EconomyConfigError,
@@ -81,10 +81,18 @@ const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) 
       storedSupply(db, Currency.CREDITS),
       db.balanceAccount.findMany({ where: { userId: null }, orderBy: [{ asset: "asc" }, { type: "asc" }] })
     ]);
-    const [sol30, nebx30] = await Promise.all([
-      ledgerFlows(db, Currency.SOL, new Date(now.getTime() - 30 * DAY), now),
-      ledgerFlows(db, Currency.NEBX, new Date(now.getTime() - 30 * DAY), now)
+    const since30 = new Date(now.getTime() - 30 * DAY);
+    const [sol30, nebx30, rewardGroups] = await Promise.all([
+      ledgerFlows(db, Currency.SOL, since30, now),
+      ledgerFlows(db, Currency.NEBX, since30, now),
+      db.reward.groupBy({ by: ["status"], where: { createdAt: { gte: since30 }, status: { not: RewardStatus.REJECTED } }, _sum: { amount: true }, _count: { _all: true } })
     ]);
+    let granted = 0n, claimed = 0n, count = 0, claimedCount = 0;
+    for (const g of rewardGroups) {
+      const amt = g._sum.amount ?? 0n;
+      granted += amt; count += g._count._all;
+      if (g.status === RewardStatus.CLAIMED) { claimed += amt; claimedCount += g._count._all; }
+    }
     const infl = (f: typeof d1) => {
       const start = stored - (f.issued + f.deposited - f.burned - f.spent - f.withdrawn);
       return start > 0n ? Number(((f.issued - f.burned - f.spent) * 1_000_000n) / start) / 1_000_000 : 0;
@@ -104,6 +112,7 @@ const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) 
       supply: { issued: d30.issued.toString(), burned: d30.burned.toString(), spent: d30.spent.toString(), stored: stored.toString(), withdrawn: nebx30.withdrawn.toString() },
       revenue: { gross: gross.toString(), net: (gross - rewardCost).toString(), bySource },
       rewardRate: breakers.includes("REWARD_PAUSE") ? 0 : emissionFromConfig(cfg, treasury.health).rate,
+      rewardClaims: { granted: granted.toString(), claimed: claimed.toString(), count, claimedCount, rate: granted > 0n ? Number((claimed * 1_000_000n) / granted) / 1_000_000 : null },
       activeBreakers: breakers,
       config: jsonBig(cfg) as Record<string, unknown>,
       series
