@@ -1,0 +1,1717 @@
+[
+  {
+    "id": "map_aurora_prime",
+    "name": "Aurora Prime",
+    "sector": "sector_nebula_corridor",
+    "system": "sys_lyra_dawn",
+    "width": 600,
+    "height": 450,
+    "pvp": false,
+    "roomType": "sector",
+    "maxPlayers": 150,
+    "levelRange": [1, 12],
+    "factionHome": "aurora",
+    "environment": {
+      "nebulaColors": [
+        "#1b3a6b",
+        "#6ee7ff",
+        "#ffd36b"
+      ],
+      "starDensity": 0.8,
+      "fog": 0.15,
+      "ambient": "#9fc5ff",
+      "skybox": "sky_lyra_dawn"
+    },
+    "zones": [
+      {
+        "id": "z_aurora_safe",
+        "type": "SAFE",
+        "x": 120,
+        "y": 225,
+        "radius": 90
+      },
+      {
+        "id": "z_aurora_neutral",
+        "type": "NEUTRAL",
+        "x": 380,
+        "y": 225,
+        "radius": 200
+      },
+      {
+        "id": "z_aurora_mining",
+        "type": "MINING",
+        "x": 430,
+        "y": 110,
+        "radius": 60
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_aurora_to_helios",
+        "kind": "JUMP_GATE",
+        "x": 560,
+        "y": 225,
+        "targetMap": "map_helios_frontier",
+        "targetPortal": "p_helios_to_aurora",
+        "requiredLevel": 8
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "npc_mining_drone",
+        "count": 10,
+        "x": 430,
+        "y": 110,
+        "radius": 55
+      },
+      {
+        "npcId": "npc_xyrr_scout",
+        "count": 8,
+        "x": 470,
+        "y": 340,
+        "radius": 70
+      },
+      {
+        "npcId": "npc_pirate_raider",
+        "count": 5,
+        "x": 520,
+        "y": 180,
+        "radius": 50
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 430,
+        "y": 110,
+        "radius": 60,
+        "count": 40,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 70
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 25
+          },
+          {
+            "id": "CRYONITE",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "x": 300,
+        "y": 390,
+        "radius": 45,
+        "count": 20,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 80
+          },
+          {
+            "id": "CRYONITE",
+            "weight": 20
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "id": "st_aurora_citadel",
+        "name": "Aurora Prime Citadel",
+        "x": 120,
+        "y": 225,
+        "faction": "aurora",
+        "services": [
+          "DOCK",
+          "HANGAR",
+          "SHOP",
+          "REPAIR",
+          "CRAFTING",
+          "MARKET",
+          "QUEST_BOARD",
+          "FACTION_HQ",
+          "CLAN"
+        ]
+      }
+    ],
+    "decor": [
+      {
+        "kind": "PLANET",
+        "x": 60,
+        "y": 60,
+        "scale": 8
+      },
+      {
+        "kind": "MOON",
+        "x": 150,
+        "y": 90,
+        "scale": 2
+      },
+      {
+        "kind": "BEACON",
+        "x": 250,
+        "y": 225,
+        "scale": 1
+      },
+      {
+        "kind": "WRECK",
+        "x": 360,
+        "y": 300,
+        "scale": 1.2
+      },
+      {
+        "kind": "DERELICT",
+        "x": 540,
+        "y": 60,
+        "scale": 2
+      }
+    ]
+  },
+  {
+    "id": "map_vortex_haven",
+    "name": "Vortex Haven",
+    "sector": "sector_titan_expanse",
+    "system": "sys_titan_forge",
+    "width": 600,
+    "height": 450,
+    "pvp": false,
+    "roomType": "sector",
+    "maxPlayers": 150,
+    "levelRange": [1, 12],
+    "factionHome": "vortex",
+    "environment": {
+      "nebulaColors": [
+        "#3b1f0b",
+        "#ff9f43",
+        "#5c677d"
+      ],
+      "starDensity": 0.6,
+      "fog": 0.25,
+      "ambient": "#ffc38a",
+      "skybox": "sky_titan_forge"
+    },
+    "zones": [
+      {
+        "id": "z_vortex_safe",
+        "type": "SAFE",
+        "x": 480,
+        "y": 225,
+        "radius": 90
+      },
+      {
+        "id": "z_vortex_neutral",
+        "type": "NEUTRAL",
+        "x": 220,
+        "y": 225,
+        "radius": 200
+      },
+      {
+        "id": "z_vortex_mining",
+        "type": "MINING",
+        "x": 170,
+        "y": 340,
+        "radius": 60
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_vortex_to_helios",
+        "kind": "JUMP_GATE",
+        "x": 40,
+        "y": 225,
+        "targetMap": "map_helios_frontier",
+        "targetPortal": "p_helios_to_vortex",
+        "requiredLevel": 8
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "npc_mining_drone",
+        "count": 10,
+        "x": 170,
+        "y": 340,
+        "radius": 55
+      },
+      {
+        "npcId": "npc_pirate_raider",
+        "count": 8,
+        "x": 130,
+        "y": 110,
+        "radius": 70
+      },
+      {
+        "npcId": "npc_xyrr_scout",
+        "count": 5,
+        "x": 80,
+        "y": 260,
+        "radius": 50
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 170,
+        "y": 340,
+        "radius": 60,
+        "count": 40,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 65
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 30
+          },
+          {
+            "id": "CRYONITE",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "x": 300,
+        "y": 70,
+        "radius": 40,
+        "count": 18,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 85
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 15
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "id": "st_vortex_exchange",
+        "name": "Consortium Grand Exchange",
+        "x": 480,
+        "y": 225,
+        "faction": "vortex",
+        "services": [
+          "DOCK",
+          "HANGAR",
+          "SHOP",
+          "REPAIR",
+          "CRAFTING",
+          "MARKET",
+          "QUEST_BOARD",
+          "FACTION_HQ",
+          "CLAN"
+        ]
+      }
+    ],
+    "decor": [
+      {
+        "kind": "PLANET",
+        "x": 560,
+        "y": 400,
+        "scale": 9
+      },
+      {
+        "kind": "STATION_RUIN",
+        "x": 330,
+        "y": 200,
+        "scale": 1.5
+      },
+      {
+        "kind": "BEACON",
+        "x": 380,
+        "y": 225,
+        "scale": 1
+      },
+      {
+        "kind": "WRECK",
+        "x": 240,
+        "y": 140,
+        "scale": 1
+      },
+      {
+        "kind": "WRECK",
+        "x": 110,
+        "y": 400,
+        "scale": 1.3
+      }
+    ]
+  },
+  {
+    "id": "map_nova_crown",
+    "name": "Nova Crown",
+    "sector": "sector_void_frontier",
+    "system": "sys_crown_reach",
+    "width": 600,
+    "height": 450,
+    "pvp": false,
+    "roomType": "sector",
+    "maxPlayers": 150,
+    "levelRange": [1, 12],
+    "factionHome": "nova",
+    "environment": {
+      "nebulaColors": [
+        "#3d0814",
+        "#ff4d6d",
+        "#d4a017"
+      ],
+      "starDensity": 0.9,
+      "fog": 0.2,
+      "ambient": "#ffadad",
+      "skybox": "sky_crown_reach"
+    },
+    "zones": [
+      {
+        "id": "z_nova_safe",
+        "type": "SAFE",
+        "x": 300,
+        "y": 380,
+        "radius": 90
+      },
+      {
+        "id": "z_nova_neutral",
+        "type": "NEUTRAL",
+        "x": 300,
+        "y": 170,
+        "radius": 200
+      },
+      {
+        "id": "z_nova_mining",
+        "type": "MINING",
+        "x": 110,
+        "y": 140,
+        "radius": 60
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_nova_to_helios",
+        "kind": "JUMP_GATE",
+        "x": 300,
+        "y": 40,
+        "targetMap": "map_helios_frontier",
+        "targetPortal": "p_helios_to_nova",
+        "requiredLevel": 8
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "npc_mining_drone",
+        "count": 10,
+        "x": 110,
+        "y": 140,
+        "radius": 55
+      },
+      {
+        "npcId": "npc_xyrr_scout",
+        "count": 8,
+        "x": 480,
+        "y": 120,
+        "radius": 70
+      },
+      {
+        "npcId": "npc_pirate_raider",
+        "count": 5,
+        "x": 420,
+        "y": 250,
+        "radius": 50
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 110,
+        "y": 140,
+        "radius": 60,
+        "count": 40,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 60
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 30
+          },
+          {
+            "id": "CRYONITE",
+            "weight": 10
+          }
+        ]
+      },
+      {
+        "x": 500,
+        "y": 330,
+        "radius": 40,
+        "count": 18,
+        "resources": [
+          {
+            "id": "PLASMA_ORE",
+            "weight": 70
+          },
+          {
+            "id": "TITANIUM",
+            "weight": 30
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "id": "st_nova_throne",
+        "name": "Ember Throne Bastion",
+        "x": 300,
+        "y": 380,
+        "faction": "nova",
+        "services": [
+          "DOCK",
+          "HANGAR",
+          "SHOP",
+          "REPAIR",
+          "CRAFTING",
+          "MARKET",
+          "QUEST_BOARD",
+          "FACTION_HQ",
+          "CLAN"
+        ]
+      }
+    ],
+    "decor": [
+      {
+        "kind": "PLANET",
+        "x": 520,
+        "y": 60,
+        "scale": 10
+      },
+      {
+        "kind": "MOON",
+        "x": 470,
+        "y": 100,
+        "scale": 2.5
+      },
+      {
+        "kind": "BEACON",
+        "x": 300,
+        "y": 280,
+        "scale": 1
+      },
+      {
+        "kind": "DERELICT",
+        "x": 60,
+        "y": 400,
+        "scale": 2
+      },
+      {
+        "kind": "WRECK",
+        "x": 250,
+        "y": 120,
+        "scale": 1
+      }
+    ]
+  },
+  {
+    "id": "map_helios_frontier",
+    "name": "Helios Frontier",
+    "sector": "sector_helios",
+    "system": "sys_helios_prime",
+    "width": 800,
+    "height": 600,
+    "pvp": false,
+    "roomType": "sector",
+    "maxPlayers": 200,
+    "levelRange": [8, 22],
+    "environment": {
+      "nebulaColors": [
+        "#1a1a40",
+        "#f9c74f",
+        "#577590"
+      ],
+      "starDensity": 1,
+      "fog": 0.2,
+      "ambient": "#fff3b0",
+      "skybox": "sky_helios"
+    },
+    "zones": [
+      {
+        "id": "z_helios_hub_safe",
+        "type": "SAFE",
+        "x": 400,
+        "y": 300,
+        "radius": 45
+      },
+      {
+        "id": "z_helios_neutral",
+        "type": "NEUTRAL",
+        "x": 400,
+        "y": 300,
+        "radius": 300
+      },
+      {
+        "id": "z_helios_pirate",
+        "type": "PIRATE",
+        "x": 650,
+        "y": 150,
+        "radius": 90
+      },
+      {
+        "id": "z_helios_mining",
+        "type": "MINING",
+        "x": 200,
+        "y": 450,
+        "radius": 70
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_helios_to_aurora",
+        "kind": "JUMP_GATE",
+        "x": 40,
+        "y": 300,
+        "targetMap": "map_aurora_prime",
+        "targetPortal": "p_aurora_to_helios",
+        "requiredLevel": 1
+      },
+      {
+        "id": "p_helios_to_vortex",
+        "kind": "JUMP_GATE",
+        "x": 760,
+        "y": 300,
+        "targetMap": "map_vortex_haven",
+        "targetPortal": "p_vortex_to_helios",
+        "requiredLevel": 1
+      },
+      {
+        "id": "p_helios_to_nova",
+        "kind": "JUMP_GATE",
+        "x": 400,
+        "y": 560,
+        "targetMap": "map_nova_crown",
+        "targetPortal": "p_nova_to_helios",
+        "requiredLevel": 1
+      },
+      {
+        "id": "p_helios_to_orion",
+        "kind": "PORTAL",
+        "x": 200,
+        "y": 40,
+        "targetMap": "map_orion_belt",
+        "targetPortal": "p_orion_to_helios",
+        "requiredLevel": 10
+      },
+      {
+        "id": "p_helios_to_vanta",
+        "kind": "PORTAL",
+        "x": 600,
+        "y": 40,
+        "targetMap": "map_vanta_rift",
+        "targetPortal": "p_vanta_to_helios",
+        "requiredLevel": 18
+      },
+      {
+        "id": "p_helios_to_eclipse",
+        "kind": "PVP_GATE",
+        "x": 760,
+        "y": 560,
+        "targetMap": "map_eclipse_arena",
+        "targetPortal": "p_eclipse_to_helios",
+        "requiredLevel": 10
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "npc_pirate_raider",
+        "count": 10,
+        "x": 650,
+        "y": 150,
+        "radius": 80
+      },
+      {
+        "npcId": "npc_pirate_marauder",
+        "count": 4,
+        "x": 680,
+        "y": 200,
+        "radius": 60
+      },
+      {
+        "npcId": "npc_xyrr_fighter",
+        "count": 10,
+        "x": 180,
+        "y": 160,
+        "radius": 90
+      },
+      {
+        "npcId": "npc_leviathan_spawnling",
+        "count": 12,
+        "x": 560,
+        "y": 460,
+        "radius": 80
+      },
+      {
+        "npcId": "npc_mining_drone",
+        "count": 8,
+        "x": 200,
+        "y": 450,
+        "radius": 60
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 200,
+        "y": 450,
+        "radius": 70,
+        "count": 50,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 45
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 35
+          },
+          {
+            "id": "CRYONITE",
+            "weight": 15
+          },
+          {
+            "id": "QUANTUM_SHARD",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "x": 520,
+        "y": 120,
+        "radius": 40,
+        "count": 20,
+        "resources": [
+          {
+            "id": "PLASMA_ORE",
+            "weight": 60
+          },
+          {
+            "id": "TITANIUM",
+            "weight": 40
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "id": "st_helios_waypoint",
+        "name": "Helios Waypoint",
+        "x": 400,
+        "y": 300,
+        "services": [
+          "DOCK",
+          "REPAIR",
+          "SHOP",
+          "MARKET",
+          "QUEST_BOARD"
+        ]
+      }
+    ],
+    "decor": [
+      {
+        "kind": "PLANET",
+        "x": 700,
+        "y": 80,
+        "scale": 12
+      },
+      {
+        "kind": "BEACON",
+        "x": 320,
+        "y": 300,
+        "scale": 1
+      },
+      {
+        "kind": "BEACON",
+        "x": 480,
+        "y": 300,
+        "scale": 1
+      },
+      {
+        "kind": "WRECK",
+        "x": 600,
+        "y": 180,
+        "scale": 1.4
+      },
+      {
+        "kind": "DERELICT",
+        "x": 120,
+        "y": 560,
+        "scale": 2.5
+      },
+      {
+        "kind": "STATION_RUIN",
+        "x": 300,
+        "y": 120,
+        "scale": 2
+      }
+    ]
+  },
+  {
+    "id": "map_orion_belt",
+    "name": "Orion Belt",
+    "sector": "sector_orion_belt",
+    "system": "sys_orion_drift",
+    "width": 700,
+    "height": 500,
+    "pvp": false,
+    "roomType": "sector",
+    "maxPlayers": 180,
+    "levelRange": [10, 26],
+    "environment": {
+      "nebulaColors": [
+        "#2b2d42",
+        "#8ecae6",
+        "#ffb703"
+      ],
+      "starDensity": 0.7,
+      "fog": 0.35,
+      "ambient": "#cfe8ff",
+      "skybox": "sky_orion_drift"
+    },
+    "zones": [
+      {
+        "id": "z_orion_safe",
+        "type": "SAFE",
+        "x": 100,
+        "y": 250,
+        "radius": 50
+      },
+      {
+        "id": "z_orion_mining_a",
+        "type": "MINING",
+        "x": 300,
+        "y": 150,
+        "radius": 100
+      },
+      {
+        "id": "z_orion_mining_b",
+        "type": "MINING",
+        "x": 480,
+        "y": 360,
+        "radius": 110
+      },
+      {
+        "id": "z_orion_neutral",
+        "type": "NEUTRAL",
+        "x": 350,
+        "y": 250,
+        "radius": 330
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_orion_to_helios",
+        "kind": "PORTAL",
+        "x": 350,
+        "y": 470,
+        "targetMap": "map_helios_frontier",
+        "targetPortal": "p_helios_to_orion",
+        "requiredLevel": 8
+      },
+      {
+        "id": "p_orion_to_astra",
+        "kind": "WARP_GATE",
+        "x": 660,
+        "y": 60,
+        "targetMap": "map_astra_graveyard",
+        "targetPortal": "p_astra_to_orion",
+        "requiredLevel": 28
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "npc_mining_drone",
+        "count": 20,
+        "x": 300,
+        "y": 150,
+        "radius": 90
+      },
+      {
+        "npcId": "npc_mining_drone",
+        "count": 16,
+        "x": 480,
+        "y": 360,
+        "radius": 100
+      },
+      {
+        "npcId": "npc_pirate_marauder",
+        "count": 8,
+        "x": 560,
+        "y": 140,
+        "radius": 70
+      },
+      {
+        "npcId": "npc_null_sentinel",
+        "count": 6,
+        "x": 420,
+        "y": 260,
+        "radius": 60
+      },
+      {
+        "npcId": "npc_xyrr_fighter",
+        "count": 8,
+        "x": 220,
+        "y": 400,
+        "radius": 70
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 300,
+        "y": 150,
+        "radius": 100,
+        "count": 80,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 40
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 30
+          },
+          {
+            "id": "CRYONITE",
+            "weight": 20
+          },
+          {
+            "id": "QUANTUM_SHARD",
+            "weight": 10
+          }
+        ]
+      },
+      {
+        "x": 480,
+        "y": 360,
+        "radius": 110,
+        "count": 90,
+        "resources": [
+          {
+            "id": "CRYONITE",
+            "weight": 35
+          },
+          {
+            "id": "QUANTUM_SHARD",
+            "weight": 25
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 25
+          },
+          {
+            "id": "AETHER_CRYSTAL",
+            "weight": 10
+          },
+          {
+            "id": "DARK_MATTER",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "x": 620,
+        "y": 440,
+        "radius": 50,
+        "count": 30,
+        "resources": [
+          {
+            "id": "AETHER_CRYSTAL",
+            "weight": 40
+          },
+          {
+            "id": "QUANTUM_SHARD",
+            "weight": 40
+          },
+          {
+            "id": "DARK_MATTER",
+            "weight": 20
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "id": "st_orion_refinery",
+        "name": "Orion Deep Refinery",
+        "x": 100,
+        "y": 250,
+        "services": [
+          "DOCK",
+          "REPAIR",
+          "CRAFTING",
+          "MARKET",
+          "QUEST_BOARD",
+          "SHOP"
+        ]
+      }
+    ],
+    "decor": [
+      {
+        "kind": "MOON",
+        "x": 40,
+        "y": 60,
+        "scale": 3
+      },
+      {
+        "kind": "WRECK",
+        "x": 360,
+        "y": 250,
+        "scale": 1
+      },
+      {
+        "kind": "DERELICT",
+        "x": 600,
+        "y": 300,
+        "scale": 2
+      },
+      {
+        "kind": "BEACON",
+        "x": 200,
+        "y": 250,
+        "scale": 1
+      },
+      {
+        "kind": "STATION_RUIN",
+        "x": 520,
+        "y": 60,
+        "scale": 1.8
+      }
+    ]
+  },
+  {
+    "id": "map_vanta_rift",
+    "name": "Vanta Rift",
+    "sector": "sector_vanta_rift",
+    "system": "sys_vanta_maw",
+    "width": 700,
+    "height": 550,
+    "pvp": true,
+    "roomType": "sector",
+    "maxPlayers": 200,
+    "levelRange": [18, 35],
+    "environment": {
+      "nebulaColors": [
+        "#10002b",
+        "#7b2cbf",
+        "#d00000"
+      ],
+      "starDensity": 0.5,
+      "fog": 0.5,
+      "ambient": "#b388ff",
+      "skybox": "sky_vanta_maw"
+    },
+    "zones": [
+      {
+        "id": "z_vanta_outpost_safe",
+        "type": "SAFE",
+        "x": 350,
+        "y": 460,
+        "radius": 35
+      },
+      {
+        "id": "z_vanta_high_risk",
+        "type": "HIGH_RISK",
+        "x": 350,
+        "y": 250,
+        "radius": 260
+      },
+      {
+        "id": "z_vanta_pirate_den",
+        "type": "PIRATE",
+        "x": 560,
+        "y": 120,
+        "radius": 110
+      },
+      {
+        "id": "z_vanta_gate_approach",
+        "type": "GATE",
+        "x": 60,
+        "y": 60,
+        "radius": 40
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_vanta_to_helios",
+        "kind": "PORTAL",
+        "x": 350,
+        "y": 510,
+        "targetMap": "map_helios_frontier",
+        "targetPortal": "p_helios_to_vanta",
+        "requiredLevel": 8
+      },
+      {
+        "id": "p_vanta_to_astra",
+        "kind": "WARP_GATE",
+        "x": 660,
+        "y": 275,
+        "targetMap": "map_astra_graveyard",
+        "targetPortal": "p_astra_to_vanta",
+        "requiredLevel": 28
+      },
+      {
+        "id": "p_vanta_to_gate_alpha",
+        "kind": "BOSS_GATE",
+        "x": 60,
+        "y": 60,
+        "targetMap": "map_gate_alpha",
+        "targetPortal": "p_gate_alpha_exit",
+        "requiredLevel": 15
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "npc_pirate_warlord",
+        "count": 3,
+        "x": 560,
+        "y": 120,
+        "radius": 80
+      },
+      {
+        "npcId": "npc_pirate_marauder",
+        "count": 10,
+        "x": 520,
+        "y": 180,
+        "radius": 100
+      },
+      {
+        "npcId": "npc_xyrr_elite",
+        "count": 6,
+        "x": 180,
+        "y": 200,
+        "radius": 90
+      },
+      {
+        "npcId": "npc_null_destroyer",
+        "count": 3,
+        "x": 380,
+        "y": 260,
+        "radius": 70
+      },
+      {
+        "npcId": "npc_leviathan_spawnling",
+        "count": 14,
+        "x": 250,
+        "y": 380,
+        "radius": 90
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 200,
+        "y": 320,
+        "radius": 60,
+        "count": 40,
+        "resources": [
+          {
+            "id": "DARK_MATTER",
+            "weight": 30
+          },
+          {
+            "id": "QUANTUM_SHARD",
+            "weight": 30
+          },
+          {
+            "id": "VOID_ESSENCE",
+            "weight": 5
+          },
+          {
+            "id": "PLASMA_ORE",
+            "weight": 35
+          }
+        ]
+      },
+      {
+        "x": 600,
+        "y": 400,
+        "radius": 50,
+        "count": 30,
+        "resources": [
+          {
+            "id": "DARK_MATTER",
+            "weight": 40
+          },
+          {
+            "id": "VOID_ESSENCE",
+            "weight": 10
+          },
+          {
+            "id": "AETHER_CRYSTAL",
+            "weight": 50
+          }
+        ]
+      }
+    ],
+    "stations": [
+      {
+        "id": "st_vanta_riftwatch",
+        "name": "Riftwatch Outpost",
+        "x": 350,
+        "y": 460,
+        "services": [
+          "DOCK",
+          "REPAIR",
+          "QUEST_BOARD"
+        ]
+      }
+    ],
+    "decor": [
+      {
+        "kind": "STATION_RUIN",
+        "x": 560,
+        "y": 120,
+        "scale": 3
+      },
+      {
+        "kind": "WRECK",
+        "x": 300,
+        "y": 180,
+        "scale": 1.5
+      },
+      {
+        "kind": "WRECK",
+        "x": 420,
+        "y": 330,
+        "scale": 1.2
+      },
+      {
+        "kind": "DERELICT",
+        "x": 120,
+        "y": 450,
+        "scale": 3
+      },
+      {
+        "kind": "BEACON",
+        "x": 350,
+        "y": 420,
+        "scale": 1
+      },
+      {
+        "kind": "PLANET",
+        "x": 650,
+        "y": 500,
+        "scale": 6
+      }
+    ]
+  },
+  {
+    "id": "map_astra_graveyard",
+    "name": "Astra Graveyard",
+    "sector": "sector_astra_graveyard",
+    "system": "sys_astra_necropolis",
+    "width": 800,
+    "height": 600,
+    "pvp": true,
+    "roomType": "boss",
+    "maxPlayers": 250,
+    "levelRange": [28, 50],
+    "environment": {
+      "nebulaColors": [
+        "#0b090a",
+        "#495057",
+        "#4cc9f0"
+      ],
+      "starDensity": 0.4,
+      "fog": 0.6,
+      "ambient": "#8d99ae",
+      "skybox": "sky_astra_necropolis"
+    },
+    "zones": [
+      {
+        "id": "z_astra_boss_arena",
+        "type": "BOSS",
+        "x": 500,
+        "y": 280,
+        "radius": 140
+      },
+      {
+        "id": "z_astra_high_risk",
+        "type": "HIGH_RISK",
+        "x": 400,
+        "y": 300,
+        "radius": 380
+      },
+      {
+        "id": "z_astra_mining",
+        "type": "MINING",
+        "x": 180,
+        "y": 300,
+        "radius": 70
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_astra_to_orion",
+        "kind": "WARP_GATE",
+        "x": 40,
+        "y": 540,
+        "targetMap": "map_orion_belt",
+        "targetPortal": "p_orion_to_astra",
+        "requiredLevel": 10
+      },
+      {
+        "id": "p_astra_to_vanta",
+        "kind": "WARP_GATE",
+        "x": 40,
+        "y": 60,
+        "targetMap": "map_vanta_rift",
+        "targetPortal": "p_vanta_to_astra",
+        "requiredLevel": 18
+      },
+      {
+        "id": "p_astra_to_gate_omega",
+        "kind": "BOSS_GATE",
+        "x": 400,
+        "y": 560,
+        "targetMap": "map_gate_omega",
+        "targetPortal": "p_gate_omega_exit",
+        "requiredLevel": 30
+      },
+      {
+        "id": "p_astra_to_raid",
+        "kind": "RAID_GATE",
+        "x": 760,
+        "y": 300,
+        "targetMap": "map_raid_titan_vault",
+        "targetPortal": "p_raid_exit",
+        "requiredLevel": 35
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "boss_vanta_colossus",
+        "count": 1,
+        "x": 500,
+        "y": 280,
+        "radius": 10
+      },
+      {
+        "npcId": "npc_null_destroyer",
+        "count": 6,
+        "x": 300,
+        "y": 150,
+        "radius": 90
+      },
+      {
+        "npcId": "npc_null_sentinel",
+        "count": 10,
+        "x": 650,
+        "y": 450,
+        "radius": 100
+      },
+      {
+        "npcId": "npc_leviathan",
+        "count": 2,
+        "x": 180,
+        "y": 480,
+        "radius": 80
+      },
+      {
+        "npcId": "npc_leviathan_spawnling",
+        "count": 16,
+        "x": 220,
+        "y": 420,
+        "radius": 100
+      }
+    ],
+    "asteroidFields": [
+      {
+        "x": 180,
+        "y": 300,
+        "radius": 70,
+        "count": 50,
+        "resources": [
+          {
+            "id": "DARK_MATTER",
+            "weight": 40
+          },
+          {
+            "id": "VOID_ESSENCE",
+            "weight": 10
+          },
+          {
+            "id": "QUANTUM_SHARD",
+            "weight": 30
+          },
+          {
+            "id": "AETHER_CRYSTAL",
+            "weight": 20
+          }
+        ]
+      }
+    ],
+    "stations": [],
+    "decor": [
+      {
+        "kind": "WRECK",
+        "x": 400,
+        "y": 200,
+        "scale": 3
+      },
+      {
+        "kind": "WRECK",
+        "x": 600,
+        "y": 380,
+        "scale": 2.5
+      },
+      {
+        "kind": "DERELICT",
+        "x": 700,
+        "y": 120,
+        "scale": 5
+      },
+      {
+        "kind": "DERELICT",
+        "x": 120,
+        "y": 120,
+        "scale": 4
+      },
+      {
+        "kind": "STATION_RUIN",
+        "x": 320,
+        "y": 500,
+        "scale": 4
+      },
+      {
+        "kind": "MOON",
+        "x": 760,
+        "y": 560,
+        "scale": 4
+      },
+      {
+        "kind": "BEACON",
+        "x": 80,
+        "y": 540,
+        "scale": 1
+      },
+      {
+        "kind": "WRECK",
+        "x": 480,
+        "y": 520,
+        "scale": 2
+      }
+    ]
+  },
+  {
+    "id": "map_eclipse_arena",
+    "name": "Eclipse Arena",
+    "sector": "sector_eclipse_zone",
+    "system": "sys_eclipse_ring",
+    "width": 500,
+    "height": 400,
+    "pvp": true,
+    "roomType": "pvp",
+    "maxPlayers": 40,
+    "levelRange": [10, 50],
+    "environment": {
+      "nebulaColors": [
+        "#000000",
+        "#ff006e",
+        "#3a86ff"
+      ],
+      "starDensity": 0.6,
+      "fog": 0.1,
+      "ambient": "#ffb3c6",
+      "skybox": "sky_eclipse_ring"
+    },
+    "zones": [
+      {
+        "id": "z_eclipse_pvp",
+        "type": "PVP",
+        "x": 250,
+        "y": 200,
+        "radius": 240
+      },
+      {
+        "id": "z_eclipse_spawn_a",
+        "type": "SAFE",
+        "x": 60,
+        "y": 200,
+        "radius": 25
+      },
+      {
+        "id": "z_eclipse_spawn_b",
+        "type": "SAFE",
+        "x": 440,
+        "y": 200,
+        "radius": 25
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_eclipse_to_helios",
+        "kind": "PVP_GATE",
+        "x": 250,
+        "y": 370,
+        "targetMap": "map_helios_frontier",
+        "targetPortal": "p_helios_to_eclipse",
+        "requiredLevel": 8
+      }
+    ],
+    "spawns": [],
+    "asteroidFields": [
+      {
+        "x": 250,
+        "y": 200,
+        "radius": 50,
+        "count": 12,
+        "resources": [
+          {
+            "id": "TITANIUM",
+            "weight": 100
+          }
+        ]
+      }
+    ],
+    "stations": [],
+    "decor": [
+      {
+        "kind": "PLANET",
+        "x": 250,
+        "y": 20,
+        "scale": 14
+      },
+      {
+        "kind": "BEACON",
+        "x": 60,
+        "y": 200,
+        "scale": 1
+      },
+      {
+        "kind": "BEACON",
+        "x": 440,
+        "y": 200,
+        "scale": 1
+      },
+      {
+        "kind": "STATION_RUIN",
+        "x": 250,
+        "y": 320,
+        "scale": 1.5
+      }
+    ]
+  },
+  {
+    "id": "map_gate_alpha",
+    "name": "Alpha Breach",
+    "sector": "sector_vanta_rift",
+    "system": "sys_vanta_maw",
+    "width": 400,
+    "height": 300,
+    "pvp": false,
+    "roomType": "gate",
+    "maxPlayers": 8,
+    "levelRange": [15, 50],
+    "environment": {
+      "nebulaColors": [
+        "#081c15",
+        "#70e000",
+        "#10002b"
+      ],
+      "starDensity": 0.3,
+      "fog": 0.4,
+      "ambient": "#ccff33"
+    },
+    "zones": [
+      {
+        "id": "z_gate_alpha_arena",
+        "type": "GATE",
+        "x": 220,
+        "y": 150,
+        "radius": 140
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_gate_alpha_exit",
+        "kind": "BOSS_GATE",
+        "x": 40,
+        "y": 150,
+        "targetMap": "map_vanta_rift",
+        "targetPortal": "p_vanta_to_gate_alpha",
+        "requiredLevel": 18
+      }
+    ],
+    "spawns": [],
+    "asteroidFields": [],
+    "stations": [],
+    "decor": [
+      {
+        "kind": "DERELICT",
+        "x": 320,
+        "y": 60,
+        "scale": 2
+      },
+      {
+        "kind": "WRECK",
+        "x": 120,
+        "y": 240,
+        "scale": 1.2
+      },
+      {
+        "kind": "BEACON",
+        "x": 60,
+        "y": 150,
+        "scale": 1
+      }
+    ]
+  },
+  {
+    "id": "map_gate_omega",
+    "name": "Omega Singularity",
+    "sector": "sector_astra_graveyard",
+    "system": "sys_astra_necropolis",
+    "width": 450,
+    "height": 320,
+    "pvp": false,
+    "roomType": "gate",
+    "maxPlayers": 8,
+    "levelRange": [30, 50],
+    "environment": {
+      "nebulaColors": [
+        "#0d1b2a",
+        "#4cc9f0",
+        "#e0aaff"
+      ],
+      "starDensity": 0.2,
+      "fog": 0.5,
+      "ambient": "#a2d2ff"
+    },
+    "zones": [
+      {
+        "id": "z_gate_omega_arena",
+        "type": "GATE",
+        "x": 250,
+        "y": 160,
+        "radius": 150
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_gate_omega_exit",
+        "kind": "BOSS_GATE",
+        "x": 40,
+        "y": 160,
+        "targetMap": "map_astra_graveyard",
+        "targetPortal": "p_astra_to_gate_omega",
+        "requiredLevel": 28
+      }
+    ],
+    "spawns": [],
+    "asteroidFields": [],
+    "stations": [],
+    "decor": [
+      {
+        "kind": "STATION_RUIN",
+        "x": 380,
+        "y": 60,
+        "scale": 2.5
+      },
+      {
+        "kind": "WRECK",
+        "x": 150,
+        "y": 260,
+        "scale": 1.4
+      },
+      {
+        "kind": "BEACON",
+        "x": 50,
+        "y": 160,
+        "scale": 1
+      }
+    ]
+  },
+  {
+    "id": "map_raid_titan_vault",
+    "name": "Titan Vault",
+    "sector": "sector_titan_expanse",
+    "system": "sys_titan_vault",
+    "width": 600,
+    "height": 450,
+    "pvp": false,
+    "roomType": "raid",
+    "maxPlayers": 20,
+    "levelRange": [35, 50],
+    "environment": {
+      "nebulaColors": [
+        "#03045e",
+        "#0077b6",
+        "#90e0ef"
+      ],
+      "starDensity": 0.3,
+      "fog": 0.55,
+      "ambient": "#90e0ef"
+    },
+    "zones": [
+      {
+        "id": "z_raid_vault_boss",
+        "type": "BOSS",
+        "x": 380,
+        "y": 225,
+        "radius": 150
+      }
+    ],
+    "portals": [
+      {
+        "id": "p_raid_exit",
+        "kind": "RAID_GATE",
+        "x": 40,
+        "y": 225,
+        "targetMap": "map_astra_graveyard",
+        "targetPortal": "p_astra_to_raid",
+        "requiredLevel": 28
+      }
+    ],
+    "spawns": [
+      {
+        "npcId": "boss_titan_warden",
+        "count": 1,
+        "x": 400,
+        "y": 225,
+        "radius": 5
+      },
+      {
+        "npcId": "npc_leviathan_spawnling",
+        "count": 12,
+        "x": 250,
+        "y": 225,
+        "radius": 80
+      }
+    ],
+    "asteroidFields": [],
+    "stations": [],
+    "decor": [
+      {
+        "kind": "DERELICT",
+        "x": 520,
+        "y": 80,
+        "scale": 4
+      },
+      {
+        "kind": "WRECK",
+        "x": 200,
+        "y": 380,
+        "scale": 2
+      },
+      {
+        "kind": "STATION_RUIN",
+        "x": 120,
+        "y": 90,
+        "scale": 3
+      },
+      {
+        "kind": "BEACON",
+        "x": 60,
+        "y": 225,
+        "scale": 1
+      }
+    ]
+  }
+]

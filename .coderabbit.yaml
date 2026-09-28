@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: "Senior security/architecture reviewer for a real-money-adjacent MMO. Be strict on security, ledger integrity and server authority."
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  collapse_walkthrough: false
+  path_filters:
+    - "!legacy/**"
+    - "!nebula-frontier/tools/reference-repos/**"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!nebula-frontier/packages/database/src/generated/**"
+    - "!nebula-frontier/pnpm-lock.yaml"
+  path_instructions:
+    - path: "nebula-frontier/**"
+      instructions: |
+        Follow nebula-frontier/CLAUDE.md. Strict TypeScript, no `any`, no TS enums, no ts-ignore/eslint-disable to hide problems.
+        Money is integer base units (bigint). Never trust the client for HP, damage, XP, loot, balances, rewards, cooldowns or positions.
+    - path: "nebula-frontier/apps/game-server/**"
+      instructions: |
+        Multiplayer security: server authoritative, no client trust, validate every message (zod + sanitize), anti-cheat
+        (speed/teleport/fire-rate/cooldown/damage), per-client rate limiting, replay protection on tickets and input seq,
+        room lifecycle / player cleanup / memory leaks, AOI interest management, tick performance, batched DB writes,
+        idempotent persistence (unique originRef / idempotencyKey), reconnect exploits.
+    - path: "nebula-frontier/packages/game-core/**"
+      instructions: "Deterministic pure simulation shared by client prediction and server. Check combat math, caps, NaN/Infinity handling, RNG injection."
+    - path: "nebula-frontier/apps/blockchain-service/**"
+      instructions: |
+        Treasury protection: private key only from env/KMS, never logged/serialized/returned. Idempotent payouts (memo lookup before resubmit),
+        signature persisted before confirmation, never COMPLETED without on-chain confirmation, retry with backoff, durable queue in Postgres,
+        decimal handling, recipient/mint/network validation, double-spend and race conditions.
+    - path: "nebula-frontier/packages/blockchain/**"
+      instructions: "Wallet signature verification (nonce, expiry, domain, replay), deposit verification (network, mint, amount, recipient, memo, sender, confirmation, signature uniqueness)."
+    - path: "nebula-frontier/packages/economy/**"
+      instructions: |
+        Accounting: double-entry ledger integrity, no negative user balances, reward caps (daily/weekly/season), reward budget never unlimited,
+        treasury reserve protection, reward liability matches rewards, circuit breakers, fee math precision, duplicate reward prevention,
+        no investment/APY/guaranteed-return semantics.
+    - path: "nebula-frontier/packages/database/**"
+      instructions: "Migrations must be non-destructive; check indexes, unique constraints, transaction boundaries, serializable retries, N+1 queries, cascade rules."
+    - path: "nebula-frontier/prisma/**"
+      instructions: "Schema/migration review: missing indexes, relations, cascades, nullability, destructive changes, data loss."
+    - path: "nebula-frontier/apps/api/**"
+      instructions: "AuthN/AuthZ (RBAC, IDOR), CSRF on cookie auth, rate limits (auth, wallet, withdrawal very strict, chat, purchase, market), zod validation, idempotency keys, audit logs, secure cookies, security headers, no secret logging."
+    - path: "nebula-frontier/apps/web/**"
+      instructions: "XSS, CSRF, auth handling, no tokens in localStorage, no client trust for economy, React rerenders, async races, Three.js GPU resource disposal, event listener leaks."
+    - path: "nebula-frontier/packages/game-renderer/**"
+      instructions: "Three.js: dispose geometries/materials/textures, pooling, instancing, LOD, per-frame allocations, GPU leaks, mobile performance tiers."
+    - path: "nebula-frontier/apps/game-client/**"
+      instructions: "Phaser/Three lifecycle and cleanup, input handling (touch/gamepad), interpolation/reconciliation correctness, network spam."
+    - path: "nebula-frontier/apps/mobile/**"
+      instructions: "Capacitor lifecycle/background state, secure storage, deep-link/app-link validation, wallet deep links, native permissions, battery/GPU usage, reconnect."
+    - path: "nebula-frontier/apps/admin/**"
+      instructions: "Admin RBAC enforced server-side, audit logging, no sensitive data leakage."
+    - path: "nebula-frontier/docker/**"
+      instructions: "Deployment security: no secrets baked into images, non-root users, healthchecks, least privilege."
+  auto_review:
+    enabled: true
+    drafts: true
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "nebula-frontier/CLAUDE.md"
+      - "nebula-frontier/docs/research/TEAM_BRIEF.md"
