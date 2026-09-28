@@ -184,8 +184,9 @@ describe("movement & anti-cheat", () => {
     await sleep(100);
     const elapsed = (Date.now() - t0) / 1000;
     const moved = Math.hypot(actor.x - start.x, actor.y - start.y);
-    // Legal maximum: max speed × elapsed (+ the 10-step jitter burst).
-    expect(moved).toBeLessThanOrEqual(actor.stats.speed * (elapsed + 0.5));
+    // Legal maximum: max speed × elapsed (+ the one-second jitter burst, tickRate steps).
+    // 5x-rate input over 1.5 s would otherwise move ~5x as far.
+    expect(moved).toBeLessThanOrEqual(actor.stats.speed * (elapsed + 1.0));
     expect(moved).toBeGreaterThan(0);
     await until(() => svc.risk.recent.some((r) => r.userId === user.id && r.type === "SPEED_HACK"));
     await until(async () => (await db.riskSignal.count({ where: { userId: user.id, type: "SPEED_HACK" } })) > 0);
