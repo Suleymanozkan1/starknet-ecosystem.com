@@ -449,7 +449,7 @@ export default function WalletPage() {
       <QueryState q={q}>
         {(w) => (
           <div className="grid gap-5">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               {([
                 ["Credits", <CurrencyAmount key="c" amount={w.balances.credits} currency="CREDITS" size={20} />],
                 ["Gems", <CurrencyAmount key="g" amount={w.balances.gems} currency="GEMS" size={20} />],

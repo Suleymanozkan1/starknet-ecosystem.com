@@ -19,7 +19,8 @@ import { LedgerAccountType, RoomName, type MapDef } from "@nebula/shared";
 import { loadConfig } from "./config.js";
 import { buildServices } from "./bootstrap.js";
 import { ensureCatalog } from "./persistence/catalog.js";
-import { DuplicateLootError } from "./persistence/writer.js";
+import { DuplicateLootError, PendingDelta } from "./persistence/writer.js";
+import { ensureStarterKit } from "./persistence/player.js";
 import { createGameServer } from "./server.js";
 import { createPlayerUser, shieldTestIpcFromPm2, ticketFor } from "./test-utils.js";
 import type { GameServices } from "./services/context.js";
@@ -42,6 +43,7 @@ interface Internals {
   applyHit(src: PlayerActor | null, target: NpcActor | PlayerActor, res: HitResult, weaponType: string): void;
   getRiftPortals(): { id: string; x: number; y: number; windowStart: number; eventId: string }[];
   getNpcs(): NpcActor[];
+  getLoot(): LootActor[];
   clanWarId?: string | null;
 }
 const I = (room: unknown) => room as Internals;
@@ -319,8 +321,16 @@ describe("pvp", () => {
     // Death repair is a credit sink through the ledger.
     await until(async () => (await getBalance(db, userWallet(b.user.id, "CREDITS"))) < 5000n);
     // Repeat kill of the same victim inside the window: no extra leaderboard credit (anti-farming).
+    b.actor.respawnAt = 0;
     b.client.send("respawn", {});
-    await sleep(100);
+    await until(() => !b.actor.dead);
+    Object.assign(b.actor, { x: a.actor.x + 10, y: a.actor.y, invulnerableUntil: 0, shield: 0, hull: 1 });
+    I(a.room).applyHit(a.actor, b.actor, bigHit(b.actor), "LASER");
+    expect(b.actor.dead).toBe(true);
+    await I(a.room).flushAll(false);
+    const lb2 = await db.leaderboardEntry.findUniqueOrThrow({ where: { leaderboardId_userId: { leaderboardId: "pvp_kills", userId: a.user.id } } });
+    expect(Number(lb2.score)).toBe(1);
+    expect((await db.playerStat.findUniqueOrThrow({ where: { userId: a.user.id } })).playerKills).toBe(1);
     await a.client.leave();
     await b.client.leave();
   });
@@ -608,5 +618,91 @@ describe("clan missions", () => {
     expect(clanEvents.some((e) => e.userId === loner.user.id)).toBe(false);
     await loner.client.leave();
     await c.leave();
+  });
+});
+
+describe("review fixes (PR #2 round 1)", () => {
+  it("#8 chargeCredits returns 0 for a duplicate posting", async () => {
+    const u = await createPlayerUser(db, { credits: 1000 });
+    expect(await svc.persistence.chargeCredits(u.id, 300n, `test-charge:${u.id}`, "test", false)).toBe(300n);
+    expect(await svc.persistence.chargeCredits(u.id, 300n, `test-charge:${u.id}`, "test", false)).toBe(0n);
+    expect(await getBalance(db, userWallet(u.id, "CREDITS"))).toBe(700n);
+  });
+
+  it("#7 ammo consumption never touches locked (escrowed) stacks", async () => {
+    const u = await createPlayerUser(db, { faction: "aurora" });
+    const stack = await db.inventoryItem.create({ data: { userId: u.id, itemId: "item_ammo_hornet", quantity: 10, lockedBy: "listing:test" } });
+    const free = await db.inventoryItem.create({ data: { userId: u.id, itemId: "item_ammo_hornet", quantity: 3 } });
+    const d = new PendingDelta();
+    d.ammo.set(stack.id, 5);
+    d.ammo.set(free.id, 3);
+    await svc.persistence.flush(u.id, d, [], new Set());
+    expect((await db.inventoryItem.findUniqueOrThrow({ where: { id: stack.id } })).quantity).toBe(10);
+    expect(await db.inventoryItem.findUnique({ where: { id: free.id } })).toBeNull();
+  });
+
+  it("#6 concurrent first joins create exactly one starter ship and loadout", async () => {
+    const u = await createPlayerUser(db, { faction: "nova" });
+    await Promise.all([ensureStarterKit(db, u.id, null), ensureStarterKit(db, u.id, null), ensureStarterKit(db, u.id, null)]);
+    const ships = await db.shipInstance.findMany({ where: { userId: u.id }, include: { loadouts: true } });
+    expect(ships).toHaveLength(1);
+    expect(ships[0]!.loadouts).toHaveLength(1);
+  });
+
+  it("#14 leavers never gain rating, even on the winning team", async () => {
+    const mapId = "map_eclipse_arena";
+    const instanceKey = `leaver-${Date.now()}`;
+    const [ua, ub, uc] = await Promise.all([1, 2, 3].map(() => createPlayerUser(db, { faction: "aurora", level: 12 })));
+    const ca = await colyseus.sdk.joinOrCreate(RoomName.ARENA, { ticket: await ticketFor(secret, ua!, mapId), mapId, instanceKey, team: 0 });
+    const room = matchMaker.getLocalRoomById(ca.roomId);
+    I(room).rules = { ...I(room).rules, arenaCountdownMs: 100, arenaScoreToWin: 1 };
+    const started = new Promise<{ matchId: string }>((r) => ca.onMessage("match_start", r));
+    const ended = new Promise((r) => ca.onMessage("match_end", r));
+    const cb = await colyseus.sdk.joinOrCreate(RoomName.ARENA, { ticket: await ticketFor(secret, ub!, mapId), mapId, instanceKey, team: 1 });
+    const { matchId } = await started;
+    const cc = await colyseus.sdk.joinOrCreate(RoomName.ARENA, { ticket: await ticketFor(secret, uc!, mapId), mapId, instanceKey, team: 0 });
+    const c = I(room).getPlayerByUser(uc!.id)!;
+    const a = I(room).getPlayerByUser(ua!.id)!;
+    expect(c.team).toBe(a.team);
+    await cc.leave();
+    await until(() => !I(room).getPlayerByUser(uc!.id));
+    const b = I(room).getPlayerByUser(ub!.id)!;
+    b.invulnerableUntil = 0;
+    I(room).applyHit(a, b, bigHit(b), "LASER");
+    await ended;
+    await until(async () => (await db.gameMatch.findUnique({ where: { id: matchId } }))?.status === "FINISHED");
+    const rows = await db.gameMatchPlayer.findMany({ where: { matchId } });
+    expect(rows.find((r) => r.userId === ua!.id)!.ratingDelta).toBeGreaterThan(0);
+    expect(rows.find((r) => r.userId === uc!.id)!.ratingDelta).toBeLessThanOrEqual(0);
+    await ca.leave().catch(() => undefined);
+    await cb.leave().catch(() => undefined);
+  });
+
+  it("#12 raids: daily entry limit and no rewards for under-manned raids", async () => {
+    const mapId = "map_raid_titan_vault";
+    const capped = await createPlayerUser(db, { faction: "aurora", level: 40 });
+    const m = await db.gameMatch.create({ data: { mode: "RAID", mapId } });
+    await db.gameMatchPlayer.create({ data: { matchId: m.id, userId: capped.id } });
+    const m2 = await db.gameMatch.create({ data: { mode: "RAID", mapId } });
+    await db.gameMatchPlayer.create({ data: { matchId: m2.id, userId: capped.id } });
+    const m3 = await db.gameMatch.create({ data: { mode: "RAID", mapId } });
+    await db.gameMatchPlayer.create({ data: { matchId: m3.id, userId: capped.id } });
+    await expect(colyseus.sdk.joinOrCreate(RoomName.RAID, { ticket: await ticketFor(secret, capped, mapId), mapId, instanceKey: `cap-${Date.now()}`, difficulty: "8" })).rejects.toThrow(/RAID_DAILY_LIMIT/);
+
+    const solo = await createPlayerUser(db, { faction: "aurora", level: 40 });
+    const c = await colyseus.sdk.joinOrCreate(RoomName.RAID, { ticket: await ticketFor(secret, solo, mapId), mapId, instanceKey: `solo-${Date.now()}`, difficulty: "4" });
+    const room = matchMaker.getLocalRoomById(c.roomId);
+    const me = I(room).getPlayerByUser(solo.id)!;
+    const boss = I(room).getNpcs().find((n) => n.tag === "raidboss")!;
+    const ended = new Promise((r) => c.onMessage("match_end", r));
+    I(room).applyHit(me, boss, bigHit(boss), "LASER");
+    await ended;
+    await I(room).flushAll(false);
+    const u = await db.user.findUniqueOrThrow({ where: { id: solo.id } });
+    expect(Number(u.xp)).toBe(0);
+    expect(await getBalance(db, userWallet(solo.id, "CREDITS"))).toBe(0n);
+    expect(await db.reward.count({ where: { userId: solo.id, source: "RAID" } })).toBe(0);
+    expect(I(room).getLoot().filter((l) => l.ownerUserId === solo.id)).toHaveLength(0);
+    await c.leave().catch(() => undefined);
   });
 });

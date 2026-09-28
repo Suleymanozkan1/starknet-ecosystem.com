@@ -190,11 +190,15 @@ export class Persistence {
 
       for (const [stackId, used] of d.ammo) {
         if (used <= 0) continue;
-        const row = await tx.inventoryItem.findFirst({ where: { id: stackId, userId }, select: { quantity: true } });
+        // Never touch listed/escrowed stacks (lockedBy set); every write is conditional on the row
+        // still being ours, unlocked and holding at least what we take (no read-modify-write race).
+        const row = await tx.inventoryItem.findFirst({ where: { id: stackId, userId, lockedBy: null }, select: { quantity: true } });
         if (!row) continue;
         const take = Math.min(row.quantity, used);
-        if (row.quantity - take <= 0) await tx.inventoryItem.delete({ where: { id: stackId } });
-        else await tx.inventoryItem.update({ where: { id: stackId }, data: { quantity: { decrement: take }, version: { increment: 1 } } });
+        if (take <= 0) continue;
+        const guard = { id: stackId, userId, lockedBy: null, quantity: { gte: take } };
+        if (row.quantity - take <= 0) await tx.inventoryItem.deleteMany({ where: { ...guard, quantity: take } });
+        else await tx.inventoryItem.updateMany({ where: guard, data: { quantity: { decrement: take }, version: { increment: 1 } } });
       }
 
       for (const [board, amount] of d.boards) {
@@ -283,19 +287,20 @@ export class Persistence {
    * Credit sink (repair, gate entry). Charges min(balance, amount) when
    * `partial`, else all-or-nothing. Idempotent by key. Returns amount charged.
    */
-  async chargeCredits(userId: string, amount: number, key: string, reason: string, partial: boolean, tx?: Tx): Promise<number> {
-    const run = async (t: Tx): Promise<number> => {
-      const want = BigInt(Math.max(0, Math.floor(amount)));
-      if (want === 0n) return 0;
+  async chargeCredits(userId: string, amount: bigint, key: string, reason: string, partial: boolean, tx?: Tx): Promise<bigint> {
+    const run = async (t: Tx): Promise<bigint> => {
+      if (amount <= 0n) return 0n;
+      // A replayed key was already charged earlier: report 0 charged now (caller must not double-apply).
+      if (await t.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } })) return 0n;
       const bal = await getBalance(t, userWallet(userId, "CREDITS"));
-      const take = partial ? (bal < want ? bal : want) : want;
-      if (take <= 0n) return 0;
-      if (!partial && bal < want) throw new Error("INSUFFICIENT_CREDITS");
-      await post(t, {
+      const take = partial ? (bal < amount ? bal : amount) : amount;
+      if (take <= 0n) return 0n;
+      if (!partial && bal < amount) throw new Error("INSUFFICIENT_CREDITS");
+      const r = await post(t, {
         from: userWallet(userId, "CREDITS"), to: system(LedgerAccountType.GAME_SINK, "CREDITS"), amount: take,
         type: "GAME_SINK", reference: reason, idempotencyKey: key, userId,
       });
-      return Number(take);
+      return r.duplicate ? 0n : take;
     };
     if (tx) return run(tx);
     return this.db.$transaction(run);

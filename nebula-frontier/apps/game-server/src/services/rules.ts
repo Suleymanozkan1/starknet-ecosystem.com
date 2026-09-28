@@ -7,7 +7,9 @@
  * `game.tuning`.
  */
 import type { Db } from "@nebula/database";
-import { mergeTuning, type SimTuning } from "@nebula/game-core";
+import { mergeTuning, parseTuningOverride, type SimTuning } from "@nebula/game-core";
+import type { Logger } from "@nebula/telemetry";
+import { z } from "zod";
 
 export interface GameRules {
   pickupRange: number;
@@ -47,6 +49,9 @@ export interface GameRules {
   /** Clan score added per enemy kill in a clan war, and bonus for the winning clan. */
   clanWarKillScore: number;
   clanWarWinScore: number;
+  /** Raid anti-exploit: min contributors = ceil(size × fraction); daily raid entries per pilot. */
+  raidMinPilotsFraction: number;
+  raidDailyEntries: number;
 }
 
 export const DEFAULT_RULES: GameRules = {
@@ -80,20 +85,61 @@ export const DEFAULT_RULES: GameRules = {
   reconnectSeconds: 20,
   clanWarKillScore: 10,
   clanWarWinScore: 100,
+  raidMinPilotsFraction: 0.5,
+  raidDailyEntries: 3,
 };
 
-export async function loadRules(db: Db | null): Promise<{ rules: GameRules; tuning: SimTuning }> {
-  if (!db) return { rules: DEFAULT_RULES, tuning: mergeTuning() };
+const num = z.number().refine((n) => Number.isFinite(n), "must be finite");
+const nonNeg = num.refine((n) => n >= 0, "must be >= 0");
+const pos = num.refine((n) => n > 0, "must be > 0");
+const frac = num.refine((n) => n >= 0 && n <= 1, "must be within 0..1");
+const int = (min: number) => z.number().int().min(min);
+
+/** Strict schema for `game.rules` overrides (partial; unknown keys rejected). */
+export const GameRulesOverrideSchema = z.object({
+  pickupRange: pos, dockRange: pos, portalRange: pos, lootOwnerMs: nonNeg, lootTtlMs: pos, spawnProtectionMs: nonNeg,
+  combatLockMs: nonNeg, pvpHonorPerVictimLevel: nonNeg, pvpXpPerVictimLevel: nonNeg, pvpSameVictimWindowMs: nonNeg,
+  pvpMaxLevelGap: int(0), pvpCryptoWeight: nonNeg, bossMinContribution: frac, chatRatePerSec: pos, chatBurst: int(1),
+  packetRatePerSec: pos, packetBurst: int(1), aoiUpdateEveryTicks: int(1), unarmedMiningFactor: nonNeg, miningRange: pos,
+  asteroidAmount: int(1), asteroidRespawnMs: nonNeg, arenaMatchMs: pos, arenaMinPlayers: int(2), arenaCountdownMs: nonNeg,
+  arenaScoreToWin: int(1), gateWaveDelayMs: nonNeg, reconnectSeconds: nonNeg, clanWarKillScore: nonNeg, clanWarWinScore: nonNeg,
+  raidMinPilotsFraction: frac, raidDailyEntries: int(0),
+} satisfies Record<keyof GameRules, z.ZodType>).partial().strict();
+
+export interface LoadedRules {
+  rules: GameRules;
+  tuning: SimTuning;
+  /** Validation problems of rejected overrides (logged by the caller). */
+  warnings: string[];
+}
+
+/** Validate untrusted overrides; invalid documents are ignored entirely (defaults apply). */
+export function applyOverrides(rawRules: unknown, rawTuning: unknown): LoadedRules {
+  const warnings: string[] = [];
+  let rules: GameRules = { ...DEFAULT_RULES };
+  if (rawRules !== undefined && rawRules !== null) {
+    const r = GameRulesOverrideSchema.safeParse(rawRules);
+    if (r.success) rules = { ...DEFAULT_RULES, ...r.data };
+    else warnings.push(`game.rules rejected: ${r.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ")}`);
+  }
+  let tuning = mergeTuning();
+  if (rawTuning !== undefined && rawTuning !== null) {
+    const t = parseTuningOverride(rawTuning);
+    if (t.ok) tuning = mergeTuning(t.value);
+    else warnings.push(`game.tuning rejected: ${t.error}`);
+  }
+  return { rules, tuning, warnings };
+}
+
+export async function loadRules(db: Db | null, log?: Pick<Logger, "warn">): Promise<LoadedRules> {
+  if (!db) return applyOverrides(undefined, undefined);
   try {
     const rows = await db.economyConfig.findMany({ where: { key: { in: ["game.rules", "game.tuning"] } } });
-    const get = (k: string) => rows.find((r) => r.key === k)?.value;
-    const r = get("game.rules");
-    const t = get("game.tuning");
-    return {
-      rules: { ...DEFAULT_RULES, ...(r && typeof r === "object" && !Array.isArray(r) ? (r as Partial<GameRules>) : {}) },
-      tuning: mergeTuning(t && typeof t === "object" && !Array.isArray(t) ? (t as Partial<SimTuning>) : undefined),
-    };
-  } catch {
-    return { rules: DEFAULT_RULES, tuning: mergeTuning() };
+    const out = applyOverrides(rows.find((r) => r.key === "game.rules")?.value, rows.find((r) => r.key === "game.tuning")?.value);
+    for (const w of out.warnings) log?.warn(w);
+    return out;
+  } catch (e) {
+    log?.warn(`game rules could not be loaded, using defaults: ${(e as Error).message}`);
+    return applyOverrides(undefined, undefined);
   }
 }

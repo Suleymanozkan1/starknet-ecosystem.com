@@ -83,11 +83,15 @@ export class SnapshotBuffer {
     this.write(time, s.x, s.y, s.heading, s.vx, s.vy);
   }
 
+  /** Ring index of the k-th newest sample (k = 0 newest). */
+  private idx(k: number): number {
+    return (this.head - k + this.cap) % this.cap;
+  }
+
   /** Sample at `time` into `out`. Returns false when empty. */
   sample(time: number, out: MotionSample): boolean {
     if (this.count === 0) return false;
-    const idx = (k: number): number => (this.head - k + this.cap) % this.cap; // k = 0 newest
-    const newest = idx(0);
+    const newest = this.idx(0);
     const tn = this.t[newest] ?? 0;
     if (time >= tn) {
       const o = newest * 5;
@@ -100,7 +104,7 @@ export class SnapshotBuffer {
       return true;
     }
     for (let k = 1; k < this.count; k++) {
-      const a = idx(k), b = idx(k - 1);
+      const a = this.idx(k), b = this.idx(k - 1);
       const ta = this.t[a] ?? 0, tb = this.t[b] ?? 0;
       if (time >= ta) {
         const oa = a * 5, ob = b * 5;
@@ -124,7 +128,7 @@ export class SnapshotBuffer {
       }
     }
     // older than everything we have: oldest sample
-    const oldest = idx(this.count - 1) * 5;
+    const oldest = this.idx(this.count - 1) * 5;
     out.x = this.data[oldest] ?? 0; out.y = this.data[oldest + 1] ?? 0; out.heading = this.data[oldest + 2] ?? 0;
     out.vx = this.data[oldest + 3] ?? 0; out.vy = this.data[oldest + 4] ?? 0;
     return true;

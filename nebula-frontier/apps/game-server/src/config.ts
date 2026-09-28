@@ -30,6 +30,10 @@ export interface GameServerConfig {
 
 export function loadConfig(): GameServerConfig {
   const gameTicketKeys = keyRingFromEnv("GAME_TICKET");
+  const nodeEnv = process.env.NODE_ENV ?? "development";
+  // Ticket single-use (jti) must be shared by every game-server process; the in-memory fallback
+  // is per-process and would allow cross-process ticket replay. Redis is mandatory in production.
+  if (nodeEnv === "production" && !process.env.REDIS_URL) throw new Error("REDIS_URL is required in production (ticket replay protection, presence, matchmaking)");
   const region = (process.env.REGION ?? "EU").toUpperCase();
   return {
     port: num("GAME_PORT", 2567),
@@ -44,6 +48,6 @@ export function loadConfig(): GameServerConfig {
     internalServiceToken: process.env.INTERNAL_SERVICE_TOKEN || null,
     publicUrl: process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${num("GAME_PORT", 2567)}`,
     flushIntervalMs: Math.max(1000, num("GAME_FLUSH_INTERVAL_MS", 5000)),
-    nodeEnv: process.env.NODE_ENV ?? "development",
+    nodeEnv,
   };
 }

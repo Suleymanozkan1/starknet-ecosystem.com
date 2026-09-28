@@ -62,9 +62,11 @@ npx cap sync ios
 npx cap open ios       # set Team, signing, then Run / Archive
 ```
 
-If `apps/mobile/ios` is missing, it could not be generated in the Linux build container (no Xcode /
-CocoaPods). All settings required for iOS are listed below so they can be applied right after
-`npx cap add ios`.
+`apps/mobile/ios` was generated with `npx cap add ios` (Capacitor 8 uses Swift Package Manager, so no
+CocoaPods step). It was not compiled in the Linux build container (no Xcode). URL types, the Face ID usage
+string (`Info.plist`) and Associated Domains + push entitlement (`App/App.entitlements`, wired through
+`CODE_SIGN_ENTITLEMENTS`) are already applied; set your Team and change `aps-environment` to `production`
+for App Store builds.
 
 ## 2. Deep links, Universal Links and App Links
 

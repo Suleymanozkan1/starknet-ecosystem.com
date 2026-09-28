@@ -151,6 +151,7 @@ export class WorldRenderer {
   private frameMs = 16;
   private mapDef: MapDef | null = null;
   private disposed = false;
+  private readonly stats: FrameStats = { fps: 60, frameMs: 16, drawCalls: 0, triangles: 0, pixelRatio: 1, entities: 0 };
   localId: string | null = null;
   /** Show cloaked enemies (scanned). */
   revealCloaked = new Set<string>();
@@ -783,15 +784,32 @@ export class WorldRenderer {
       this.background.setPixelRatio(r);
       this.resize(this.width, this.height);
     }
+    if (!this.backend.supportsGlsl) this.hideGlslObjects(t);
     const info = this.backend.webgl?.info.render;
-    return {
-      fps: this.fps,
-      frameMs: this.frameMs,
-      drawCalls: info?.calls ?? 0,
-      triangles: info?.triangles ?? 0,
-      pixelRatio: this.backend.pixelRatio,
-      entities: this.entries.size,
-    };
+    const s = this.stats;
+    s.fps = this.fps;
+    s.frameMs = this.frameMs;
+    s.drawCalls = info?.calls ?? 0;
+    s.triangles = info?.triangles ?? 0;
+    s.pixelRatio = this.backend.pixelRatio;
+    s.entities = this.entries.size;
+    return s;
+  }
+
+  private lastGlslSweep = -10;
+
+  /**
+   * WebGPU backend (experimental): GLSL ShaderMaterials are not supported by
+   * three/webgpu, so those objects are hidden (sky → flat background, custom FX
+   * off; PBR ships/stations/asteroids and sprite glows still render).
+   */
+  private hideGlslObjects(time: number): void {
+    if (time - this.lastGlslSweep < 0.5) return;
+    this.lastGlslSweep = time;
+    this.scene.traverse((o) => {
+      const m = (o as { material?: unknown }).material;
+      if (m && (m as { isShaderMaterial?: boolean }).isShaderMaterial) o.visible = false;
+    });
   }
 
   get elapsed(): number {

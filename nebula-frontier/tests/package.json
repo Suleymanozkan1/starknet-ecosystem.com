@@ -8,12 +8,17 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@colyseus/core": "^0.18.17",
+    "@colyseus/sdk": "^0.18.4",
+    "@nebula/api": "workspace:*",
     "@nebula/authentication": "workspace:*",
     "@nebula/blockchain": "workspace:*",
+    "@nebula/blockchain-service": "workspace:*",
     "@nebula/config": "workspace:*",
     "@nebula/database": "workspace:*",
     "@nebula/economy": "workspace:*",
     "@nebula/game-core": "workspace:*",
+    "@nebula/game-server": "workspace:*",
     "@nebula/shared": "workspace:*",
     "@nebula/validation": "workspace:*"
   },

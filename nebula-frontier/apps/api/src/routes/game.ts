@@ -34,8 +34,8 @@ export default async function gameRoutes(app: FastifyInstance): Promise<void> {
     if (!mapId) throw badRequest("NO_MAP", "No valid map for this pilot");
     const jti = randomUUID();
     const ticket = await signGameTicket({ sub: req.user.id, username: u.username, mapId, jti }, env.gameTicketKeys, TICKET_TTL_SEC);
-    // Recorded so the game server can enforce single use (SET NX on consume).
-    await app.redis.set(`gt:${jti}`, req.user.id, "EX", TICKET_TTL_SEC + 5);
+    // Single use is enforced by the consumer only: the game server claims `gt:<jti>` with SET NX
+    // on join. The API must NOT pre-write that key, or every ticket would read as replayed.
     // Presence: a ticket means the pilot is entering the game. The game server may keep refreshing
     // `presence:<userId>`; the API sets it with a TTL so friends see the pilot online.
     await app.redis.set(`presence:${req.user.id}`, "api", "EX", PRESENCE_TTL_SEC);

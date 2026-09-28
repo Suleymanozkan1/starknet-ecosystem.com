@@ -712,12 +712,24 @@ importers:
 
   tests:
     dependencies:
+      '@colyseus/core':
+        specifier: ^0.18.17
+        version: 0.18.17(@colyseus/auth@0.18.3)(@colyseus/better-call@1.3.3(zod@4.6.5))(@colyseus/schema@5.0.34(typescript@5.9.3))(@colyseus/ws-transport@0.18.4)(@pm2/io@6.1.0)(express@5.2.1)(zod@4.6.5)
+      '@colyseus/sdk':
+        specifier: ^0.18.4
+        version: 0.18.4(@colyseus/core@0.18.17)(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.6.5)
+      '@nebula/api':
+        specifier: workspace:*
+        version: link:../apps/api
       '@nebula/authentication':
         specifier: workspace:*
         version: link:../packages/authentication
       '@nebula/blockchain':
         specifier: workspace:*
         version: link:../packages/blockchain
+      '@nebula/blockchain-service':
+        specifier: workspace:*
+        version: link:../apps/blockchain-service
       '@nebula/config':
         specifier: workspace:*
         version: link:../packages/config
@@ -730,6 +742,9 @@ importers:
       '@nebula/game-core':
         specifier: workspace:*
         version: link:../packages/game-core
+      '@nebula/game-server':
+        specifier: workspace:*
+        version: link:../apps/game-server
       '@nebula/shared':
         specifier: workspace:*
         version: link:../packages/shared

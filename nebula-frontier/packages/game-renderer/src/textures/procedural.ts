@@ -121,7 +121,7 @@ export function createPanelTextures(size: number, seed = 1337): PanelTextureSet 
       const wear = Math.max(0, g - 0.52) * 2.2;
       const r = Math.min(1, (rough[i] ?? 0.5) + wear * 0.35 + (fine - 0.5) * 0.08 + cavity * 0.2);
       const m = Math.max(0, (metal[i] ?? 0.7) - wear * 0.4 - cavity * 0.3);
-      const alb = Math.max(0, Math.min(1, 0.92 - wear * 0.35 - cavity * 0.35 + (fine - 0.5) * 0.06));
+      const alb = Math.max(0, Math.min(1, 0.9 - wear * 0.18 - cavity * 0.3 + (fine - 0.5) * 0.04));
       const o = i * 4;
       albedoData[o] = albedoData[o + 1] = albedoData[o + 2] = Math.round(alb * 255);
       albedoData[o + 3] = 255;

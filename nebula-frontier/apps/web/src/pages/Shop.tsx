@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CurrencyAmount, HoloPanel, Icon, Modal, NeonButton, Tabs } from "@nebula/game-ui";
+import { CurrencyAmount, Icon, Modal, NeonButton, Tabs } from "@nebula/game-ui";
 import type { IconName } from "@nebula/game-ui";
 import { api } from "../lib/api.js";
 import type { RewardBundleView, ShopProductView } from "../lib/dto.js";

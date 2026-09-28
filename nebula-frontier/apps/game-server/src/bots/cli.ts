@@ -6,6 +6,7 @@
  * first run, reused afterwards).
  */
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { Client, type Room } from "@colyseus/sdk";
 import { FACTIONS, FACTIONS_BY_ID, MAPS_BY_ID } from "@nebula/config";
 import { keyRingFromEnv, signGameTicket, type KeyRing } from "@nebula/authentication";
@@ -13,20 +14,38 @@ import { createDb, type Db } from "@nebula/database";
 import { mulberry32, RoomName } from "@nebula/shared";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./behaviors.js";
 
-interface Args { count: number; map: string | null; url: string; type: string | null; durationSec: number }
+export interface Args { count: number; map: string | null; url: string; type: string | null; durationSec: number }
 
-function parseArgs(argv: string[]): Args {
-  const get = (k: string) => {
-    const i = argv.indexOf(`--${k}`);
-    return i >= 0 ? argv[i + 1] : undefined;
+const FLAGS = new Set(["count", "map", "url", "type", "duration"]);
+
+/** Strict flag parsing: unknown flags, missing operands and out-of-range numbers are rejected. */
+export function parseArgs(argv: string[]): Args {
+  const vals = new Map<string, string>();
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a === "--") continue;
+    if (!a.startsWith("--")) throw new Error(`Unexpected argument "${a}"`);
+    const name = a.slice(2);
+    if (!FLAGS.has(name)) throw new Error(`Unknown flag --${name}`);
+    const v = argv[i + 1];
+    if (v === undefined || v.startsWith("--")) throw new Error(`Flag --${name} requires a value`);
+    vals.set(name, v);
+    i++;
+  }
+  const int = (name: string, def: number, min: number, max: number): number => {
+    const raw = vals.get(name);
+    if (raw === undefined) return def;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < min || n > max) throw new Error(`--${name} must be an integer in ${min}..${max}`);
+    return n;
   };
-  return {
-    count: Math.max(1, Math.min(500, Number(get("count") ?? 10))),
-    map: get("map") ?? null,
-    url: get("url") ?? process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${process.env.GAME_PORT ?? 2567}`,
-    type: get("type") ?? null,
-    durationSec: Number(get("duration") ?? 0),
-  };
+  const type = vals.get("type") ?? null;
+  if (type !== null && !Object.keys(ARCHETYPES).includes(type)) throw new Error(`--type must be one of ${Object.keys(ARCHETYPES).join(", ")}`);
+  const map = vals.get("map") ?? null;
+  if (map !== null && MAPS_BY_ID.get(map)?.roomType !== "sector") throw new Error(`--map must be a sector map id`);
+  const url = vals.get("url") ?? process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${process.env.GAME_PORT ?? 2567}`;
+  if (!/^wss?:\/\//.test(url)) throw new Error("--url must be a ws:// or wss:// URL");
+  return { count: int("count", 10, 1, 500), map, url, type, durationSec: int("duration", 0, 0, 86_400) };
 }
 
 async function ensureBots(db: Db, n: number): Promise<{ id: string; username: string; faction: string; lastMapId: string | null }[]> {
@@ -82,11 +101,17 @@ async function runBot(url: string, secret: KeyRing, bot: { id: string; username:
   let target = "";
   let lastRespawn = 0;
   await new Promise<void>((resolve) => {
-    room.onLeave(() => resolve());
-    const iv = setInterval(() => {
+    let iv: NodeJS.Timeout | null = null;
+    room.onLeave(() => {
+      if (iv) clearInterval(iv);
+      iv = null;
+      resolve();
+    });
+    iv = setInterval(() => {
       const now = Date.now();
       if (stopAt > 0 && now > stopAt) {
-        clearInterval(iv);
+        if (iv) clearInterval(iv);
+        iv = null;
         void room.leave().then(() => resolve());
         return;
       }
@@ -130,7 +155,14 @@ async function runBot(url: string, secret: KeyRing, bot: { id: string; username:
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
+  let args: Args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (e) {
+    console.error(`bots: ${(e as Error).message}`);
+    console.error("usage: bots -- --count <1..500> [--map <sector map>] [--type scout|miner|fighter|tank|support] [--url ws://…] [--duration <sec>]");
+    process.exit(2);
+  }
   const secret = keyRingFromEnv("GAME_TICKET");
   const db = createDb();
   const bots = await ensureBots(db, args.count);
@@ -158,7 +190,8 @@ async function main(): Promise<void> {
   await Promise.all(runs);
 }
 
-main().catch((e: unknown) => {
+// Only run when executed directly (the parser is unit-tested).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e: unknown) => {
   console.error(e instanceof Error ? e.message : e);
   process.exit(1);
 });

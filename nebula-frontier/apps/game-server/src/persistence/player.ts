@@ -86,6 +86,9 @@ export async function ensureStarterKit(db: Db, userId: string, preferredMap: str
   const existing = await db.shipInstance.findFirst({ where: { userId }, select: { id: true } });
   if (existing) return;
   await db.$transaction(async (tx) => {
+    // Serialize concurrent first joins of the same user: lock the user row, then re-check.
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+    if (await tx.shipInstance.findFirst({ where: { userId }, select: { id: true } })) return;
     let pf = await tx.playerFaction.findUnique({ where: { userId } });
     if (!pf) {
       const fac = FACTIONS.find((f) => f.homeMap === preferredMap) ?? FACTIONS[0];
@@ -112,7 +115,7 @@ export async function ensureStarterKit(db: Db, userId: string, preferredMap: str
     const rows = grants.map((g, idx) => ({ userId, itemId: itemIdForDef(g.defId), quantity: 1, originRef: `starter:${userId}:${idx}:${g.defId}`, boundAt: new Date() }));
     const validRows = rows.filter((r) => ITEMS_BY_ID.has(r.itemId));
     await tx.inventoryItem.createMany({ data: validRows, skipDuplicates: true });
-    const inv = await tx.inventoryItem.findMany({ where: { originRef: { in: validRows.map((r) => r.originRef) } }, select: { id: true, originRef: true, itemId: true } });
+    const inv = await tx.inventoryItem.findMany({ where: { userId, originRef: { in: validRows.map((r) => r.originRef) } }, select: { id: true, originRef: true, itemId: true } });
     const byRef = new Map(inv.map((i) => [i.originRef, i]));
     const cfg: Required<Omit<LoadoutConfig, "ammo" | "cosmetics" | "formation">> & LoadoutConfig = { weapons: [], missiles: [], generators: [], modules: [], drones: [], formation: "STANDARD", ammo: null, cosmetics: {} };
     grants.forEach((g, idx) => {

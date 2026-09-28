@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Vector3 } from "three";
+import { type BufferAttribute, Vector3 } from "three";
 import { TIER_SETTINGS } from "../core/tiers.js";
 import { EffectsSystem } from "./EffectsSystem.js";
 import { ProjectileStyle, ProjectileSystem } from "./projectiles.js";
@@ -29,7 +29,7 @@ describe("effects pools (headless)", () => {
     layer.setBudget(32);
     for (let i = 0; i < 40; i++) layer.emit(i, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1);
     layer.update(0.1);
-    const pos = layer.points.geometry.attributes.position;
+    const pos = layer.points.geometry.attributes.position as BufferAttribute | undefined;
     expect(pos?.getX(0)).toBe(32); // wrapped: slot 0 overwritten by particle #32
     expect(pos?.updateRanges.length).toBe(1);
     layer.dispose();

@@ -188,7 +188,7 @@ export abstract class MatchRoom extends BaseGameRoom {
       await this.svc.persistence.finishMatch(
         matchId,
         winnerTeam,
-        roster.map((r) => ({ userId: r.userId, kills: r.kills, deaths: r.deaths, damage: r.damage, score: r.score, ratingDelta: deltas.get(r.userId) ?? 0, won: winnerTeam !== null && r.team === winnerTeam && !r.left, left: r.left })),
+        roster.map((r) => ({ userId: r.userId, kills: r.kills, deaths: r.deaths, damage: r.damage, score: r.score, ratingDelta: r.left ? Math.min(0, deltas.get(r.userId) ?? 0) : deltas.get(r.userId) ?? 0, won: winnerTeam !== null && r.team === winnerTeam && !r.left, left: r.left })),
         { reason, teamScores: this.teamScores, mode: this.mode },
         (tx) => this.onMatchFinishedTx(tx, winnerTeam),
       );

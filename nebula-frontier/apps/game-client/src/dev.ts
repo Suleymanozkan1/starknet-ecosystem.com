@@ -95,7 +95,7 @@ createGame({
   onHud: renderHud,
 }).then((handle) => {
   statusEl.textContent = "";
-  (window as unknown as { game: typeof handle }).game = handle;
+  (window as unknown as { nebula: typeof handle }).nebula = handle;
 }).catch((err: unknown) => {
   statusEl.textContent = err instanceof Error ? err.message : String(err);
 });

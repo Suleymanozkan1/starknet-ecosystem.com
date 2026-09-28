@@ -24,7 +24,6 @@ export function createAsteroidGeometry(detail: number, seed: number): BufferGeom
   g = mergeVertices(g);
   const pos = g.attributes.position;
   if (!pos) return g;
-  const colors = new Float32Array(pos.count * 3);
   const rng = createRng(seed);
   const sx = rng.range(0.75, 1.25), sy = rng.range(0.6, 0.95), sz = rng.range(0.8, 1.3);
   for (let i = 0; i < pos.count; i++) {
@@ -34,15 +33,27 @@ export function createAsteroidGeometry(detail: number, seed: number): BufferGeom
     const crater = Math.max(0, fbm3(x * 3.1, y * 3.1 + seed, z * 3.1, 2, seed + 3) - 0.6) * 1.6;
     const r = 0.7 + n * 0.6 - crater + (fine - 0.5) * 0.12;
     pos.setXYZ(i, x * r * sx, y * r * sy, z * r * sz);
-    const vein = fbm3(x * 5.5, y * 5.5, z * 5.5 + seed, 3, seed + 11) > 0.66 ? 1 : 0;
-    const base = 0.1 + n * 0.1 + crater * 0.05;
-    colors[i * 3] = vein ? 1 : base;
-    colors[i * 3 + 1] = vein ? 1 : base;
-    colors[i * 3 + 2] = vein ? 1 : base * 1.05;
   }
-  g.setAttribute("color", new BufferAttribute(colors, 3));
   g = g.toNonIndexed();
   g.computeVertexNormals();
+  // per-face colours (linear albedo): dark basalt faces + crisp mineral-vein facets
+  const p2 = g.attributes.position;
+  if (!p2) return g;
+  const colors = new Float32Array(p2.count * 3);
+  for (let f = 0; f < p2.count; f += 3) {
+    const cx = (p2.getX(f) + p2.getX(f + 1) + p2.getX(f + 2)) / 3;
+    const cy = (p2.getY(f) + p2.getY(f + 1) + p2.getY(f + 2)) / 3;
+    const cz = (p2.getZ(f) + p2.getZ(f + 1) + p2.getZ(f + 2)) / 3;
+    const vein = fbm3(cx * 3.2, cy * 3.2, cz * 3.2 + seed, 3, seed + 11) > 0.64;
+    const shade = 0.035 + fbm3(cx * 2, cy * 2, cz * 2, 2, seed + 5) * 0.05;
+    const v = vein ? 1 : shade;
+    for (let k = 0; k < 3; k++) {
+      colors[(f + k) * 3] = v;
+      colors[(f + k) * 3 + 1] = v;
+      colors[(f + k) * 3 + 2] = vein ? 1 : v * 1.05;
+    }
+  }
+  g.setAttribute("color", new BufferAttribute(colors, 3));
   return g;
 }
 
@@ -76,7 +87,7 @@ export class AsteroidLayer {
     this.material.onBeforeCompile = (shader) => {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <emissivemap_fragment>",
-        "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += max(vColor.rgb - vec3(0.3), vec3(0.0)) * 1.1;\n#endif",
+        "#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance += max(vColor.rgb - vec3(0.2), vec3(0.0)) * 1.3;\n#endif",
       );
     };
     for (let v = 0; v < variants; v++) {

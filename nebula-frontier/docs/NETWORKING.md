@@ -16,7 +16,7 @@ Clients send **intents only**. The server decides positions, HP, damage, cooldow
 | `arena` | `ArenaRoom` | `mapId, instanceKey` | any | Rated small-team matches. |
 | `clan_war` | `ClanWarRoom` | `mapId, instanceKey` | any | Exactly two clans. `instanceKey` = `ClanWar.id`. The result updates the ClanWar row and clan score in the same transaction as GameMatch. |
 | `gate` | `GateRoom` | `mapId, instanceKey, difficulty` | `roomType: "gate"` | Waves 1-3, Elite, Mini Boss, Final Boss. `difficulty` is `NORMAL`, `HARD`, `NIGHTMARE` or `MYTHIC`. The entry cost is charged once per instance. |
-| `raid` | `RaidRoom` | `mapId, instanceKey, difficulty` | `roomType: "raid"` | `difficulty` sets the raid size: `4`, `8`, `16` or `25`. Boss hull scales with size. |
+| `raid` | `RaidRoom` | `mapId, instanceKey, difficulty` | `roomType: "raid"` | `difficulty` sets the raid size: `4`, `8`, `16` or `25`. Boss hull scales with size. Each pilot may enter `raidDailyEntries` raids per UTC day. Rewards need at least `ceil(size × raidMinPilotsFraction)` contributors and are scaled by `min(1, contributors / size)`. |
 | `event` | `EventRoom` | `mapId, instanceKey` | any map listed by an active event | Instanced event/rift. Joining is rejected (`NO_ACTIVE_EVENT`) unless an event is active on that map. |
 | `galaxy` | `GalaxyRoom` | – | – | Online counts per map/room (across processes via the matchmaker driver) and active events. |
 | `lobby` | Colyseus `LobbyRoom` | – | – | Realtime room listing: `sector`, `pvp`, `arena`, `boss` and `event` are listed. |
@@ -35,7 +35,8 @@ Room metadata is `{ mapId, roomKind, region, maxPlayers, instanceKey?, difficult
    `client.joinOrCreate("sector", { ticket, mapId })`. For instanced rooms also pass `instanceKey` / `difficulty`.
    `JoinOptions` is validated with zod.
 3. `onAuth` does three things:
-   - `verifyGameTicket(ticket, GAME_TICKET_SECRET)`.
+   - `verifyGameTicket(ticket, keyRingFromEnv("GAME_TICKET"))`. `GAME_TICKET_SECRETS=kid:secret,…` supports key
+     rotation: the first key signs, and all keys verify. `GAME_TICKET_SECRET` is the single-key fallback.
    - Single use: `SET gt:<jti> 1 EX 120 NX`. This is the same key the API uses. Without Redis a process-local TTL map
      is used. A reused ticket is rejected with `TICKET_REPLAYED`.
    - Sector and boss rooms reject a ticket issued for another map (`TICKET_MAP_MISMATCH`).
@@ -269,6 +270,18 @@ write per type per 30 s) and sent to `recordRiskSignal` (`@nebula/economy`), whi
   - Crypto rewards always go through `grantCryptoReward` with unique source refs.
 - **Crash window:** a hard crash loses at most one flush interval of *batched* deltas (≤ 5 s of XP/counters). Loot,
   money sinks and match results are already committed. Nothing is kept only in Redis.
+
+### Clan missions (game server → API)
+
+Targeted objective events of clan members (KILL / KILL_PLAYER / COLLECT / MINE / TRAVEL / DAMAGE_BOSS / COMPLETE_GATE /
+WIN_PVP / DELIVER) are sent to `POST {API_INTERNAL_URL}/api/internal/clan-missions/progress` with the header
+`x-internal-token: $INTERNAL_SERVICE_TOKEN`.
+
+- Quantity events (boss damage, mining, collecting) are aggregated per user and target.
+- Events are sent with the persistence flush, in batches of at most 500, fire-and-forget, retried with backoff.
+- Delivery never blocks the tick.
+- After the retries are exhausted the batch is dropped and logged. Untargeted objectives still progress from
+  PlayerStat in the API.
 
 ## 12. Load testing with bots
 

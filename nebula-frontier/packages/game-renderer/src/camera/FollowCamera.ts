@@ -46,7 +46,7 @@ export class FollowCamera {
     this.pitch = opts.pitch ?? 1.08;
     this.minDistance = opts.minDistance ?? 30;
     this.maxDistance = opts.maxDistance ?? 220;
-    this.distance = opts.distance ?? 85;
+    this.distance = opts.distance ?? 64;
     this.curDistance = this.distance;
   }
 

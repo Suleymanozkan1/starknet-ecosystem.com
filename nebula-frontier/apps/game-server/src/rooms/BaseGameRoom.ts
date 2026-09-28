@@ -180,6 +180,10 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
   /** Called after an NPC dies and default rewards are applied. */
   protected onNpcKilled(_npc: NpcActor, _credited: PlayerActor | null): void {}
   protected onPlayerKilled(_victim: PlayerActor, _killer: ShipActor | null): void {}
+  /** Multiplier applied to NPC kill rewards (XP/credits/loot); 0 disables them. */
+  protected rewardScale(_npc: NpcActor, _contributors: number): number {
+    return 1;
+  }
   /** Whether NPC kills use contribution sharing (bosses always do). */
   protected shareRewards(npc: NpcActor): boolean {
     return npc.def.kind === "BOSS";
@@ -211,7 +215,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     if (!map) throw new ServerError(4404, `Unknown map ${mapId}`);
     this.map = map;
     this.options = { ...(JoinOptionsSchema.partial().parse(rawOptions) as ParsedJoinOptions), mapId };
-    const { rules, tuning } = await loadRules(this.svc.db);
+    const { rules, tuning } = await loadRules(this.svc.db, this.log);
     this.rules = rules;
     this.tuning = tuning;
     this.rng = mulberry32(this.svc.rngSeed ?? randomInt(0, 2 ** 31));
@@ -1130,8 +1134,10 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     }
     if (boss) this.broadcast(ServerEvent.KILL_FEED, { killer: credited?.name ?? killer?.name ?? "?", victim: n.name, weapon: "", pvp: false });
 
-    const rewardMult = n.rewardMult;
-    if (this.shareRewards(n) && totalDmg > 0) {
+    const rewardMult = n.rewardMult * this.rewardScale(n, contributors.length);
+    if (rewardMult <= 0) {
+      // No rewards (e.g. under-manned raid); kill still counts for match/quest bookkeeping below.
+    } else if (this.shareRewards(n) && totalDmg > 0) {
       for (const c of contributors) {
         const share = c.dmg / totalDmg;
         if (share < this.rules.bossMinContribution) continue;
@@ -1296,10 +1302,10 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     v.pending.deaths++;
     const cost = deathRepairCost(v.maxHull, PROGRESSION);
     v.lastRepairCost = 0;
-    if (cost > 0) {
+    if (cost > 0n) {
       const key = `death:${this.roomId}:${v.userId}:${v.deathCount}`;
       this.svc.persistence.chargeCredits(v.userId, cost, key, "death_repair", true)
-        .then((charged) => { v.lastRepairCost = charged; })
+        .then((charged) => { v.lastRepairCost = Number(charged); })
         .catch((e: unknown) => this.log.error({ err: e }, "repair charge failed"));
     }
     const kp = killer?.kind === "PLAYER" ? (killer as PlayerActor) : null;
@@ -1672,7 +1678,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       this.svc.persistence.chargeCredits(p.userId, cost, key, "station_repair", true)
         .then((charged) => {
           if (p.left) return;
-          const fraction = cost > 0 ? charged / cost : 1;
+          const fraction = cost > 0n ? Number(charged) / Number(cost) : 1;
           p.hull = Math.min(p.maxHull, p.hull + missing * fraction);
           if (charged < cost) this.emitTo(p.client, ServerEvent.NOTICE, { level: "warn", text: "Insufficient credits for a full repair" });
         })

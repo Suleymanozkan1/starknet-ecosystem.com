@@ -117,7 +117,8 @@ export const ShieldUp: Behavior = (w, mem) => {
 export const ARCHETYPES: Record<string, Behavior[]> = {
   scout: [Flee, Wander],
   miner: [Flee, Collect, Wander],
-  fighter: [Flee, Collect, Attack, Wander],
+  // Fighters engage first and only collect when there is nothing to fight.
+  fighter: [Flee, Attack, Collect, Wander],
   tank: [ShieldUp, Attack, Wander],
   support: [Flee, Assist, Attack, Wander],
 };

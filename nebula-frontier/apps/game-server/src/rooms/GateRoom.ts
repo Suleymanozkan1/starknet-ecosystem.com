@@ -5,6 +5,7 @@
  * eligibility (source GATE). RaidRoom extends this for 4/8/16/25-pilot raids.
  */
 import { GATES, NPCS_BY_ID } from "@nebula/config";
+import { toMoney } from "@nebula/game-core";
 import { GateDifficulty, MatchMode, RoomName, ServerEvent, type GateDef, type RewardSource } from "@nebula/shared";
 import { ServerError } from "@colyseus/core";
 import { BaseGameRoom } from "./BaseGameRoom.js";
@@ -58,44 +59,67 @@ export class GateRoom extends BaseGameRoom {
     if (!g) throw new ServerError(4404, "NO_GATE_FOR_MAP");
     if (this.completed) throw new ServerError(4403, "GATE_COMPLETED");
     if (p.level < g.requiredLevel) throw new ServerError(4403, "LEVEL_TOO_LOW");
-    // Entry cost, charged once per instance (re-joining the same instance is free; idempotent key).
+    // Entry cost is charged once per instance. The in-memory claim happens synchronously
+    // (before any await), so concurrent joins of the same user in this room cannot both pay;
+    // the ledger idempotency key protects credits across retries, and resources are only spent
+    // when the credit charge was new (or when the entry has no credit cost and the claim is ours).
     if (this.participants.has(p.userId)) return;
-    const credits = g.entryCost.credits ?? 0;
+    this.participants.add(p.userId);
+    const credits = toMoney(g.entryCost.credits ?? 0);
     const resources = g.entryCost.resources ?? {};
     const key = `gate_entry:${this.roomId}:${p.userId}`;
     try {
       await this.svc.db.$transaction(async (tx) => {
-        const paid = await tx.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } });
-        if (paid) return;
-        await this.svc.persistence.chargeCredits(p.userId, credits, key, `gate_entry:${g.id}`, false, tx);
+        if (credits > 0n) {
+          const charged = await this.svc.persistence.chargeCredits(p.userId, credits, key, `gate_entry:${g.id}`, false, tx);
+          if (charged === 0n) return; // duplicate entry: already paid (credits + resources) earlier
+        }
         await this.svc.persistence.spendResources(tx, p.userId, resources);
       });
     } catch (e) {
+      this.participants.delete(p.userId);
       const msg = (e as Error).message;
       if (msg.includes("INSUFFICIENT")) throw new ServerError(4402, msg.startsWith("INSUFFICIENT_RESOURCE") ? msg : "INSUFFICIENT_CREDITS");
       throw e;
     }
-    this.participants.add(p.userId);
   }
 
-  protected override onPlayerJoined(): void {
+  /** Create the GameMatch row once (shared promise — no sentinel ids). */
+  protected ensureMatch(): Promise<string> {
+    this.matchPromise ??= this.svc.persistence
+      .createMatch({ roomId: this.roomId, mode: this.matchMode(), mapId: this.map.id, metadata: this.matchMetadata() })
+      .then((id) => {
+        this.matchId = id;
+        this.state.match.matchId = id;
+        this.broadcast(ServerEvent.MATCH_START, { matchId: id, mode: this.matchMode() });
+        return id;
+      })
+      .catch((e: unknown) => {
+        this.matchPromise = null;
+        throw e;
+      });
+    return this.matchPromise;
+  }
+  protected matchPromise: Promise<string> | null = null;
+
+  protected matchMetadata(): Record<string, unknown> {
+    return { gate: this.gate?.id, difficulty: this.difficulty };
+  }
+
+  /** Persist only the joining player's GameMatchPlayer row; failures are logged, never thrown. */
+  protected enrollInMatch(p: PlayerActor): void {
+    this.ensureMatch()
+      .then((id) => this.svc.persistence.joinMatch(id, p.userId, 0))
+      .catch((e: unknown) => this.log.error({ err: e, userId: p.userId }, "match enrollment failed"));
+  }
+
+  protected override onPlayerJoined(p: PlayerActor): void {
     if (this.wave < 0 && !this.completed) {
       this.wave = 0;
       this.nextWaveAt = this.now + this.rules.gateWaveDelayMs;
       this.state.match.phase = "RUNNING";
-      if (!this.matchId) {
-        void this.svc.persistence.createMatch({ roomId: this.roomId, mode: MatchMode.GATE, mapId: this.map.id, metadata: { gate: this.gate?.id, difficulty: this.difficulty } })
-          .then((id) => {
-            this.matchId = id;
-            this.state.match.matchId = id;
-            this.broadcast(ServerEvent.MATCH_START, { matchId: id, mode: MatchMode.GATE });
-            for (const p of this.players.values()) void this.svc.persistence.joinMatch(id, p.userId, 0);
-          })
-          .catch((e: unknown) => this.log.error({ err: e }, "createMatch failed"));
-      }
-    } else if (this.matchId) {
-      for (const p of this.players.values()) void this.svc.persistence.joinMatch(this.matchId, p.userId, 0);
     }
+    this.enrollInMatch(p);
   }
 
   protected waveNpcsAlive(): number {
@@ -114,7 +138,9 @@ export class GateRoom extends BaseGameRoom {
       return;
     }
     if (this.nextWaveAt === 0 && this.waveNpcsAlive() === 0) {
-      if (this.wave >= g.waves.length - 1) void this.completeRun();
+      if (this.wave >= g.waves.length - 1) {
+        this.completeRun().catch((e: unknown) => this.log.error({ err: e }, "gate completion failed"));
+      }
       else {
         this.wave++;
         this.nextWaveAt = this.now + this.rules.gateWaveDelayMs;
@@ -157,13 +183,20 @@ export class GateRoom extends BaseGameRoom {
     const m = this.mult();
     const scores = [...this.players.values()].map((p) => ({ entityId: p.id, name: p.name, kills: p.kills, deaths: p.deaths, score: Math.round(p.damageDealt) }));
     for (const p of this.players.values()) {
-      p.pending.gatesCompleted++;
-      this.questEvent(p, { type: "COMPLETE_GATE", gateId: g.id, mapId: this.map.id });
-      await this.grantBundle(p, g.rewards, m.reward, `gate:${this.roomId}:${p.userId}`, `${g.name} (${this.difficulty}) cleared`, this.completionSource());
+      // One player's failure must not block the others, finishMatch or lock().
+      try {
+        p.pending.gatesCompleted++;
+        this.questEvent(p, { type: "COMPLETE_GATE", gateId: g.id, mapId: this.map.id });
+        await this.grantBundle(p, g.rewards, m.reward, `gate:${this.roomId}:${p.userId}`, `${g.name} (${this.difficulty}) cleared`, this.completionSource());
+      } catch (e) {
+        this.log.error({ err: e, userId: p.userId }, "gate reward failed");
+      }
     }
-    if (this.matchId) {
-      await this.svc.persistence.finishMatch(this.matchId, 0, [...this.players.values()].map((p) => ({ userId: p.userId, kills: p.kills, deaths: p.deaths, damage: p.damageDealt, score: Math.round(p.damageDealt), ratingDelta: 0, won: true, left: false })), { gate: g.id, difficulty: this.difficulty })
-        .catch((e: unknown) => this.log.error({ err: e }, "finishMatch failed"));
+    try {
+      const matchId = await this.ensureMatch();
+      await this.svc.persistence.finishMatch(matchId, 0, [...this.players.values()].map((p) => ({ userId: p.userId, kills: p.kills, deaths: p.deaths, damage: p.damageDealt, score: Math.round(p.damageDealt), ratingDelta: 0, won: true, left: false })), { gate: g.id, difficulty: this.difficulty });
+    } catch (e) {
+      this.log.error({ err: e }, "finishMatch failed");
     }
     this.broadcast(ServerEvent.MATCH_END, { matchId: this.matchId ?? this.roomId, winnerTeam: 0, scores });
     await this.lock();
@@ -174,7 +207,14 @@ export class GateRoom extends BaseGameRoom {
   }
 }
 
-/** Raid instance: map spawns (raid boss + adds) scaled for 4/8/16/25 pilots; completes when the raid boss dies. */
+/**
+ * Raid instance: map spawns (raid boss + adds) scaled for 4/8/16/25 pilots; completes when the raid boss dies.
+ *
+ * Anti-exploit (a solo pilot must not farm a small, weakened raid for full rewards):
+ * - daily entry limit per pilot (`game.rules.raidDailyEntries`, counted from GameMatchPlayer rows of RAID matches);
+ * - rewards require at least `ceil(raidSize × raidMinPilotsFraction)` distinct contributors, and are scaled by
+ *   `min(1, contributors / raidSize)` (XP/credits/loot/crypto weight). Admission is enforced server-side.
+ */
 export class RaidRoom extends GateRoom {
   override readonly roomKind: RoomName = RoomName.RAID;
   private raidSize = 8;
@@ -187,6 +227,20 @@ export class RaidRoom extends GateRoom {
   }
   protected override completionSource(): RewardSource {
     return "RAID";
+  }
+  protected override matchMetadata(): Record<string, unknown> {
+    return { size: this.raidSize };
+  }
+
+  minPilots(): number {
+    return Math.max(1, Math.ceil(this.raidSize * this.rules.raidMinPilotsFraction));
+  }
+
+  /** Reward scale for the raid boss based on how many pilots actually fought it. */
+  protected override rewardScale(n: NpcActor, contributors: number): number {
+    if (n.tag !== "raidboss") return 1;
+    if (contributors < this.minPilots()) return 0;
+    return Math.min(1, contributors / this.raidSize);
   }
 
   protected override setupWorld(): void {
@@ -213,20 +267,24 @@ export class RaidRoom extends GateRoom {
   protected override async beforePlayerJoin(p: PlayerActor): Promise<void> {
     if (this.completed) throw new ServerError(4403, "RAID_COMPLETED");
     if (p.level < this.map.levelRange[0]) throw new ServerError(4403, "LEVEL_TOO_LOW");
+    if (this.participants.has(p.userId)) return; // re-join of the same instance
+    const dayStart = new Date();
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const entries = await this.svc.db.gameMatchPlayer.count({ where: { userId: p.userId, joinedAt: { gte: dayStart }, match: { mode: MatchMode.RAID } } });
+    if (entries >= this.rules.raidDailyEntries) throw new ServerError(4403, "RAID_DAILY_LIMIT");
     this.participants.add(p.userId);
+    // Record the entry before admission so the daily limit cannot be bypassed by leaving early.
+    try {
+      const id = await this.ensureMatch();
+      await this.svc.persistence.joinMatch(id, p.userId, 0);
+    } catch (e) {
+      this.participants.delete(p.userId);
+      throw e;
+    }
   }
 
   protected override onPlayerJoined(): void {
-    if (!this.matchId) {
-      this.matchId = "pending";
-      void this.svc.persistence.createMatch({ roomId: this.roomId, mode: MatchMode.RAID, mapId: this.map.id, metadata: { size: this.raidSize } })
-        .then((id) => {
-          this.matchId = id;
-          this.state.match.matchId = id;
-          this.broadcast(ServerEvent.MATCH_START, { matchId: id, mode: MatchMode.RAID });
-        })
-        .catch((e: unknown) => this.log.error({ err: e }, "createMatch failed"));
-    }
+    // enrollment already happened in beforePlayerJoin
   }
 
   protected override onTickExtra(): void {
@@ -238,15 +296,23 @@ export class RaidRoom extends GateRoom {
     this.completed = true;
     this.state.match.phase = "ENDED";
     const total = contributors.reduce((s, c) => s + c.dmg, 0);
+    const scale = this.rewardScale(n, contributors.length);
+    if (scale <= 0) {
+      this.broadcast(ServerEvent.NOTICE, { level: "warn", text: `Raid rewards require at least ${this.minPilots()} pilots` });
+    }
     for (const c of contributors) {
       const share = total > 0 ? c.dmg / total : 0;
       if (share < this.rules.bossMinContribution) continue;
       this.questEvent(c.p, { type: "KILL", npcId: n.def.id, boss: true, mapId: this.map.id });
-      void this.crypto(c.p, "RAID", `raid:${this.roomId}:${c.p.userId}`, Math.max(0.2, Math.min(3, share * contributors.length)), `${n.name} defeated (raid ${this.raidSize})`, this.matchId ?? undefined);
+      if (scale > 0) {
+        void this.crypto(c.p, "RAID", `raid:${this.roomId}:${c.p.userId}`, Math.max(0.2, Math.min(3, share * contributors.length)) * scale, `${n.name} defeated (raid ${this.raidSize})`, this.matchId ?? undefined);
+      }
     }
-    if (this.matchId && this.matchId !== "pending") {
-      await this.svc.persistence.finishMatch(this.matchId, 0, contributors.map((c) => ({ userId: c.p.userId, kills: c.p.kills, deaths: c.p.deaths, damage: c.dmg, score: Math.round(c.dmg), ratingDelta: 0, won: true, left: false })), { boss: n.def.id, size: this.raidSize })
-        .catch((e: unknown) => this.log.error({ err: e }, "finishMatch failed"));
+    try {
+      const matchId = await this.ensureMatch();
+      await this.svc.persistence.finishMatch(matchId, 0, contributors.map((c) => ({ userId: c.p.userId, kills: c.p.kills, deaths: c.p.deaths, damage: c.dmg, score: Math.round(c.dmg), ratingDelta: 0, won: true, left: false })), { boss: n.def.id, size: this.raidSize, rewardScale: scale });
+    } catch (e) {
+      this.log.error({ err: e }, "finishMatch failed");
     }
     this.broadcast(ServerEvent.MATCH_END, { matchId: this.matchId ?? this.roomId, winnerTeam: 0, scores: contributors.map((c) => ({ entityId: c.p.id, name: c.p.name, kills: c.p.kills, deaths: c.p.deaths, score: Math.round(c.dmg) })) });
   }

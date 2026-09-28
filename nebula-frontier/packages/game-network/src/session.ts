@@ -49,6 +49,11 @@ export interface SessionEvents {
   ping: number;
 }
 
+/** Schema fields the server never assigned decode as undefined — treat as 0. */
+function num(v: number | undefined): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
 export interface Pose {
   x: number;
   y: number;
@@ -176,18 +181,18 @@ export class GameSession {
       if (added) this.events.emit("entityAdd", e);
       return;
     }
-    this.sample.x = e.x;
-    this.sample.y = e.y;
-    this.sample.heading = e.heading;
-    this.sample.vx = e.vx;
-    this.sample.vy = e.vy;
+    this.sample.x = num(e.x);
+    this.sample.y = num(e.y);
+    this.sample.heading = num(e.heading);
+    this.sample.vx = num(e.vx);
+    this.sample.vy = num(e.vy);
     this.interp.push(e.id, now, this.sample);
     if (added) this.events.emit("entityAdd", e);
   }
 
   private onLocalSnapshot(e: EntitySnapshot): void {
     const map = MAPS_BY_ID.get(this.mapId);
-    const server = { x: e.x, y: e.y, vx: e.vx, vy: e.vy, heading: e.heading, energy: e.energy };
+    const server = { x: num(e.x), y: num(e.y), vx: num(e.vx), vy: num(e.vy), heading: num(e.heading), energy: num(e.energy) };
     const stunned = (e.flags & EntityFlag.STUNNED) !== 0;
     if (e.dead) {
       this.localDead = true;
@@ -206,8 +211,8 @@ export class GameSession {
       return;
     }
     this.predictor.stats.stunned = stunned;
-    this.predictor.stats.maxEnergy = e.maxEnergy;
-    this.predictor.reconcile(server, e.lastSeq);
+    this.predictor.stats.maxEnergy = num(e.maxEnergy);
+    this.predictor.reconcile(server, num(e.lastSeq));
   }
 
   /** True when local input should be applied (alive, not docked, predictor ready). */

@@ -23,6 +23,11 @@ const PICK_RADIUS_PX = 34;
 
 interface CooldownStart { at: number; ms: number }
 
+/** Unset schema fields decode as undefined. */
+function num(v: number | undefined): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
 /** Orchestrates renderer, overlay, network session, input and audio. */
 export class Game {
   private readonly opts: GameClientOptions;
@@ -675,9 +680,9 @@ export class Game {
       let r = this.renderInputs.get(e.id);
       if (!r) {
         r = {
-          id: e.id, kind: e.kind, defId: e.defId, cosmetics: e.cosmetics, x: e.x, y: e.y, heading: e.heading, vx: e.vx, vy: e.vy,
-          hull: e.hull, maxHull: e.maxHull, shield: e.shield, maxShield: e.maxShield, flags: e.flags, cloaked: e.cloaked, dead: e.dead,
-          targetId: e.targetId,
+          id: e.id, kind: e.kind, defId: e.defId ?? "", cosmetics: e.cosmetics ?? "", x: num(e.x), y: num(e.y), heading: num(e.heading),
+          vx: num(e.vx), vy: num(e.vy), hull: num(e.hull), maxHull: num(e.maxHull), shield: num(e.shield), maxShield: num(e.maxShield),
+          flags: num(e.flags), cloaked: !!e.cloaked, dead: !!e.dead, targetId: e.targetId ?? "",
         };
         this.renderInputs.set(e.id, r);
         this.kinds.set(e.id, e.kind);
@@ -687,10 +692,10 @@ export class Game {
       if (ok) {
         r.x = this.pose.x; r.y = this.pose.y; r.heading = this.pose.heading; r.vx = this.pose.vx; r.vy = this.pose.vy;
       } else {
-        r.x = e.x; r.y = e.y; r.heading = e.heading; r.vx = e.vx; r.vy = e.vy;
+        r.x = num(e.x); r.y = num(e.y); r.heading = num(e.heading); r.vx = num(e.vx); r.vy = num(e.vy);
       }
-      r.hull = e.hull; r.maxHull = e.maxHull; r.shield = e.shield; r.maxShield = e.maxShield; r.flags = e.flags;
-      r.cloaked = e.cloaked; r.dead = e.dead; r.targetId = e.targetId; r.cosmetics = e.cosmetics;
+      r.hull = num(e.hull); r.maxHull = num(e.maxHull); r.shield = num(e.shield); r.maxShield = num(e.maxShield); r.flags = num(e.flags);
+      r.cloaked = !!e.cloaked; r.dead = !!e.dead; r.targetId = e.targetId ?? ""; r.cosmetics = e.cosmetics ?? "";
       if (isLocal) {
         this.localPose.x = r.x; this.localPose.y = r.y; this.localPose.heading = r.heading; this.localPose.vx = r.vx; this.localPose.vy = r.vy;
         this.hasLocalPose = true;
@@ -757,7 +762,8 @@ export class Game {
     const vp = this.world.viewport;
     // camera footprint (map coords) from screen corners
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const [sx, sy] of [[0, 0], [vp.width, 0], [0, vp.height], [vp.width, vp.height]] as const) {
+    for (let c = 0; c < 4; c++) {
+      const sx = c % 2 === 0 ? 0 : vp.width, sy = c < 2 ? 0 : vp.height;
       if (this.world.screenToMap(sx, sy, this.tmpMap)) {
         minX = Math.min(minX, this.tmpMap.x); maxX = Math.max(maxX, this.tmpMap.x);
         minY = Math.min(minY, this.tmpMap.y); maxY = Math.max(maxY, this.tmpMap.y);

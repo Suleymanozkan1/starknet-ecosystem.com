@@ -66,8 +66,8 @@ async function shipsView(): Promise<void> {
   ];
   ents.push(...skinned);
   world.camera.follow(Number(params.get("x") ?? cx), Number(params.get("y") ?? cy));
-  world.camera.setZoom(Number(params.get("zoom") ?? 150));
-  const norm = params.get("norm") === "1";
+  world.camera.setZoom(Number(params.get("zoom") ?? 132));
+  const norm = params.get("norm") !== "0";
   world.camera.snap();
   const pos = { x: 0, y: 0 };
   let frames = 0;
@@ -81,7 +81,7 @@ async function shipsView(): Promise<void> {
       world.syncEntity(e, 1 / 60);
       if (norm && frames === 0) {
         const def = SHIPS.find((x) => x.id === e.defId);
-        if (def) world.setDisplayScale(e.id, Math.min(1.6, 7 / def.visual.length));
+        if (def) world.setDisplayScale(e.id, Math.max(0.6, Math.min(2.2, 6.5 / def.visual.length)));
       }
     }
     if (frames % 40 === 5) {

@@ -55,7 +55,7 @@ export function buildShipGeometry(v: ShipVisualDef, withGreebles: boolean): Ship
   let greebles: Float32Array = new Float32Array(0);
   for (const d of DETAIL_FOR_LEVEL) {
     const rng = createRng(key);
-    const pc = new PartCollector(1.4 / Math.max(1, v.length / 3));
+    const pc = new PartCollector(0.75 / Math.sqrt(Math.max(1, v.length / 3)));
     const L = v.length;
     const hull = buildHull(v.hull, L, d, pc);
     const wings = buildWings(v, hull, d, pc);

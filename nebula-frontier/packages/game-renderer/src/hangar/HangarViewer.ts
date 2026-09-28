@@ -253,6 +253,13 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     }
     factory.update(time);
     fx.update(time, dt);
+    if (!backend.supportsGlsl) {
+      // experimental WebGPU backend: GLSL effects are unsupported → hide them
+      scene.traverse((o) => {
+        const m = (o as { material?: unknown }).material;
+        if (m && (m as { isShaderMaterial?: boolean }).isShaderMaterial) o.visible = false;
+      });
+    }
     controls.update();
     backend.render(scene, camera);
   };
