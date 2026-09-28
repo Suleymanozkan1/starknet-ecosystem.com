@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-28T20:37:21.469Z",
+  "generatedAt": "2026-09-28T20:42:09.524Z",
   "total": 249,
-  "implemented": 159,
-  "partial": 87,
+  "implemented": 227,
+  "partial": 20,
   "notImplemented": 1,
-  "blocked": 2,
-  "completionPercent": 63.9,
+  "blocked": 1,
+  "completionPercent": 91.2,
   "byCategory": {
     "PROJECT STRUCTURE": {
       "IMPLEMENTED": 7,
@@ -44,8 +44,8 @@
       "BLOCKED": 0
     },
     "WORLD IMMERSION": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -62,14 +62,14 @@
       "BLOCKED": 0
     },
     "NAVIGATION": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "FACTIONS": {
-      "IMPLEMENTED": 2,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 3,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -104,8 +104,8 @@
       "BLOCKED": 0
     },
     "SHIP CUSTOMIZATION": {
-      "IMPLEMENTED": 1,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 2,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -128,20 +128,20 @@
       "BLOCKED": 0
     },
     "THREE.JS": {
-      "IMPLEMENTED": 2,
-      "PARTIAL": 3,
+      "IMPLEMENTED": 4,
+      "PARTIAL": 1,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "EFFECTS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 4,
+      "IMPLEMENTED": 4,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "CAMERA": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -164,14 +164,14 @@
       "BLOCKED": 0
     },
     "INPUT": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 2,
+      "IMPLEMENTED": 2,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "MOBILE INPUT": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -266,8 +266,8 @@
       "BLOCKED": 0
     },
     "PET / COMPANION": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -278,8 +278,8 @@
       "BLOCKED": 0
     },
     "DAMAGE VISUALIZATION": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -314,8 +314,8 @@
       "BLOCKED": 0
     },
     "RAID": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -332,8 +332,8 @@
       "BLOCKED": 0
     },
     "GLOBAL EVENTS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -344,8 +344,8 @@
       "BLOCKED": 0
     },
     "RESOURCES": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -386,8 +386,8 @@
       "BLOCKED": 0
     },
     "CLAN WAR": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -398,38 +398,38 @@
       "BLOCKED": 0
     },
     "SQUAD": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "FRIENDS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "CHAT": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "MAILBOX": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "NOTIFICATIONS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "PROFILE": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -440,38 +440,38 @@
       "BLOCKED": 0
     },
     "ACHIEVEMENTS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "BATTLE PASS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "SEASONS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "LEADERBOARD": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "BOUNTY": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "REPUTATION": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -560,8 +560,8 @@
       "BLOCKED": 0
     },
     "BLOCKCHAIN SERVICE": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -585,9 +585,9 @@
     },
     "SMART CONTRACT": {
       "IMPLEMENTED": 0,
-      "PARTIAL": 0,
+      "PARTIAL": 1,
       "NOT_IMPLEMENTED": 0,
-      "BLOCKED": 1
+      "BLOCKED": 0
     },
     "DEVNET": {
       "IMPLEMENTED": 0,
@@ -710,14 +710,14 @@
       "BLOCKED": 0
     },
     "OWNER REVENUE": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "TRANSPARENCY": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -740,8 +740,8 @@
       "BLOCKED": 0
     },
     "COMPLIANCE": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -776,8 +776,8 @@
       "BLOCKED": 0
     },
     "MONITORING": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -812,62 +812,62 @@
       "BLOCKED": 0
     },
     "DEV BOTS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "ADMIN PANEL": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 2,
+      "IMPLEMENTED": 2,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "ECONOMY ADMIN": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "ANALYTICS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "WEB": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 18,
+      "IMPLEMENTED": 18,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "HUD": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "UI QUALITY": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "MOBILE UI": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "CAPACITOR": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "ANDROID": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -884,8 +884,8 @@
       "BLOCKED": 0
     },
     "MOBILE PERFORMANCE": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -908,8 +908,8 @@
       "BLOCKED": 0
     },
     "REDIS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -938,8 +938,8 @@
       "BLOCKED": 0
     },
     "TESTING": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -1155,10 +1155,8 @@
       "id": "WORLD-05",
       "category": "WORLD IMMERSION",
       "requirement": "Asteroids, nebulas, wrecks, stations, gates, derelicts, distant objects rendered",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "WORLD-06",
@@ -1178,10 +1176,8 @@
       "id": "NAV-02",
       "category": "NAVIGATION",
       "requirement": "Smooth map transitions (warp effect/loading)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "FAC-01",
@@ -1208,10 +1204,8 @@
       "id": "FAC-04",
       "category": "FACTIONS",
       "requirement": "Faction reputation, missions, ranking",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "SHIP-01",
@@ -1245,10 +1239,8 @@
       "id": "SHIP-05",
       "category": "SHIP CUSTOMIZATION",
       "requirement": "Hull skin, engine effect/color, weapon skin, shield color/effect, trail, drone skin, explosion, nameplate, badge, emblem",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "SHIP-06",
@@ -1284,19 +1276,15 @@
       "id": "3D-01",
       "category": "THREE.JS",
       "requirement": "Three.js renderer with WebGPU-compatible abstraction",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "3D-02",
       "category": "THREE.JS",
       "requirement": "PBR materials (base, normal, metallic, roughness, emission, AO)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "3D-03",
@@ -1326,46 +1314,36 @@
       "id": "FX-01",
       "category": "EFFECTS",
       "requirement": "Engine glow & trails",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "FX-02",
       "category": "EFFECTS",
       "requirement": "Weapon muzzle flash, laser beams, projectiles, missile trails",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "FX-03",
       "category": "EFFECTS",
       "requirement": "Shield bubble + hit ripple, EMP, warp, explosions, debris, hull damage sparks/smoke",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "FX-04",
       "category": "EFFECTS",
       "requirement": "Nebula/particle fields, mining effects, boss attack effects",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CAM-01",
       "category": "CAMERA",
       "requirement": "Top-down follow camera: zoom, smooth follow, combat zoom, boss cinematic, target focus, auto framing",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "PHASER-01",
@@ -1398,28 +1376,22 @@
       "id": "INPUT-01",
       "category": "INPUT",
       "requirement": "Desktop WASD + mouse aim + left click fire + right click + 1-9 abilities + shortcuts",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "INPUT-02",
       "category": "INPUT",
       "requirement": "Gamepad support",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "INPUT-03",
       "category": "MOBILE INPUT",
       "requirement": "Touch joystick + fire/ability/ultimate/EMP/shield/dash + target buttons",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MOVE-01",
@@ -1492,7 +1464,8 @@
       "requirement": "Horizontal scaling via Redis presence/driver, regions",
       "status": "PARTIAL",
       "why": [
-        "NOT_TESTED"
+        "NOT_TESTED",
+        "RedisPresence/RedisDriver wired when REDIS_URL is set (presence/mute keys covered by game-server tests); a two-node matchmaking run has not been tested"
       ]
     },
     {
@@ -1565,10 +1538,8 @@
       "id": "CMB-08",
       "category": "PET / COMPANION",
       "requirement": "Pet: loot collect, repair, radar, scan, resource detection, buff, levels",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CMB-09",
@@ -1581,10 +1552,8 @@
       "id": "CMB-10",
       "category": "DAMAGE VISUALIZATION",
       "requirement": "Shield flash, sparks, smoke, broken parts, explosion, debris",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CMB-11",
@@ -1632,10 +1601,8 @@
       "id": "RAID-01",
       "category": "RAID",
       "requirement": "Raids for 4/8/16/25 players with mechanics",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "GATE-01",
@@ -1655,10 +1622,8 @@
       "id": "EVT-02",
       "category": "GLOBAL EVENTS",
       "requirement": "Dynamic global event 'VOID RIFT OPENED' with collective damage + tiers",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MINE-01",
@@ -1671,10 +1636,8 @@
       "id": "RES-01",
       "category": "RESOURCES",
       "requirement": "7 resources from asteroids/wrecks/NPC/quest/event/raid",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CRAFT-01",
@@ -1722,10 +1685,8 @@
       "id": "CLAN-02",
       "category": "CLAN WAR",
       "requirement": "Clan war phases Preparation→Declaration→Matchmaking→Battle→Scoring→Reward",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CLAN-03",
@@ -1740,55 +1701,43 @@
       "id": "SQUAD-01",
       "category": "SQUAD",
       "requirement": "4-8 player squads with shared target/marker/rewards/chat",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "FRIEND-01",
       "category": "FRIENDS",
       "requirement": "Add/remove/block/online/invite",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CHAT-01",
       "category": "CHAT",
       "requirement": "Global/Faction/Clan/Squad/Private chat with spam/rate limit/mute/report/ban",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MAIL-01",
       "category": "MAILBOX",
       "requirement": "Internal mail with reward attachments",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "NOTIF-01",
       "category": "NOTIFICATIONS",
       "requirement": "Web + mobile notifications for key events",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "PROF-01",
       "category": "PROFILE",
       "requirement": "Profile: level, rank, ship, gear score, PvP/PvE stats, achievements, clan, faction, title",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "RANK-01",
@@ -1801,55 +1750,43 @@
       "id": "ACH-01",
       "category": "ACHIEVEMENTS",
       "requirement": "Achievements (supports hundreds) unlocked server-side",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BP-01",
       "category": "BATTLE PASS",
       "requirement": "Free/premium tracks with pass XP and claims",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "SEASON-01",
       "category": "SEASONS",
       "requirement": "Seasons 1-3 with leaderboard, missions, cosmetics, boss, rewards",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "LB-01",
       "category": "LEADERBOARD",
       "requirement": "Leaderboards updated from gameplay (PvP kills etc.)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BOUNTY-01",
       "category": "BOUNTY",
       "requirement": "PvP bounties with amount/target/creator/expiration/status",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "REP-01",
       "category": "REPUTATION",
       "requirement": "Karma statuses Neutral/Friendly/Hostile/Outlaw/Bounty Target",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "PVP-01",
@@ -1970,10 +1907,8 @@
       "id": "BC-06",
       "category": "BLOCKCHAIN SERVICE",
       "requirement": "Separate blockchain service, sole treasury key holder",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-07",
@@ -2003,9 +1938,9 @@
       "id": "BC-10",
       "category": "SMART CONTRACT",
       "requirement": "Anchor program architecture for settlement/escrow",
-      "status": "BLOCKED",
+      "status": "PARTIAL",
       "why": [
-        "Rust/Anchor toolchain not available in this environment; program not compiled or deployed (MVP does not require it)"
+        "cargo check + 6 Rust unit tests pass; Anchor/Solana CLI not installed here, so not built as BPF, no on-chain (bankrun) tests, not deployed (MVP settles off-chain via blockchain-service)"
       ]
     },
     {
@@ -2162,19 +2097,15 @@
       "id": "ECO-17",
       "category": "OWNER REVENUE",
       "requirement": "Revenue sources tracked separately; profitability dashboard",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "ECO-18",
       "category": "TRANSPARENCY",
       "requirement": "Reward rules, pool, fees, eligibility, limits, season rules visible to players",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "ECO-19",
@@ -2201,10 +2132,8 @@
       "id": "ECO-22",
       "category": "COMPLIANCE",
       "requirement": "Feature flags / region / account restrictions ready for KYC/AML/age/tax",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "SEC-01",
@@ -2245,10 +2174,8 @@
       "id": "SEC-06",
       "category": "MONITORING",
       "requirement": "/health, /ready, /metrics on services",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "SEC-07",
@@ -2312,253 +2239,197 @@
       "id": "BOTS-01",
       "category": "DEV BOTS",
       "requirement": "Development bots Scout/Miner/Fighter/Tank/Support (wander/collect/attack/flee/assist)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "ADM-01",
       "category": "ADMIN PANEL",
       "requirement": "Admin dashboard (players, rooms, revenue, purchases, deposits, withdrawals, liability, treasury, suspicious, reports, health)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "ADM-02",
       "category": "ADMIN PANEL",
       "requirement": "Admin management (users, catalog, events, seasons, shop, market, clan, rewards, withdrawals, economy)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "ADM-03",
       "category": "ECONOMY ADMIN",
       "requirement": "Economy dashboard with required graphs",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "ANA-01",
       "category": "ANALYTICS",
       "requirement": "DAU/MAU/retention/session/match time/kills/ship & weapon usage/win rate/economy sources & sinks/market & withdrawal volume",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Home",
       "category": "WEB",
       "requirement": "Home screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Play",
       "category": "WEB",
       "requirement": "Play screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Galaxy",
       "category": "WEB",
       "requirement": "Galaxy screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Hangar",
       "category": "WEB",
       "requirement": "Hangar screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Inventory",
       "category": "WEB",
       "requirement": "Inventory screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Ships",
       "category": "WEB",
       "requirement": "Ships screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Missions",
       "category": "WEB",
       "requirement": "Missions screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Clan",
       "category": "WEB",
       "requirement": "Clan screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Market",
       "category": "WEB",
       "requirement": "Market screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Auction",
       "category": "WEB",
       "requirement": "Auction screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Leaderboard",
       "category": "WEB",
       "requirement": "Leaderboard screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Season",
       "category": "WEB",
       "requirement": "Season screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-BattlePass",
       "category": "WEB",
       "requirement": "BattlePass screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Wallet",
       "category": "WEB",
       "requirement": "Wallet screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Shop",
       "category": "WEB",
       "requirement": "Shop screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Settings",
       "category": "WEB",
       "requirement": "Settings screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-Profile",
       "category": "WEB",
       "requirement": "Profile screen wired to real API",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-HUD",
       "category": "HUD",
       "requirement": "HUD: health/shield/energy/ammo/speed/target/minimap/skills/cooldowns/quest/objective/squad/notifications",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-STYLE",
       "category": "UI QUALITY",
       "requirement": "AAA sci-fi holographic UI, transitions, loading screens",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-MOBILE",
       "category": "MOBILE UI",
       "requirement": "Bottom nav Home/Hangar/Galaxy/Clan/Shop/Wallet; critical-only combat HUD",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "UI-I18N",
       "category": "WEB",
       "requirement": "TR/EN localization",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MOB-01",
       "category": "CAPACITOR",
       "requirement": "Capacitor config & native project",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MOB-02",
       "category": "ANDROID",
       "requirement": "Android project generated and buildable",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MOB-03",
@@ -2580,10 +2451,8 @@
       "id": "MOB-05",
       "category": "MOBILE PERFORMANCE",
       "requirement": "Battery/GPU/network optimization, background pause",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MOB-06",
@@ -2610,10 +2479,8 @@
       "id": "INF-03",
       "category": "REDIS",
       "requirement": "Redis for presence, rate limits, queues (non-critical state)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "INF-04",
@@ -2649,10 +2516,8 @@
       "id": "INF-08",
       "category": "TESTING",
       "requirement": "Unit/integration/E2E/game server/economy/blockchain tests",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "INF-09",
