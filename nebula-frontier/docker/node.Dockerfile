@@ -2,13 +2,18 @@
 # Usage: docker build -f docker/node.Dockerfile --build-arg APP=api .
 FROM node:22-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+RUN --mount=type=secret,id=ca,required=false \
+    if [ -f /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca; fi \
+ && corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
 
 FROM base AS build
 ARG APP
 COPY . .
-RUN pnpm install --frozen-lockfile && pnpm --filter @nebula/${APP} build \
+# Optional corporate/sandbox CA for registry access (BuildKit secret "ca"); absent in normal builds.
+RUN --mount=type=secret,id=ca,required=false \
+    if [ -f /run/secrets/ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/ca npm_config_cafile=/run/secrets/ca; fi \
+ && pnpm install --frozen-lockfile && pnpm --filter @nebula/${APP} build \
  && pnpm --filter @nebula/${APP} deploy --prod --legacy /out
 
 FROM node:22-bookworm-slim AS runtime

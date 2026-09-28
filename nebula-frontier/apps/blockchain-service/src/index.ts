@@ -27,7 +27,6 @@ async function main(): Promise<void> {
   const treasuryAddress = getTreasuryAddress();
   if (signer.address !== treasuryAddress) throw new Error("Treasury signer does not match TREASURY_PUBLIC_KEY");
   const rpc = createRpcFromEnv();
-  await assertRpcCluster(rpc, network);
   const { mint, decimals } = getRewardMint();
 
   const db = createDb();
@@ -35,6 +34,27 @@ async function main(): Promise<void> {
   const connection = redis;
   const metrics = new Metrics();
   const queue = createWithdrawalQueue(connection);
+  const earlyServer = buildServer({ db, redis, rpc, queue, metrics, internalToken: env.internalToken, treasuryAddress });
+  let stopping = false;
+  // Safety gate: never pay out before the RPC is proven to be the configured cluster (genesis hash).
+  // An unreachable RPC at boot must not crash the service (queued payouts stay durable in Postgres and
+  // /health stays up); retry with exponential backoff and start the payout worker only once verified.
+  for (let attempt = 1; !stopping; attempt++) {
+    try {
+      await assertRpcCluster(rpc, network);
+      metrics.set("rpc_cluster_verified", 1);
+      break;
+    } catch (err) {
+      metrics.set("rpc_cluster_verified", 0);
+      const waitMs = Math.min(60_000, 1000 * 2 ** Math.min(attempt, 6));
+      log.warn("RPC cluster check failed; payouts held until verified", { attempt, retryInMs: waitMs, error: (err as Error).message });
+      if (attempt === 1) {
+        // Serve /health (+ /ready = 503) while waiting so orchestrators see a live, not-ready service.
+        await earlyServer.listen({ port: env.port, host: env.host });
+      }
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
   const worker = createWithdrawalWorker(
     connection,
     {
@@ -80,11 +100,12 @@ async function main(): Promise<void> {
   void runController();
   const ctrl = setInterval(() => void runController(), env.controllerIntervalMs);
 
-  const server = buildServer({ db, redis, rpc, queue, metrics, internalToken: env.internalToken, treasuryAddress });
-  await server.listen({ port: env.port, host: env.host });
+  const server = earlyServer;
+  if (!server.server.listening) await server.listen({ port: env.port, host: env.host });
   log.info("blockchain-service listening", { port: env.port, network, treasury: treasuryAddress, mint });
 
   const shutdown = async (sig: string) => {
+    stopping = true;
     log.info("shutting down", { signal: sig });
     clearInterval(sweep);
     clearInterval(ctrl);
