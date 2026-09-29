@@ -1,0 +1,158 @@
+{
+  "pnpm_install": {
+    "status": "PASS",
+    "evidence": "pnpm install (1232 packages) + prisma generate, 2026-09-28"
+  },
+  "lint": {
+    "status": "PASS",
+    "evidence": "pnpm lint: 0 errors, 0 warnings"
+  },
+  "build": {
+    "status": "PASS",
+    "evidence": "pnpm build: all 22 workspaces (tsc libs, tsup api/game-server/blockchain-service, vite web/admin/game-client)"
+  },
+  "tests": {
+    "status": "PASS",
+    "evidence": "pnpm test: 38 files / 331 tests (unit parallel + integration sequential) green; Playwright web e2e 9 specs green"
+  },
+  "db_migrate": {
+    "status": "PASS",
+    "evidence": "prisma migrate deploy on local Postgres 16 and inside docker compose (migrate service)"
+  },
+  "db_seed": {
+    "status": "PASS",
+    "evidence": "pnpm db:seed idempotent; docker compose migrate: created 361 rows"
+  },
+  "redis": {
+    "status": "PASS",
+    "evidence": "API/game-server /ready report redis ok; BullMQ queue recovery test with real Redis"
+  },
+  "docker_compose": {
+    "status": "PASS",
+    "evidence": "docker compose up: postgres, redis, migrate+seed, api(healthy), game-server(healthy), web(nginx :8088 → /api 200); blockchain-service alive (/health 200, /ready 503) because containers have no internet egress in this sandbox"
+  },
+  "api_health": {
+    "status": "PASS",
+    "evidence": "GET /health 200, /ready 200 (DB+Redis) on :8080"
+  },
+  "game_server_boot": {
+    "status": "PASS",
+    "evidence": "game-server :2567 /health 200 /ready 200; 60-bot load run tick p95 ≤ 5 ms (docs/NETWORKING.md)"
+  },
+  "blockchain_service_boot": {
+    "status": "PASS",
+    "evidence": "blockchain-service :8090 /health 200 /ready 200 against devnet RPC (local); in-container ready=503 by design without RPC"
+  },
+  "api_wallet_login": {
+    "status": "PASS",
+    "evidence": "vertical-slice: SIWS nonce → ed25519 signature → verify → cookie session; auth.test replay/expiry rejected"
+  },
+  "web_wallet_ui": {
+    "status": "PASS",
+    "evidence": "Playwright: /login shows wallet sign-in (Phantom/Solflare adapters + Wallet Standard); a real browser wallet extension cannot be driven headless"
+  },
+  "api_faction": {
+    "status": "PASS",
+    "evidence": "vertical-slice + Playwright onboarding: faction pledge grants starter ship/loadout/ammo"
+  },
+  "game_join": {
+    "status": "PASS",
+    "evidence": "vertical-slice + Playwright Play: API ticket → Colyseus sector room (single-use gt:<jti>)"
+  },
+  "game_move": {
+    "status": "PASS",
+    "evidence": "vertical-slice: inputs move ship server-side; Playwright desktop: HUD speed > 0 while W held"
+  },
+  "game_kill_npc": {
+    "status": "PASS",
+    "evidence": "vertical-slice: target + fire kills NPC, XP/credits persisted, level ≥ 2 reached"
+  },
+  "game_loot": {
+    "status": "PASS",
+    "evidence": "vertical-slice: loot pickup persisted once (originRef unique)"
+  },
+  "api_inventory": {
+    "status": "PASS",
+    "evidence": "vertical-slice: GET /api/inventory + POST /api/inventory/equip 200"
+  },
+  "api_shop": {
+    "status": "PASS",
+    "evidence": "tests/integration/market.test.ts purchase flows (idempotent, server price)"
+  },
+  "game_pvp_kill": {
+    "status": "PASS",
+    "evidence": "vertical-slice: PvP kill on map_vanta_rift counted, rival death recorded"
+  },
+  "leaderboard_update": {
+    "status": "PASS",
+    "evidence": "vertical-slice: GET /api/leaderboard?board=pvp_kills shows pilot score ≥ 1"
+  },
+  "event_reward": {
+    "status": "PASS",
+    "evidence": "vertical-slice: event tier paid once (idempotent) to sole participant"
+  },
+  "crypto_reward": {
+    "status": "PASS",
+    "evidence": "vertical-slice: PvP Reward + RewardLiability OUTSTANDING; /api/rewards/claim credits NEBX via ledger"
+  },
+  "devnet_payout": {
+    "status": "BLOCKED",
+    "evidence": "Payout pipeline verified end-to-end against a mock chain that decodes the real signed transactions (vertical-slice + e2e-mock: COMPLETED with signature). Real devnet: faucet returns 429 to this environment; treasury Hd6r6rGc8CNXRzYV8DwsU6vqh8aPM3711r2UC8Z3vbhe holds 0 SOL, so no devnet signature exists yet."
+  },
+  "devnet_deposit": {
+    "status": "BLOCKED",
+    "evidence": "Deposit verification tested against mock chain (e2e-mock, blockchain.test fake-tx cases); no funded devnet wallet available (faucet 429)."
+  },
+  "renderer_showcase": {
+    "status": "PASS",
+    "evidence": "docs/screenshots/ships-showcase.png, world-showcase.png, boss-showcase.png rendered in Chromium (swiftshader)"
+  },
+  "game_client_build": {
+    "status": "PASS",
+    "evidence": "vite build apps/game-client; Phaser radar visible in docs/screenshots/desktop-play.png"
+  },
+  "web_hangar": {
+    "status": "PASS",
+    "evidence": "Playwright: hangar page with 3D viewer (docs/screenshots/desktop-hangar.png)"
+  },
+  "web_pages": {
+    "status": "PASS",
+    "evidence": "Playwright desktop+mobile: landing, login, faction, starter ship, home, hangar, wallet, play"
+  },
+  "web_mobile": {
+    "status": "PASS",
+    "evidence": "Playwright 390×844 touch: bottom nav, touch combat HUD with joystick/fire (docs/screenshots/mobile-play.png)"
+  },
+  "admin_build": {
+    "status": "PASS",
+    "evidence": "vite build apps/admin; docker web image serves /admin"
+  },
+  "cap_sync": {
+    "status": "PASS",
+    "evidence": "npx cap sync (android + ios)"
+  },
+  "android_build": {
+    "status": "PASS",
+    "evidence": "./gradlew assembleDebug → app-debug.apk (11 MB) with Android SDK 35"
+  },
+  "economy_simulation": {
+    "status": "PASS",
+    "evidence": "pnpm economy:simulate: 270 runs, 0 liability/pool invariant violations"
+  },
+  "coderabbit": {
+    "status": "PASS",
+    "evidence": "PR #2 reviewed (22 findings, all fixed); PR #3 review in progress — see docs/CODERABBIT_REPORT.md"
+  },
+  "anchor_cargo_test": {
+    "status": "PASS",
+    "evidence": "cd programs && cargo test -p nebula_settlement: 6 passed (config/emission-epoch/fee-cap/refund rules), 2026-09-28"
+  },
+  "backup_drill": {
+    "status": "PASS",
+    "evidence": "scripts/backup/pg-backup.sh against local Postgres 16 (11.9 MB dump, pg_restore --list ok, sha256) + pg-restore-drill.sh restored into a scratch DB with identical row counts for User/BalanceLedger/BalanceAccount/Withdrawal/Reward/AuditLog, 2026-09-28"
+  },
+  "load_100": {
+    "status": "PASS",
+    "evidence": "100 fighter bots in one map_vanta_rift sector room (50v50-scale) on a 4-core sandbox, bots on the same machine; 60 s steady window: 1201 ticks (20 Hz held), mean 13.2 ms, p95 in (20,35] ms, 99.75% of ticks ≤ 50 ms budget, 0 errors. First run exposed and fixed: SPEED_HACK false positives from jittered input clumps (MovementBudget now 1 s burst + 25% sustained-excess flag) and TransactionWriteConflict in SERIALIZABLE recordRiskSignal (now per-user row lock), 2026-09-28"
+  }
+}

@@ -1,0 +1,2102 @@
+[
+  {
+    "id": "pass_s1",
+    "seasonId": "season_1",
+    "name": "Season I Frontier Pass",
+    "premiumProductSku": "sku_battlepass_s1_premium",
+    "tiers": [
+      {
+        "tier": 1,
+        "xpRequired": 1040,
+        "premium": {
+          "credits": 5300,
+          "resources": {
+            "QUANTUM_SHARD": 16
+          }
+        }
+      },
+      {
+        "tier": 2,
+        "xpRequired": 2160,
+        "free": {
+          "credits": 2400
+        },
+        "premium": {
+          "credits": 5600,
+          "resources": {
+            "AETHER_CRYSTAL": 17
+          }
+        }
+      },
+      {
+        "tier": 3,
+        "xpRequired": 3360,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 13
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 4,
+        "xpRequired": 4640,
+        "free": {
+          "credits": 2800
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 5,
+        "xpRequired": 6000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_engine_color_crimson",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 6,
+        "xpRequired": 7440,
+        "free": {
+          "resources": {
+            "TITANIUM": 16
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 7,
+        "xpRequired": 8960,
+        "premium": {
+          "credits": 7100,
+          "resources": {
+            "QUANTUM_SHARD": 22
+          }
+        }
+      },
+      {
+        "tier": 8,
+        "xpRequired": 10560,
+        "free": {
+          "credits": 3600
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 9,
+        "xpRequired": 12240,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 19
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 10,
+        "xpRequired": 14000,
+        "free": {
+          "gems": 15
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_shield_color_violet",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 11,
+        "xpRequired": 15840,
+        "premium": {
+          "credits": 8300,
+          "resources": {
+            "PLASMA_ORE": 26
+          }
+        }
+      },
+      {
+        "tier": 12,
+        "xpRequired": 17760,
+        "free": {
+          "resources": {
+            "TITANIUM": 22
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 13,
+        "xpRequired": 19760,
+        "premium": {
+          "credits": 8900,
+          "resources": {
+            "QUANTUM_SHARD": 28
+          }
+        }
+      },
+      {
+        "tier": 14,
+        "xpRequired": 21840,
+        "free": {
+          "credits": 4800
+        },
+        "premium": {
+          "credits": 9200,
+          "resources": {
+            "AETHER_CRYSTAL": 29
+          }
+        }
+      },
+      {
+        "tier": 15,
+        "xpRequired": 24000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_nameplate_frontier",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 16,
+        "xpRequired": 26240,
+        "free": {
+          "credits": 5200
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 17,
+        "xpRequired": 28560,
+        "premium": {
+          "credits": 10100,
+          "resources": {
+            "PLASMA_ORE": 32
+          }
+        }
+      },
+      {
+        "tier": 18,
+        "xpRequired": 30960,
+        "free": {
+          "resources": {
+            "TITANIUM": 28
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 19,
+        "xpRequired": 33440,
+        "premium": {
+          "credits": 10700,
+          "resources": {
+            "QUANTUM_SHARD": 34
+          }
+        }
+      },
+      {
+        "tier": 20,
+        "xpRequired": 36000,
+        "free": {
+          "gems": 15
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_trail_stardust",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 21,
+        "xpRequired": 38640,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 31
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 22,
+        "xpRequired": 41360,
+        "free": {
+          "credits": 6400
+        },
+        "premium": {
+          "credits": 11600,
+          "resources": {
+            "TITANIUM": 37
+          }
+        }
+      },
+      {
+        "tier": 23,
+        "xpRequired": 44160,
+        "premium": {
+          "credits": 11900,
+          "resources": {
+            "PLASMA_ORE": 38
+          }
+        }
+      },
+      {
+        "tier": 24,
+        "xpRequired": 47040,
+        "free": {
+          "resources": {
+            "TITANIUM": 34
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 25,
+        "xpRequired": 50000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_trail_void_wake",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 26,
+        "xpRequired": 53040,
+        "free": {
+          "credits": 7200
+        },
+        "premium": {
+          "credits": 12800,
+          "resources": {
+            "AETHER_CRYSTAL": 41
+          }
+        }
+      },
+      {
+        "tier": 27,
+        "xpRequired": 56160,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 37
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 28,
+        "xpRequired": 59360,
+        "free": {
+          "credits": 7600
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 29,
+        "xpRequired": 62640,
+        "premium": {
+          "credits": 13700,
+          "resources": {
+            "PLASMA_ORE": 44
+          }
+        }
+      },
+      {
+        "tier": 30,
+        "xpRequired": 66000,
+        "free": {
+          "gems": 15
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_shield_hexweave",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 31,
+        "xpRequired": 69440,
+        "premium": {
+          "credits": 14300,
+          "resources": {
+            "QUANTUM_SHARD": 46
+          }
+        }
+      },
+      {
+        "tier": 32,
+        "xpRequired": 72960,
+        "free": {
+          "credits": 8400
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 33,
+        "xpRequired": 76560,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 43
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 34,
+        "xpRequired": 80240,
+        "free": {
+          "credits": 8800
+        },
+        "premium": {
+          "credits": 15200,
+          "resources": {
+            "TITANIUM": 49
+          }
+        }
+      },
+      {
+        "tier": 35,
+        "xpRequired": 84000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_emblem_starwing",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 36,
+        "xpRequired": 87840,
+        "free": {
+          "resources": {
+            "TITANIUM": 46
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 37,
+        "xpRequired": 91760,
+        "premium": {
+          "credits": 16100,
+          "resources": {
+            "QUANTUM_SHARD": 52
+          }
+        }
+      },
+      {
+        "tier": 38,
+        "xpRequired": 95760,
+        "free": {
+          "credits": 9600
+        },
+        "premium": {
+          "credits": 16400,
+          "resources": {
+            "AETHER_CRYSTAL": 53
+          }
+        }
+      },
+      {
+        "tier": 39,
+        "xpRequired": 99840,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 49
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 40,
+        "xpRequired": 104000,
+        "free": {
+          "gems": 15
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_drone_skin_gilded",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 41,
+        "xpRequired": 108240,
+        "premium": {
+          "credits": 17300,
+          "resources": {
+            "PLASMA_ORE": 56
+          }
+        }
+      },
+      {
+        "tier": 42,
+        "xpRequired": 112560,
+        "free": {
+          "resources": {
+            "TITANIUM": 52
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 43,
+        "xpRequired": 116960,
+        "premium": {
+          "credits": 17900,
+          "resources": {
+            "QUANTUM_SHARD": 58
+          }
+        }
+      },
+      {
+        "tier": 44,
+        "xpRequired": 121440,
+        "free": {
+          "credits": 10800
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 45,
+        "xpRequired": 126000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_weapon_skin_prism",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 46,
+        "xpRequired": 130640,
+        "free": {
+          "credits": 11200
+        },
+        "premium": {
+          "credits": 18800,
+          "resources": {
+            "TITANIUM": 61
+          }
+        }
+      },
+      {
+        "tier": 47,
+        "xpRequired": 135360,
+        "premium": {
+          "credits": 19100,
+          "resources": {
+            "PLASMA_ORE": 62
+          }
+        }
+      },
+      {
+        "tier": 48,
+        "xpRequired": 140160,
+        "free": {
+          "resources": {
+            "TITANIUM": 58
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 49,
+        "xpRequired": 145040,
+        "premium": {
+          "credits": 19700,
+          "resources": {
+            "QUANTUM_SHARD": 64
+          }
+        }
+      },
+      {
+        "tier": 50,
+        "xpRequired": 150000,
+        "free": {
+          "gems": 15
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_title_s1_vanguard",
+              "quantity": 1
+            },
+            {
+              "itemId": "skin_sovereign_regalia",
+              "quantity": 1
+            }
+          ],
+          "gems": 100
+        }
+      }
+    ]
+  },
+  {
+    "id": "pass_s2",
+    "seasonId": "season_2",
+    "name": "Season II Frontier Pass",
+    "premiumProductSku": "sku_battlepass_s2_premium",
+    "tiers": [
+      {
+        "tier": 1,
+        "xpRequired": 1040,
+        "premium": {
+          "credits": 5300,
+          "resources": {
+            "QUANTUM_SHARD": 16
+          }
+        }
+      },
+      {
+        "tier": 2,
+        "xpRequired": 2160,
+        "free": {
+          "credits": 2400
+        },
+        "premium": {
+          "credits": 5600,
+          "resources": {
+            "AETHER_CRYSTAL": 17
+          }
+        }
+      },
+      {
+        "tier": 3,
+        "xpRequired": 3360,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 13
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 4,
+        "xpRequired": 4640,
+        "free": {
+          "credits": 2800
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 5,
+        "xpRequired": 6000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_nameplate_frontier",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 6,
+        "xpRequired": 7440,
+        "free": {
+          "resources": {
+            "TITANIUM": 16
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 7,
+        "xpRequired": 8960,
+        "premium": {
+          "credits": 7100,
+          "resources": {
+            "QUANTUM_SHARD": 22
+          }
+        }
+      },
+      {
+        "tier": 8,
+        "xpRequired": 10560,
+        "free": {
+          "credits": 3600
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 9,
+        "xpRequired": 12240,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 19
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 10,
+        "xpRequired": 14000,
+        "free": {
+          "gems": 20
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_trail_stardust",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 11,
+        "xpRequired": 15840,
+        "premium": {
+          "credits": 8300,
+          "resources": {
+            "PLASMA_ORE": 26
+          }
+        }
+      },
+      {
+        "tier": 12,
+        "xpRequired": 17760,
+        "free": {
+          "resources": {
+            "TITANIUM": 22
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 13,
+        "xpRequired": 19760,
+        "premium": {
+          "credits": 8900,
+          "resources": {
+            "QUANTUM_SHARD": 28
+          }
+        }
+      },
+      {
+        "tier": 14,
+        "xpRequired": 21840,
+        "free": {
+          "credits": 4800
+        },
+        "premium": {
+          "credits": 9200,
+          "resources": {
+            "AETHER_CRYSTAL": 29
+          }
+        }
+      },
+      {
+        "tier": 15,
+        "xpRequired": 24000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_shield_hexweave",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 16,
+        "xpRequired": 26240,
+        "free": {
+          "credits": 5200
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 17,
+        "xpRequired": 28560,
+        "premium": {
+          "credits": 10100,
+          "resources": {
+            "PLASMA_ORE": 32
+          }
+        }
+      },
+      {
+        "tier": 18,
+        "xpRequired": 30960,
+        "free": {
+          "resources": {
+            "TITANIUM": 28
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 19,
+        "xpRequired": 33440,
+        "premium": {
+          "credits": 10700,
+          "resources": {
+            "QUANTUM_SHARD": 34
+          }
+        }
+      },
+      {
+        "tier": 20,
+        "xpRequired": 36000,
+        "free": {
+          "gems": 20
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_emblem_starwing",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 21,
+        "xpRequired": 38640,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 31
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 22,
+        "xpRequired": 41360,
+        "free": {
+          "credits": 6400
+        },
+        "premium": {
+          "credits": 11600,
+          "resources": {
+            "TITANIUM": 37
+          }
+        }
+      },
+      {
+        "tier": 23,
+        "xpRequired": 44160,
+        "premium": {
+          "credits": 11900,
+          "resources": {
+            "PLASMA_ORE": 38
+          }
+        }
+      },
+      {
+        "tier": 24,
+        "xpRequired": 47040,
+        "free": {
+          "resources": {
+            "TITANIUM": 34
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 25,
+        "xpRequired": 50000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_trail_void_wake",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 26,
+        "xpRequired": 53040,
+        "free": {
+          "credits": 7200
+        },
+        "premium": {
+          "credits": 12800,
+          "resources": {
+            "AETHER_CRYSTAL": 41
+          }
+        }
+      },
+      {
+        "tier": 27,
+        "xpRequired": 56160,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 37
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 28,
+        "xpRequired": 59360,
+        "free": {
+          "credits": 7600
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 29,
+        "xpRequired": 62640,
+        "premium": {
+          "credits": 13700,
+          "resources": {
+            "PLASMA_ORE": 44
+          }
+        }
+      },
+      {
+        "tier": 30,
+        "xpRequired": 66000,
+        "free": {
+          "gems": 20
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_drone_skin_gilded",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 31,
+        "xpRequired": 69440,
+        "premium": {
+          "credits": 14300,
+          "resources": {
+            "QUANTUM_SHARD": 46
+          }
+        }
+      },
+      {
+        "tier": 32,
+        "xpRequired": 72960,
+        "free": {
+          "credits": 8400
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 33,
+        "xpRequired": 76560,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 43
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 34,
+        "xpRequired": 80240,
+        "free": {
+          "credits": 8800
+        },
+        "premium": {
+          "credits": 15200,
+          "resources": {
+            "TITANIUM": 49
+          }
+        }
+      },
+      {
+        "tier": 35,
+        "xpRequired": 84000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_weapon_skin_prism",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 36,
+        "xpRequired": 87840,
+        "free": {
+          "resources": {
+            "TITANIUM": 46
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 37,
+        "xpRequired": 91760,
+        "premium": {
+          "credits": 16100,
+          "resources": {
+            "QUANTUM_SHARD": 52
+          }
+        }
+      },
+      {
+        "tier": 38,
+        "xpRequired": 95760,
+        "free": {
+          "credits": 9600
+        },
+        "premium": {
+          "credits": 16400,
+          "resources": {
+            "AETHER_CRYSTAL": 53
+          }
+        }
+      },
+      {
+        "tier": 39,
+        "xpRequired": 99840,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 49
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 40,
+        "xpRequired": 104000,
+        "free": {
+          "gems": 20
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_explosion_supernova",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 41,
+        "xpRequired": 108240,
+        "premium": {
+          "credits": 17300,
+          "resources": {
+            "PLASMA_ORE": 56
+          }
+        }
+      },
+      {
+        "tier": 42,
+        "xpRequired": 112560,
+        "free": {
+          "resources": {
+            "TITANIUM": 52
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 43,
+        "xpRequired": 116960,
+        "premium": {
+          "credits": 17900,
+          "resources": {
+            "QUANTUM_SHARD": 58
+          }
+        }
+      },
+      {
+        "tier": 44,
+        "xpRequired": 121440,
+        "free": {
+          "credits": 10800
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 45,
+        "xpRequired": 126000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "skin_kestrel_nightjar",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 46,
+        "xpRequired": 130640,
+        "free": {
+          "credits": 11200
+        },
+        "premium": {
+          "credits": 18800,
+          "resources": {
+            "TITANIUM": 61
+          }
+        }
+      },
+      {
+        "tier": 47,
+        "xpRequired": 135360,
+        "premium": {
+          "credits": 19100,
+          "resources": {
+            "PLASMA_ORE": 62
+          }
+        }
+      },
+      {
+        "tier": 48,
+        "xpRequired": 140160,
+        "free": {
+          "resources": {
+            "TITANIUM": 58
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 49,
+        "xpRequired": 145040,
+        "premium": {
+          "credits": 19700,
+          "resources": {
+            "QUANTUM_SHARD": 64
+          }
+        }
+      },
+      {
+        "tier": 50,
+        "xpRequired": 150000,
+        "free": {
+          "gems": 20
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_title_s2_harbinger",
+              "quantity": 1
+            },
+            {
+              "itemId": "skin_cradle_leviathan_bone",
+              "quantity": 1
+            }
+          ],
+          "gems": 100
+        }
+      }
+    ]
+  },
+  {
+    "id": "pass_s3",
+    "seasonId": "season_3",
+    "name": "Season III Frontier Pass",
+    "premiumProductSku": "sku_battlepass_s3_premium",
+    "tiers": [
+      {
+        "tier": 1,
+        "xpRequired": 1040,
+        "premium": {
+          "credits": 5300,
+          "resources": {
+            "QUANTUM_SHARD": 16
+          }
+        }
+      },
+      {
+        "tier": 2,
+        "xpRequired": 2160,
+        "free": {
+          "credits": 2400
+        },
+        "premium": {
+          "credits": 5600,
+          "resources": {
+            "AETHER_CRYSTAL": 17
+          }
+        }
+      },
+      {
+        "tier": 3,
+        "xpRequired": 3360,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 13
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 4,
+        "xpRequired": 4640,
+        "free": {
+          "credits": 2800
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 5,
+        "xpRequired": 6000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_shield_hexweave",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 6,
+        "xpRequired": 7440,
+        "free": {
+          "resources": {
+            "TITANIUM": 16
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 7,
+        "xpRequired": 8960,
+        "premium": {
+          "credits": 7100,
+          "resources": {
+            "QUANTUM_SHARD": 22
+          }
+        }
+      },
+      {
+        "tier": 8,
+        "xpRequired": 10560,
+        "free": {
+          "credits": 3600
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 9,
+        "xpRequired": 12240,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 19
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 10,
+        "xpRequired": 14000,
+        "free": {
+          "gems": 25
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_emblem_starwing",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 11,
+        "xpRequired": 15840,
+        "premium": {
+          "credits": 8300,
+          "resources": {
+            "PLASMA_ORE": 26
+          }
+        }
+      },
+      {
+        "tier": 12,
+        "xpRequired": 17760,
+        "free": {
+          "resources": {
+            "TITANIUM": 22
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 13,
+        "xpRequired": 19760,
+        "premium": {
+          "credits": 8900,
+          "resources": {
+            "QUANTUM_SHARD": 28
+          }
+        }
+      },
+      {
+        "tier": 14,
+        "xpRequired": 21840,
+        "free": {
+          "credits": 4800
+        },
+        "premium": {
+          "credits": 9200,
+          "resources": {
+            "AETHER_CRYSTAL": 29
+          }
+        }
+      },
+      {
+        "tier": 15,
+        "xpRequired": 24000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_drone_skin_gilded",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 16,
+        "xpRequired": 26240,
+        "free": {
+          "credits": 5200
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 17,
+        "xpRequired": 28560,
+        "premium": {
+          "credits": 10100,
+          "resources": {
+            "PLASMA_ORE": 32
+          }
+        }
+      },
+      {
+        "tier": 18,
+        "xpRequired": 30960,
+        "free": {
+          "resources": {
+            "TITANIUM": 28
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 19,
+        "xpRequired": 33440,
+        "premium": {
+          "credits": 10700,
+          "resources": {
+            "QUANTUM_SHARD": 34
+          }
+        }
+      },
+      {
+        "tier": 20,
+        "xpRequired": 36000,
+        "free": {
+          "gems": 25
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_weapon_skin_prism",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 21,
+        "xpRequired": 38640,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 31
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 22,
+        "xpRequired": 41360,
+        "free": {
+          "credits": 6400
+        },
+        "premium": {
+          "credits": 11600,
+          "resources": {
+            "TITANIUM": 37
+          }
+        }
+      },
+      {
+        "tier": 23,
+        "xpRequired": 44160,
+        "premium": {
+          "credits": 11900,
+          "resources": {
+            "PLASMA_ORE": 38
+          }
+        }
+      },
+      {
+        "tier": 24,
+        "xpRequired": 47040,
+        "free": {
+          "resources": {
+            "TITANIUM": 34
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 25,
+        "xpRequired": 50000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_trail_void_wake",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 26,
+        "xpRequired": 53040,
+        "free": {
+          "credits": 7200
+        },
+        "premium": {
+          "credits": 12800,
+          "resources": {
+            "AETHER_CRYSTAL": 41
+          }
+        }
+      },
+      {
+        "tier": 27,
+        "xpRequired": 56160,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 37
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 28,
+        "xpRequired": 59360,
+        "free": {
+          "credits": 7600
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 29,
+        "xpRequired": 62640,
+        "premium": {
+          "credits": 13700,
+          "resources": {
+            "PLASMA_ORE": 44
+          }
+        }
+      },
+      {
+        "tier": 30,
+        "xpRequired": 66000,
+        "free": {
+          "gems": 25
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_explosion_supernova",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 31,
+        "xpRequired": 69440,
+        "premium": {
+          "credits": 14300,
+          "resources": {
+            "QUANTUM_SHARD": 46
+          }
+        }
+      },
+      {
+        "tier": 32,
+        "xpRequired": 72960,
+        "free": {
+          "credits": 8400
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 33,
+        "xpRequired": 76560,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 43
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 34,
+        "xpRequired": 80240,
+        "free": {
+          "credits": 8800
+        },
+        "premium": {
+          "credits": 15200,
+          "resources": {
+            "TITANIUM": 49
+          }
+        }
+      },
+      {
+        "tier": 35,
+        "xpRequired": 84000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "skin_kestrel_nightjar",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 36,
+        "xpRequired": 87840,
+        "free": {
+          "resources": {
+            "TITANIUM": 46
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 37,
+        "xpRequired": 91760,
+        "premium": {
+          "credits": 16100,
+          "resources": {
+            "QUANTUM_SHARD": 52
+          }
+        }
+      },
+      {
+        "tier": 38,
+        "xpRequired": 95760,
+        "free": {
+          "credits": 9600
+        },
+        "premium": {
+          "credits": 16400,
+          "resources": {
+            "AETHER_CRYSTAL": 53
+          }
+        }
+      },
+      {
+        "tier": 39,
+        "xpRequired": 99840,
+        "free": {
+          "resources": {
+            "QUANTUM_SHARD": 49
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_xp_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 40,
+        "xpRequired": 104000,
+        "free": {
+          "gems": 25
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_engine_color_crimson",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 41,
+        "xpRequired": 108240,
+        "premium": {
+          "credits": 17300,
+          "resources": {
+            "PLASMA_ORE": 56
+          }
+        }
+      },
+      {
+        "tier": 42,
+        "xpRequired": 112560,
+        "free": {
+          "resources": {
+            "TITANIUM": 52
+          }
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "item_drop_booster_1h",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 43,
+        "xpRequired": 116960,
+        "premium": {
+          "credits": 17900,
+          "resources": {
+            "QUANTUM_SHARD": 58
+          }
+        }
+      },
+      {
+        "tier": 44,
+        "xpRequired": 121440,
+        "free": {
+          "credits": 10800
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 45,
+        "xpRequired": 126000,
+        "free": {
+          "items": [
+            {
+              "itemId": "item_repair_kit",
+              "quantity": 5
+            },
+            {
+              "itemId": "item_ammo_hornet",
+              "quantity": 100
+            }
+          ]
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_shield_color_violet",
+              "quantity": 1
+            }
+          ]
+        }
+      },
+      {
+        "tier": 46,
+        "xpRequired": 130640,
+        "free": {
+          "credits": 11200
+        },
+        "premium": {
+          "credits": 18800,
+          "resources": {
+            "TITANIUM": 61
+          }
+        }
+      },
+      {
+        "tier": 47,
+        "xpRequired": 135360,
+        "premium": {
+          "credits": 19100,
+          "resources": {
+            "PLASMA_ORE": 62
+          }
+        }
+      },
+      {
+        "tier": 48,
+        "xpRequired": 140160,
+        "free": {
+          "resources": {
+            "TITANIUM": 58
+          }
+        },
+        "premium": {
+          "gems": 20
+        }
+      },
+      {
+        "tier": 49,
+        "xpRequired": 145040,
+        "premium": {
+          "credits": 19700,
+          "resources": {
+            "QUANTUM_SHARD": 64
+          }
+        }
+      },
+      {
+        "tier": 50,
+        "xpRequired": 150000,
+        "free": {
+          "gems": 25
+        },
+        "premium": {
+          "items": [
+            {
+              "itemId": "cos_title_s3_ascendant",
+              "quantity": 1
+            },
+            {
+              "itemId": "skin_riftbreaker_voidborn",
+              "quantity": 1
+            }
+          ],
+          "gems": 100
+        }
+      }
+    ]
+  }
+]

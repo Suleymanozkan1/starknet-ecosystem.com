@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+tools/reference-repos
+.env
+.secrets
+apps/mobile/android
+apps/mobile/ios
+docs/screenshots

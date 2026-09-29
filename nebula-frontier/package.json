@@ -1,0 +1,45 @@
+{
+  "name": "nebula-frontier",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NEBULA FRONTIER — persistent 3D space MMO (browser + Android + iOS) with a Solana devnet reward economy",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/api --filter ./apps/game-server --filter ./apps/blockchain-service --filter ./apps/web dev",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --workspace-concurrency=2 typecheck",
+    "test": "vitest run",
+    "build": "pnpm -r --workspace-concurrency=2 build",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "economy:simulate": "pnpm --filter @nebula/economy-simulation start",
+    "repos:clone": "bash tools/clone-reference-repos.sh",
+    "mobile:sync": "pnpm --filter @nebula/web build && pnpm --filter @nebula/mobile sync",
+    "postinstall": "prisma generate"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.19.0",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
+    "prisma": "7.10.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^3.2.7",
+    "dotenv": "^17.2.0"
+  },
+  "dependencies": {
+    "@prisma/client": "7.10.0",
+    "@prisma/adapter-pg": "7.10.0",
+    "pg": "^8.16.0"
+  }
+}

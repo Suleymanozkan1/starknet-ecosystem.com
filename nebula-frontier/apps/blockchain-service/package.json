@@ -1,0 +1,35 @@
+{
+  "name": "@nebula/blockchain-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "SERVICE_ROLE=blockchain tsx watch --env-file-if-exists=../../.env src/index.ts",
+    "start": "SERVICE_ROLE=blockchain node --enable-source-maps dist/index.js",
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json",
+    "devnet:setup": "tsx --env-file-if-exists=../../.env scripts/devnet-setup.ts",
+    "economy:bootstrap": "tsx --env-file-if-exists=../../.env scripts/economy-bootstrap.ts",
+    "devnet:e2e": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts",
+    "devnet:e2e:mock": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts --mock",
+    "nft:mint": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/mint-devnet-nft.ts"
+  },
+  "dependencies": {
+    "@metaplex-foundation/mpl-token-metadata-kit": "0.0.3",
+    "@nebula/blockchain": "workspace:*",
+    "@nebula/config": "workspace:*",
+    "@nebula/database": "workspace:*",
+    "@nebula/economy": "workspace:*",
+    "@nebula/shared": "workspace:*",
+    "@nebula/telemetry": "workspace:*",
+    "@nebula/validation": "workspace:*",
+    "@solana-program/memo": "^0.15.0",
+    "@solana-program/system": "^0.15.0",
+    "@solana-program/token": "^0.17.0",
+    "@solana/kit": "^8.4.0",
+    "bullmq": "^5.61.0",
+    "fastify": "^5.6.0",
+    "ioredis": "^5.8.0",
+    "zod": "^4.1.0"
+  }
+}
