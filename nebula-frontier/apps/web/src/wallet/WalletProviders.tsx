@@ -10,6 +10,7 @@ import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import "./wallet-theme.css";
 import { toast } from "../store/ui.js";
+import { tNow } from "../lib/i18n.js";
 
 export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_RPC_URL || "https://api.devnet.solana.com";
 
@@ -23,7 +24,7 @@ export function WalletProviders({ children }: { children: ReactNode }) {
   const onError = useCallback((error: WalletError, adapter?: Adapter) => {
     // User rejections are expected; everything else is surfaced.
     if (/reject|cancel/i.test(error.message || error.name)) return;
-    toast.error(adapter ? `${adapter.name} wallet error` : "Wallet error", error.message || error.name);
+    toast.error(adapter ? tNow("wallet.adapterError", { name: adapter.name }) : tNow("wallet.error"), error.message || error.name);
   }, []);
   return (
     <ConnectionProvider endpoint={SOLANA_RPC_URL} config={{ commitment: "confirmed" }}>

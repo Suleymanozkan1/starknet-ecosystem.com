@@ -22,6 +22,7 @@ import { haptic } from "../native/haptics.js";
 import { useGameLink } from "../store/gameLink.js";
 import { useSettings } from "../store/settings.js";
 import { toast } from "../store/ui.js";
+import { translateServerText, useT } from "../lib/i18n.js";
 
 type Phase = { kind: "ticket" } | { kind: "loading"; progress: number; label: string } | { kind: "running" } | { kind: "error"; message: string };
 
@@ -30,6 +31,7 @@ type Phase = { kind: "ticket" } | { kind: "loading"; progress: number; label: st
  * → HudState/GameUiEvent callbacks drive the React HUD. Rendering pauses when the app is backgrounded.
  */
 export default function PlayPage() {
+  const t = useT();
   const me = useSession();
   useFactionAccent(me.faction);
   const navigate = useNavigate();
@@ -166,8 +168,8 @@ export default function PlayPage() {
           {/* Touch: stack the shell controls under the radar so they never overlap the ship status block on
               narrow screens; desktop keeps them in a row left of the radar. */}
           <div className={mobile ? "absolute right-3 flex flex-col gap-2" : "absolute top-[calc(12px+var(--safe-top))] flex gap-2"} style={mobile ? { top: "calc(146px + var(--safe-top))" } : { right: 250 }}>
-            <button type="button" className="nf-iconbtn" aria-label="Chat" onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
-            <button type="button" className="nf-iconbtn" aria-label="Leave to command deck" onClick={exit}><Icon name="logout" size={18} /></button>
+            <button type="button" className="nf-iconbtn" aria-label={t("nav.chat")} onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
+            <button type="button" className="nf-iconbtn" aria-label={t("play.leave")} onClick={exit}><Icon name="logout" size={18} /></button>
           </div>
           <div className="absolute grid justify-items-end gap-2" style={{ top: mobile ? 250 : 214, right: mobile ? 64 : 12 }}>
             <TargetPanel hud={hud} onClear={() => actions.target("CLEAR")} />
@@ -176,13 +178,13 @@ export default function PlayPage() {
           </div>
           {!mobile && (
             <div className="absolute bottom-[calc(14px+var(--safe-bottom))] left-1/2 grid -translate-x-1/2 justify-items-center gap-2">
-              {hud.dockPrompt && <NeonButton variant="primary" onClick={() => actions.dock()} icon={<span className="nf-kbd">F</span>}>Dock at {hud.dockPrompt.name}</NeonButton>}
+              {hud.dockPrompt && <NeonButton variant="primary" onClick={() => actions.dock()} icon={<span className="nf-kbd">F</span>}>{t("play.dockAt", { name: hud.dockPrompt.name })}</NeonButton>}
               <SkillBar hud={hud} actions={actions} />
             </div>
           )}
           {mobile && (
             <>
-              {hud.dockPrompt && <div className="absolute left-1/2 top-[calc(110px+var(--safe-top))] -translate-x-1/2"><NeonButton size="sm" variant="primary" onClick={() => actions.dock()}>Dock</NeonButton></div>}
+              {hud.dockPrompt && <div className="absolute left-1/2 top-[calc(110px+var(--safe-top))] -translate-x-1/2"><NeonButton size="sm" variant="primary" onClick={() => actions.dock()}>{t("play.dock")}</NeonButton></div>}
               {!hud.dead && !hud.docked && <MobileControls hud={hud} actions={actions} />}
             </>
           )}
@@ -201,11 +203,11 @@ export default function PlayPage() {
       {phase.kind === "error" && (
         <div className="absolute inset-0 grid place-items-center bg-[#03050a] p-6">
           <div className="nf-panel grid max-w-md gap-3 p-6 text-center">
-            <div className="text-[12px] font-bold uppercase tracking-[0.3em] text-bad">Launch aborted</div>
-            <p className="m-0 text-[14px] text-dim">{phase.message}</p>
+            <div className="text-[12px] font-bold uppercase tracking-[0.3em] text-bad">{t("play.aborted")}</div>
+            <p className="m-0 text-[14px] text-dim">{translateServerText(phase.message)}</p>
             <div className="flex justify-center gap-2">
-              <NeonButton variant="ghost" onClick={exit}>Command deck</NeonButton>
-              <NeonButton variant="primary" onClick={() => setAttempt((a) => a + 1)}>Retry</NeonButton>
+              <NeonButton variant="ghost" onClick={exit}>{t("home.commandDeck")}</NeonButton>
+              <NeonButton variant="primary" onClick={() => setAttempt((a) => a + 1)}>{t("common.retry")}</NeonButton>
             </div>
           </div>
         </div>

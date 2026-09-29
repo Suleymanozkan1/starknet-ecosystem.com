@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
+import { translateServerText, useT } from "../lib/i18n.js";
+import type { TKey } from "../lib/i18n.js";
 
-const TIPS = [
-  "Shield generators recharge faster when you stop taking fire for a few seconds.",
-  "Drones follow the formation you choose in the hangar — Turtle favours defense, Arrow favours damage.",
-  "High-risk sectors drop better loot, but other pilots can engage you there.",
-  "Gates are instanced wave encounters. Bring repair modules.",
-  "Battle Rewards are granted for competitive play and events and are subject to season caps.",
-  "Dock at a station to repair, craft and trade without leaving the map.",
-];
+const TIPS: readonly TKey[] = ["tip.1", "tip.2", "tip.3", "tip.4", "tip.5", "tip.6"];
 
 export interface LoadingScreenProps {
   label?: string;
@@ -17,7 +12,10 @@ export interface LoadingScreenProps {
 }
 
 /** Full screen branded loader with animated progress and rotating tips. */
-export function LoadingScreen({ label = "Establishing uplink", progress, detail }: LoadingScreenProps) {
+export function LoadingScreen({ label: rawLabel, progress, detail }: LoadingScreenProps) {
+  const t = useT();
+  // Labels may come from the game engine / callers as English text; translate known ones.
+  const label = rawLabel ? translateServerText(rawLabel) : t("loading.default");
   const [tip, setTip] = useState(() => Math.floor(Math.random() * TIPS.length));
   useEffect(() => {
     const t = window.setInterval(() => setTip((i) => (i + 1) % TIPS.length), 4500);
@@ -47,11 +45,11 @@ export function LoadingScreen({ label = "Establishing uplink", progress, detail 
             <span>{label}</span>
             <span className="tabular-nums text-accent">{pct === undefined ? "" : `${pct}%`}</span>
           </div>
-          {detail && <div className="text-[12px] text-mute">{detail}</div>}
+          {detail && <div className="text-[12px] text-mute">{translateServerText(detail)}</div>}
         </div>
         <p className="max-w-[440px] text-[13px] leading-relaxed text-dim">
-          <span className="nf-label mr-2">Tip</span>
-          {TIPS[tip]}
+          <span className="nf-label mr-2">{t("loading.tip")}</span>
+          {t(TIPS[tip] ?? "tip.1")}
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cx } from "./cx.js";
+import { uiLocale } from "./locale.js";
 
 export interface StatBarProps {
   value: number;
@@ -28,7 +29,7 @@ export function StatBar({
   value, max, label, color = STAT_COLORS.hull, height = 8, showValue = true, format, className, ghost = true,
 }: StatBarProps) {
   const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
-  const readout = format ? format(value, max) : `${Math.round(value).toLocaleString()} / ${Math.round(max).toLocaleString()}`;
+  const readout = format ? format(value, max) : `${Math.round(value).toLocaleString(uiLocale().locale)} / ${Math.round(max).toLocaleString(uiLocale().locale)}`;
   return (
     <div className={cx("nf-stat", className)} style={{ "--c": color, "--h": `${height}px` } as CSSProperties}>
       {(label || showValue) && (

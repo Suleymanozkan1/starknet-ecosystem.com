@@ -4,7 +4,8 @@ import { FactionEmblem, HoloPanel, Icon, NeonButton } from "@nebula/game-ui";
 import type { MapDef } from "@nebula/shared";
 import { useNavigate } from "react-router-dom";
 import { useMapLive } from "../lib/queries.js";
-import { ROOM_META, ZONE_META, humanize } from "../lib/gameMeta.js";
+import { ROOM_META, ZONE_META, roomLabel, zoneLabel } from "../lib/gameMeta.js";
+import { En, Rich, enumLabel, useT } from "../lib/i18n.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { useSession } from "../hooks/useSession.js";
 
@@ -49,6 +50,7 @@ function layout(): { nodes: Node[]; sectors: { id: string; name: string; x: numb
 }
 
 export default function GalaxyPage() {
+  const t = useT();
   const me = useSession();
   const navigate = useNavigate();
   const { nodes, sectors } = useMemo(layout, []);
@@ -77,10 +79,10 @@ export default function GalaxyPage() {
   const zones = m ? [...new Set(m.zones.map((z) => z.type))] : [];
   return (
     <div>
-      <PageHeader eyebrow={GALAXY.name} title="Galaxy map" subtitle="Sectors, systems and jump routes. Travel happens in-flight through portals and jump gates." />
+      <PageHeader eyebrow={<En>{GALAXY.name}</En>} title={t("galaxy.title")} subtitle={t("galaxy.subtitle")} />
       <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
         <HoloPanel padded={false} corners className="relative">
-          <svg viewBox="0 0 100 100" className="block aspect-square max-h-[74vh] w-full" role="img" aria-label="Galaxy map">
+          <svg viewBox="0 0 100 100" className="block aspect-square max-h-[74vh] w-full" role="img" aria-label={t("galaxy.title")}>
             <defs>
               <radialGradient id="gx-core"><stop offset="0" stopColor="var(--nf-accent)" stopOpacity="0.35" /><stop offset="1" stopColor="var(--nf-accent)" stopOpacity="0" /></radialGradient>
               <filter id="gx-glow"><feGaussianBlur stdDeviation="0.6" /></filter>
@@ -90,7 +92,7 @@ export default function GalaxyPage() {
             {sectors.map((s) => (
               <g key={s.id}>
                 <circle cx={s.x} cy={s.y} r="11.5" fill="rgba(140,200,255,0.025)" stroke="rgba(140,200,255,0.12)" strokeWidth="0.15" />
-                <text x={s.x} y={s.y - 13} textAnchor="middle" fontSize="1.9" fill="var(--nf-text-mute)" style={{ fontFamily: "var(--nf-font-ui)", letterSpacing: "0.25em", textTransform: "uppercase" }}>{s.name}</text>
+                <text x={s.x} y={s.y - 13} textAnchor="middle" fontSize="1.9" fill="var(--nf-text-mute)" style={{ fontFamily: "var(--nf-font-ui)", letterSpacing: "0.25em", textTransform: "uppercase" }} lang="en">{s.name}</text>
               </g>
             ))}
             {edges.map((e, i) => (
@@ -113,54 +115,54 @@ export default function GalaxyPage() {
           </svg>
           <div className="flex flex-wrap gap-2 border-t border-line p-3">
             {["SAFE", "NEUTRAL", "PVP", "HIGH_RISK", "MINING", "GATE", "BOSS"].map((z) => (
-              <span key={z} className="nf-chip text-[10.5px]" style={{ color: ZONE_META[z]?.color }}><span className="h-2 w-2 rounded-full" style={{ background: ZONE_META[z]?.color }} />{ZONE_META[z]?.label}</span>
+              <span key={z} className="nf-chip text-[10.5px]" style={{ color: ZONE_META[z]?.color }}><span className="h-2 w-2 rounded-full" style={{ background: ZONE_META[z]?.color }} />{zoneLabel(z)}</span>
             ))}
           </div>
         </HoloPanel>
 
         {m && selected && (
-          <HoloPanel title="Sector intel" accent={selected.color} glow>
+          <HoloPanel title={t("galaxy.intel")} accent={selected.color} glow>
             <div className="grid gap-4">
               <div>
-                <div className="nf-label">{selected.sector}</div>
+                <div className="nf-label" lang="en">{selected.sector}</div>
                 <div className="nf-display text-[24px] font-bold tracking-[0.08em]" style={{ color: selected.color }}>{m.name}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  <span className="nf-chip"><Icon name={ROOM_META[m.roomType]?.icon ?? "galaxy"} size={12} />{ROOM_META[m.roomType]?.label ?? m.roomType}</span>
-                  <span className="nf-chip">Lv {m.levelRange[0]}–{m.levelRange[1]}</span>
+                  <span className="nf-chip"><Icon name={ROOM_META[m.roomType]?.icon ?? "galaxy"} size={12} />{roomLabel(m.roomType)}</span>
+                  <span className="nf-chip">{t("common.lvRange", { min: m.levelRange[0], max: m.levelRange[1] })}</span>
                   {m.pvp && <span className="nf-chip" style={{ color: "var(--nf-bad)" }}>PvP</span>}
-                  {m.id === home && <span className="nf-chip" style={{ color: selected.color }}>Home</span>}
+                  {m.id === home && <span className="nf-chip" style={{ color: selected.color }}>{t("galaxy.home")}</span>}
                 </div>
               </div>
               {m.factionHome && FACTIONS_BY_ID.get(m.factionHome) && (
                 <div className="flex items-center gap-2 text-[13px] text-dim">
                   <FactionEmblem path={FACTIONS_BY_ID.get(m.factionHome)!.emblem} color={selected.color} size={22} framed={false} />
-                  Homeworld of {FACTIONS_BY_ID.get(m.factionHome)!.name}
+                  <Rich text={t("galaxy.homeworld")} parts={{ name: <En>{FACTIONS_BY_ID.get(m.factionHome)!.name}</En> }} />
                 </div>
               )}
               <div className="grid gap-1.5">
-                <div className="nf-label">Zones</div>
-                <div className="flex flex-wrap gap-1.5">{zones.map((z) => <span key={z} className="nf-chip" style={{ color: ZONE_META[z]?.color }}>{ZONE_META[z]?.label ?? z}</span>)}</div>
+                <div className="nf-label">{t("galaxy.zones")}</div>
+                <div className="flex flex-wrap gap-1.5">{zones.map((z) => <span key={z} className="nf-chip" style={{ color: ZONE_META[z]?.color }}>{zoneLabel(z)}</span>)}</div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[13px]">
-                <div><div className="nf-label">Pilots in sector</div><div className="nf-display text-[18px] font-bold">{pilots ?? "—"}</div></div>
-                <div><div className="nf-label">Instances</div><div className="nf-display text-[18px] font-bold">{live.data?.rooms.length ?? "—"}</div></div>
+                <div><div className="nf-label">{t("galaxy.pilots")}</div><div className="nf-display text-[18px] font-bold">{pilots ?? "—"}</div></div>
+                <div><div className="nf-label">{t("galaxy.instances")}</div><div className="nf-display text-[18px] font-bold">{live.data?.rooms.length ?? "—"}</div></div>
               </div>
               <div className="grid gap-1.5">
-                <div className="nf-label">Stations</div>
-                {m.stations.length === 0 ? <div className="text-[13px] text-mute">No stations — no safe docking.</div> : m.stations.map((s) => (
-                  <div key={s.id} className="text-[13px]"><b className="nf-ui text-[14px]">{s.name}</b> <span className="text-mute">· {s.services.map(humanize).join(", ")}</span></div>
+                <div className="nf-label">{t("galaxy.stations")}</div>
+                {m.stations.length === 0 ? <div className="text-[13px] text-mute">{t("galaxy.noStations")}</div> : m.stations.map((s) => (
+                  <div key={s.id} className="text-[13px]"><b className="nf-ui text-[14px]">{s.name}</b> <span className="text-mute">· {s.services.map((x) => enumLabel(x)).join(", ")}</span></div>
                 ))}
               </div>
               <div className="grid gap-1.5">
-                <div className="nf-label">Jump routes</div>
+                <div className="nf-label">{t("galaxy.jumpRoutes")}</div>
                 {m.portals.map((p) => (
                   <button key={p.id} type="button" className="flex items-center justify-between rounded-md border border-line px-3 py-2 text-left text-[13px] hover:border-accent" onClick={() => setSel(p.targetMap)}>
                     <span>{MAPS_BY_ID.get(p.targetMap)?.name ?? p.targetMap}</span>
-                    <span className="nf-label">{humanize(p.kind)}{p.requiredLevel > 1 ? ` · Lv ${p.requiredLevel}` : ""}</span>
+                    <span className="nf-label">{enumLabel(p.kind)}{p.requiredLevel > 1 ? ` · ${t("common.lvN", { n: p.requiredLevel })}` : ""}</span>
                   </button>
                 ))}
               </div>
-              <NeonButton variant="primary" block onClick={() => navigate("/play")} icon={<Icon name="play" size={16} />}>Launch</NeonButton>
+              <NeonButton variant="primary" block onClick={() => navigate("/play")} icon={<Icon name="play" size={16} />}>{t("play.launch")}</NeonButton>
             </div>
           </HoloPanel>
         )}

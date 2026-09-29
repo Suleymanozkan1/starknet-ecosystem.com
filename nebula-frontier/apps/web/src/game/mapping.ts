@@ -2,6 +2,8 @@
 import { QUESTS_BY_ID, SHIPS } from "@nebula/config";
 import type { GameUiEvent, HudState } from "@nebula/game-client";
 import type { HudEvent, HudSkill, HudView } from "./hudModel.js";
+import { currentLanguage, fmtNum, tNow, translateServerText } from "../lib/i18n.js";
+import { objectiveLabel } from "../lib/gameMeta.js";
 
 const ABILITY_KIND = new Map<string, string>(SHIPS.flatMap((s) => s.abilities.map((a) => [a.id, a.kind] as const)));
 
@@ -14,6 +16,21 @@ export interface SessionFacts {
 
 export function newSessionFacts(): SessionFacts {
   return { docked: null, death: null, bossPhase: null };
+}
+
+type QuestDef = NonNullable<ReturnType<typeof QUESTS_BY_ID.get>>;
+
+/**
+ * Tracker text for the current objective. English keeps the game client's own text; Turkish rebuilds it
+ * from the quest definition ("Yok et: Korsan Akıncı 3/10").
+ */
+function questText(q: NonNullable<HudState["questObjective"]>, qdef: QuestDef | undefined): string {
+  if (currentLanguage() === "en" || !qdef) return q.text;
+  const idx = qdef.objectives.findIndex((o, i) => (q.progress[i] ?? 0) < o.count);
+  const i = idx < 0 ? 0 : idx;
+  const o = qdef.objectives[i];
+  if (!o) return q.text;
+  return `${objectiveLabel(o.type, o.target)} ${Math.min(o.count, q.progress[i] ?? 0)}/${o.count}`;
 }
 
 export function mapHud(s: HudState, facts: SessionFacts): HudView {
@@ -45,7 +62,7 @@ export function mapHud(s: HudState, facts: SessionFacts): HudView {
     quest: q
       ? {
           name: q.name,
-          objectives: (qdef?.objectives ?? [{ count: 1 }]).map((o, i) => ({ label: i === 0 ? q.text : `Objective ${i + 1}`, progress: q.progress[i] ?? 0, count: o.count })),
+          objectives: (qdef?.objectives ?? [{ count: 1 }]).map((o, i) => ({ label: i === 0 ? questText(q, qdef) : tNow("hud.objectiveN", { n: i + 1 }), progress: q.progress[i] ?? 0, count: o.count })),
         }
       : null,
     squad: s.squad.map((m) => ({ id: m.id, name: m.name, hull: { value: m.hullPct, max: 1 }, shield: { value: m.shieldPct, max: 1 }, dead: m.hullPct <= 0 })),
@@ -56,7 +73,7 @@ export function mapHud(s: HudState, facts: SessionFacts): HudView {
         }
       : null,
     dockPrompt: station ? { stationId: station.id, name: station.label.replace(/^Dock at /, "") } : null,
-    docked: s.docked ? (facts.docked ?? { stationId: "", name: "Station", services: [] }) : null,
+    docked: s.docked ? (facts.docked ?? { stationId: "", name: tNow("hud.station"), services: [] }) : null,
     dead: s.dead ? { repairCost: facts.death?.repairCost ?? 0, killer: facts.death?.killer ?? null, respawnAt: null } : null,
     zone: s.zone,
   };
@@ -72,28 +89,28 @@ export function mapEvent(e: GameUiEvent, facts: SessionFacts): HudEvent | null {
     case "level_up": return { type: "levelup", level: e.level };
     case "loot_pickup": {
       const first = e.data.items[0];
-      const label = first ? `${first.quantity > 1 ? `${first.quantity}× ` : ""}${first.name}${e.data.items.length > 1 ? ` +${e.data.items.length - 1}` : ""}` : e.data.credits ? "Credits" : "Resources";
+      const label = first ? `${first.quantity > 1 ? `${first.quantity}× ` : ""}${first.name}${e.data.items.length > 1 ? ` +${e.data.items.length - 1}` : ""}` : e.data.credits ? tNow("common.credits") : tNow("inv.resources");
       return { type: "loot", label, rarity: first?.rarity ?? "COMMON", credits: e.data.credits };
     }
     case "reward": {
       const r = e.data;
-      const parts = [r.xp ? `+${r.xp} XP` : "", r.honor ? `+${r.honor} honor` : "", r.credits ? `+${r.credits} credits` : ""].filter(Boolean);
-      return { type: "reward", text: `${r.reason}${parts.length ? ` · ${parts.join(" · ")}` : ""}${r.cryptoEligible ? " · Battle Reward eligible" : ""}` };
+      const parts = [r.xp ? tNow("event.xp", { n: r.xp }) : "", r.honor ? tNow("event.honor", { n: r.honor }) : "", r.credits ? tNow("event.credits", { n: r.credits }) : ""].filter(Boolean);
+      return { type: "reward", text: `${translateServerText(r.reason)}${parts.length ? ` · ${parts.join(" · ")}` : ""}${r.cryptoEligible ? ` · ${tNow("reward.cryptoEligible")}` : ""}` };
     }
-    case "notice": return { type: "notice", level: e.data.level, text: e.data.text };
-    case "error": return { type: "notice", level: "error", text: e.message };
+    case "notice": return { type: "notice", level: e.data.level, text: translateServerText(e.data.text) };
+    case "error": return { type: "notice", level: "error", text: translateServerText(e.message) };
     case "boss_phase":
       facts.bossPhase = { name: e.name, layer: e.layer, phase: e.phase };
       return { type: "boss_phase", name: e.name, phase: e.phase };
-    case "event_started": return { type: "notice", level: "warn", text: `Event started: ${e.name}` };
-    case "quest_complete": return { type: "notice", level: "success", text: `Mission complete: ${e.name}` };
-    case "wave": return { type: "notice", level: "warn", text: `Wave ${e.wave}/${e.total}: ${e.name}` };
+    case "event_started": return { type: "notice", level: "warn", text: tNow("event.started", { name: e.name }) };
+    case "quest_complete": return { type: "notice", level: "success", text: tNow("event.missionComplete", { name: e.name }) };
+    case "wave": return { type: "notice", level: "warn", text: tNow("event.wave", { wave: e.wave, total: e.total, name: e.name }) };
     case "death":
       facts.death = { killer: e.killerName ?? null, repairCost: e.repairCost ?? 0, at: Date.now() };
       return null;
     case "respawn":
       facts.death = null;
-      return e.repairCost > 0 ? { type: "notice", level: "info", text: `Hull repaired for ${e.repairCost.toLocaleString()} credits` } : null;
+      return e.repairCost > 0 ? { type: "notice", level: "info", text: tNow("event.repaired", { n: fmtNum(e.repairCost) }) } : null;
     case "docked":
       facts.docked = { stationId: e.stationId, name: e.stationName, services: e.services };
       return null;
@@ -102,11 +119,11 @@ export function mapEvent(e: GameUiEvent, facts: SessionFacts): HudEvent | null {
       return null;
     case "map_transition":
       if (e.phase === "start" || e.phase === "loading") return { type: "jump", mapId: e.mapId, phase: "start" };
-      if (e.phase === "failed") return { type: "notice", level: "error", text: e.error ?? "Jump failed" };
+      if (e.phase === "failed") return { type: "notice", level: "error", text: e.error ? translateServerText(e.error) : tNow("event.jumpFailed") };
       return { type: "jump", mapId: e.mapId, phase: "end" };
     case "chat": return { type: "chat", channel: e.channel, from: e.from, text: e.text, at: e.at };
     case "connection":
-      return e.status === "reconnecting" ? { type: "notice", level: "warn", text: "Connection lost — reconnecting…" } : null;
+      return e.status === "reconnecting" ? { type: "notice", level: "warn", text: tNow("event.reconnecting") } : null;
     default:
       return null;
   }

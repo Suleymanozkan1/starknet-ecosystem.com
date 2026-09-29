@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { CurrencyAmount, FactionEmblem, Icon, StatBar, STAT_COLORS, Tooltip } from "@nebula/game-ui";
 import type { MeResponse } from "@nebula/shared";
-import { useT } from "../lib/i18n.js";
+import { fmtNum, rankLabel, useT } from "../lib/i18n.js";
 import { useNotifications } from "../lib/queries.js";
 import { faction } from "../lib/gameMeta.js";
 import { useFactionAccent, useLogout, useSession } from "../hooks/useSession.js";
@@ -27,6 +27,7 @@ export function LevelHex({ level, size = 40 }: { level: number; size?: number })
 }
 
 function ProfileChip({ me, compact }: { me: MeResponse; compact?: boolean }) {
+  const t = useT();
   const f = faction(me.faction);
   const xpMax = Math.max(1, me.xpToNext);
   return (
@@ -41,8 +42,8 @@ function ProfileChip({ me, compact }: { me: MeResponse; compact?: boolean }) {
         <StatBar value={me.xpIntoLevel} max={xpMax} height={4} showValue={false} color={STAT_COLORS.xp} ghost={false} />
         {!compact && (
           <div className="nf-ui flex justify-between text-[10.5px] uppercase tracking-[0.16em] text-mute">
-            <span>{me.rank}</span>
-            <span className="tabular-nums">{Math.floor((me.xpIntoLevel / xpMax) * 100)}% XP</span>
+            <span>{rankLabel(me.rank)}</span>
+            <span className="tabular-nums">{t("shell.xp", { pct: fmtNum(Math.floor((me.xpIntoLevel / xpMax) * 100)) })}</span>
           </div>
         )}
       </div>
@@ -51,6 +52,7 @@ function ProfileChip({ me, compact }: { me: MeResponse; compact?: boolean }) {
 }
 
 function Bell() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const notifs = useNotifications();
   const unread = notifs.data?.unread ?? 0;
@@ -65,7 +67,7 @@ function Bell() {
   }, [open]);
   return (
     <div ref={ref} className="relative">
-      <button type="button" className="nf-iconbtn" aria-label={`Notifications${unread ? ` (${unread} unread)` : ""}`} aria-expanded={open} onClick={() => { haptic("selection"); setOpen((o) => !o); }}>
+      <button type="button" className="nf-iconbtn" aria-label={unread ? t("nav.notificationsUnread", { n: unread }) : t("nav.notifications")} aria-expanded={open} onClick={() => { haptic("selection"); setOpen((o) => !o); }}>
         <Icon name="bell" size={19} />
         {unread > 0 && <span className="nf-badge-dot">{unread > 9 ? "9+" : unread}</span>}
       </button>
@@ -82,7 +84,7 @@ function TopBar({ me, mobile }: { me: MeResponse; mobile: boolean }) {
   return (
     <header className="nf-topbar">
       {!mobile && (
-        <Link to="/home" className="nf-logo mr-2 text-ink no-underline" aria-label="Nebula Frontier home">
+        <Link to="/home" className="nf-logo mr-2 text-ink no-underline" aria-label={t("nav.homeLink")}>
           NEBULA <b>FRONTIER</b>
         </Link>
       )}
@@ -100,7 +102,7 @@ function TopBar({ me, mobile }: { me: MeResponse; mobile: boolean }) {
         <Bell />
         {!mobile && (
           <>
-            <button type="button" className="nf-iconbtn" aria-label="Chat" aria-pressed={chatOpen} onClick={() => setChat(!chatOpen)}>
+            <button type="button" className="nf-iconbtn" aria-label={t("nav.chat")} aria-pressed={chatOpen} onClick={() => setChat(!chatOpen)}>
               <Icon name="chat" size={19} />
             </button>
             <Link to="/mail" className="nf-iconbtn" aria-label={t("nav.mail")}><Icon name="mail" size={19} /></Link>
@@ -118,7 +120,7 @@ function TopBar({ me, mobile }: { me: MeResponse; mobile: boolean }) {
 function SideNav() {
   const t = useT();
   return (
-    <nav className="nf-sidenav" aria-label="Main menu">
+    <nav className="nf-sidenav" aria-label={t("nav.mainMenu")}>
       {MAIN_MENU.map((n) => (
         <NavLink key={n.to} to={n.to} className={({ isActive }) => `nf-navlink${isActive ? " active" : ""}${n.to === "/play" ? " nf-navlink--play" : ""}`}>
           <Icon name={n.icon} size={17} />
@@ -139,7 +141,7 @@ function SideNav() {
 function BottomNav() {
   const t = useT();
   return (
-    <nav className="nf-bottomnav" aria-label="Primary">
+    <nav className="nf-bottomnav" aria-label={t("nav.primary")}>
       {BOTTOM_NAV.map((n) => (
         <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? "active" : "")} onClick={() => haptic("selection")}>
           <Icon name={n.icon} size={22} />

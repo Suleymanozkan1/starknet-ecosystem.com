@@ -1,4 +1,5 @@
 import type { ShipDef } from "@nebula/shared";
+import { useT } from "../lib/i18n.js";
 
 /** Silhouette outlines (top-down, nose up) per hull archetype, in a 100x140 box. */
 const HULLS: Record<string, string> = {
@@ -18,11 +19,12 @@ const HULLS: Record<string, string> = {
 
 /** 2D holographic blueprint fallback for devices without WebGL. */
 export function ShipBlueprint({ def }: { def: ShipDef }) {
+  const t = useT();
   const v = def.visual;
   const path = HULLS[v.hull] ?? HULLS.dart!;
   return (
     <div className="absolute inset-0 grid place-items-center">
-      <svg viewBox="-20 -10 140 160" className="h-[78%] max-h-[520px] w-auto" role="img" aria-label={`${def.name} blueprint`}>
+      <svg viewBox="-20 -10 140 160" className="h-[78%] max-h-[520px] w-auto" role="img" aria-label={t("ship.blueprintAria", { name: def.name })}>
         <defs>
           <linearGradient id="bp-hull" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor={v.primaryColor} stopOpacity="0.9" />

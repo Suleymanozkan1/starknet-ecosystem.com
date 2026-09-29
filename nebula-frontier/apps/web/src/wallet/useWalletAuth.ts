@@ -5,6 +5,7 @@ import bs58 from "bs58";
 import type { MeResponse } from "@nebula/shared";
 import { api } from "../lib/api.js";
 import { getDeviceId } from "../native/secureStorage.js";
+import { tNow } from "../lib/i18n.js";
 
 type Purpose = "LOGIN" | "LINK_WALLET";
 type Phase = "idle" | "connecting" | "nonce" | "signing" | "verifying" | "done" | "error";
@@ -32,7 +33,7 @@ export function useWalletAuth(onDone: (user: MeResponse | null) => void) {
     running.current = true;
     setError(null);
     try {
-      if (!signMessage) throw new Error(`${wallet?.adapter.name ?? "This wallet"} does not support message signing.`);
+      if (!signMessage) throw new Error(tNow("wallet.noSignMessage", { name: wallet?.adapter.name ?? tNow("wallet.thisWallet") }));
       const address = publicKey.toBase58();
       setPhase("nonce");
       const { nonce, message } = await api.auth.nonce({ address, purpose });
@@ -52,7 +53,7 @@ export function useWalletAuth(onDone: (user: MeResponse | null) => void) {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(/reject|declin|cancel/i.test(msg) ? "Signature request was rejected in the wallet." : msg);
+      setError(/reject|declin|cancel/i.test(msg) ? tNow("wallet.sigRejected") : msg);
       setPhase("error");
     } finally {
       running.current = false;

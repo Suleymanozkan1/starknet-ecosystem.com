@@ -1,14 +1,16 @@
 import { ITEMS_BY_ID, WEAPONS_BY_ID } from "@nebula/config";
 import type { EquipRequest, InventoryItemDto, LoadoutDto, ShipDef } from "@nebula/shared";
+import type { TKey } from "./i18n/en.js";
 
 export type SlotType = EquipRequest["slotType"];
 
-export const SLOT_TYPES: { key: SlotType; label: string; shipSlot: keyof ShipDef["slots"]; icon: "weapon" | "rocket" | "energy" | "module" | "drone" }[] = [
-  { key: "weapons", label: "Lasers", shipSlot: "laser", icon: "weapon" },
-  { key: "missiles", label: "Missiles", shipSlot: "missile", icon: "rocket" },
-  { key: "generators", label: "Generators", shipSlot: "generator", icon: "energy" },
-  { key: "modules", label: "Modules", shipSlot: "module", icon: "module" },
-  { key: "drones", label: "Drones", shipSlot: "drone", icon: "drone" },
+/** `label` is an i18n key (translate with `t(label)`). */
+export const SLOT_TYPES: { key: SlotType; label: TKey; shipSlot: keyof ShipDef["slots"]; icon: "weapon" | "rocket" | "energy" | "module" | "drone" }[] = [
+  { key: "weapons", label: "slot.weapons", shipSlot: "laser", icon: "weapon" },
+  { key: "missiles", label: "slot.missiles", shipSlot: "missile", icon: "rocket" },
+  { key: "generators", label: "slot.generators", shipSlot: "generator", icon: "energy" },
+  { key: "modules", label: "slot.modules", shipSlot: "module", icon: "module" },
+  { key: "drones", label: "slot.drones", shipSlot: "drone", icon: "drone" },
 ];
 
 /** Which loadout slot family an inventory item fits into (mirrors the server's slotFamilyFor). */

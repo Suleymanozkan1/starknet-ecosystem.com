@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { HoloPanel, Icon, NeonButton } from "@nebula/game-ui";
 import { errorMessage, isApiError } from "../lib/http.js";
+import { translateServerText, useT } from "../lib/i18n.js";
 
 interface Q<T> { data: T | undefined; isLoading: boolean; error: unknown; refetch: () => unknown }
 
@@ -26,24 +27,26 @@ export function QueryState<T>({ q, children, empty, isEmpty, skeleton = 3 }: {
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const t = useT();
   const notFound = isApiError(error) && (error.status === 404 || error.status === 501);
   return (
     <HoloPanel accent="var(--nf-bad)" className="text-center">
       <div className="grid justify-items-center gap-2 py-4">
         <span className="text-bad"><Icon name="warning" size={28} /></span>
-        <div className="nf-ui text-[16px] font-bold uppercase tracking-[0.14em]">{notFound ? "Service not available" : "Transmission failed"}</div>
-        <p className="max-w-md text-[13px] text-dim">{errorMessage(error)}</p>
-        {onRetry && <NeonButton size="sm" onClick={onRetry} icon={<Icon name="refresh" size={14} />}>Retry</NeonButton>}
+        <div className="nf-ui text-[16px] font-bold uppercase tracking-[0.14em]">{notFound ? t("query.unavailable") : t("query.failed")}</div>
+        <p className="max-w-md text-[13px] text-dim">{translateServerText(errorMessage(error))}</p>
+        {onRetry && <NeonButton size="sm" onClick={onRetry} icon={<Icon name="refresh" size={14} />}>{t("common.retry")}</NeonButton>}
       </div>
     </HoloPanel>
   );
 }
 
-export function EmptyState({ title = "Nothing here yet", body, action, icon = "galaxy" }: { title?: string; body?: string; action?: ReactNode; icon?: Parameters<typeof Icon>[0]["name"] }) {
+export function EmptyState({ title, body, action, icon = "galaxy" }: { title?: string; body?: string; action?: ReactNode; icon?: Parameters<typeof Icon>[0]["name"] }) {
+  const t = useT();
   return (
     <div className="grid justify-items-center gap-2 rounded-xl border border-dashed border-line px-6 py-10 text-center">
       <span className="text-mute"><Icon name={icon} size={34} /></span>
-      <div className="nf-ui text-[16px] font-bold uppercase tracking-[0.14em] text-dim">{title}</div>
+      <div className="nf-ui text-[16px] font-bold uppercase tracking-[0.14em] text-dim">{title ?? t("common.noData")}</div>
       {body && <p className="max-w-md text-[13px] text-mute">{body}</p>}
       {action}
     </div>

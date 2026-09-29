@@ -1,5 +1,6 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import { tNow, translateServerText } from "../lib/i18n.js";
 
 interface State { error: Error | null }
 
@@ -19,10 +20,10 @@ export class ErrorBoundary extends Component<{ children: ReactNode; fallback?: (
     return (
       <div className="grid min-h-[60vh] place-items-center p-6 text-center">
         <div className="nf-panel grid max-w-md gap-3 p-6">
-          <div className="nf-eyebrow" style={{ color: "var(--nf-bad)" }}>System fault</div>
-          <div className="nf-ui text-[18px] font-bold uppercase">This panel failed to load</div>
-          <p className="text-[13px] text-dim">{error.message}</p>
-          <button type="button" className="nf-btn" onClick={this.reset}>Reload panel</button>
+          <div className="nf-eyebrow" style={{ color: "var(--nf-bad)" }}>{tNow("error.systemFault")}</div>
+          <div className="nf-ui text-[18px] font-bold uppercase">{tNow("error.panelFailed")}</div>
+          <p className="text-[13px] text-dim">{translateServerText(error.message)}</p>
+          <button type="button" className="nf-btn" onClick={this.reset}>{tNow("error.reloadPanel")}</button>
         </div>
       </div>
     );

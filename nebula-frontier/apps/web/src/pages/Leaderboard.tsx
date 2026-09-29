@@ -6,29 +6,32 @@ import { faction } from "../lib/gameMeta.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { EmptyState, QueryState } from "../components/QueryState.js";
 import { useSession } from "../hooks/useSession.js";
+import { fmtNum, useT } from "../lib/i18n.js";
+import type { TKey } from "../lib/i18n.js";
 
 const BOARDS = [
-  { key: "honor", label: "Honor", score: "Honor" },
-  { key: "pvp_kills", label: "PvP", score: "Kills" },
-  { key: "npc_kills", label: "PvE", score: "NPC kills" },
-  { key: "season_score", label: "Season", score: "Season pts" },
-  { key: "clan", label: "Clans", score: "Score" },
-  { key: "faction", label: "Factions", score: "Score" },
-] as const;
+  { key: "honor", label: "lb.honor", score: "lb.honor" },
+  { key: "pvp_kills", label: "lb.pvp", score: "lb.kills" },
+  { key: "npc_kills", label: "lb.pve", score: "lb.npcKills" },
+  { key: "season_score", label: "lb.season", score: "lb.seasonPts" },
+  { key: "clan", label: "lb.clans", score: "common.score" },
+  { key: "faction", label: "lb.factions", score: "common.score" },
+] as const satisfies readonly { key: string; label: TKey; score: TKey }[];
 type Board = (typeof BOARDS)[number]["key"];
 const PODIUM = ["#fbbf24", "#cbd5e1", "#d97706"];
 
 export default function LeaderboardPage() {
+  const t = useT();
   const me = useSession();
   const [board, setBoard] = useState<Board>("honor");
   const q = useLeaderboard(board);
   const meta = BOARDS.find((b) => b.key === board)!;
-  const entity = board === "clan" ? "Clan" : board === "faction" ? "Faction" : "Pilot";
+  const entity = board === "clan" ? t("lb.clan") : board === "faction" ? t("common.faction") : t("lb.pilot");
   return (
     <div>
-      <PageHeader eyebrow="Hall of fame" title="Leaderboards" subtitle="Rankings refresh every 30 seconds." />
-      <Tabs className="mb-4" value={board} onChange={setBoard} items={BOARDS.map((b) => ({ key: b.key, label: b.label }))} />
-      <QueryState q={q} isEmpty={(d) => d.entries.length === 0} empty={<EmptyState title="No rankings yet" icon="leaderboard" />}>
+      <PageHeader eyebrow={t("lb.eyebrow")} title={t("lb.title")} subtitle={t("lb.subtitle")} />
+      <Tabs className="mb-4" value={board} onChange={setBoard} items={BOARDS.map((b) => ({ key: b.key, label: t(b.label) }))} />
+      <QueryState q={q} isEmpty={(d) => d.entries.length === 0} empty={<EmptyState title={t("lb.empty")} icon="leaderboard" />}>
         {(d) => (
           <div className="grid gap-5">
             <div className="grid gap-3 sm:grid-cols-3">
@@ -43,8 +46,8 @@ export default function LeaderboardPage() {
                         {f && <FactionEmblem path={f.emblem} color={f.color} size={20} framed={false} />}
                         <span className="nf-ui text-[18px] font-bold">{e.clanTag && board !== "clan" && board !== "faction" ? `[${e.clanTag}] ` : ""}{e.username}</span>
                       </div>
-                      <div className="nf-display text-[20px] font-bold tabular-nums">{BigInt(e.score).toLocaleString()}</div>
-                      <div className="nf-label">{meta.score}</div>
+                      <div className="nf-display text-[20px] font-bold tabular-nums">{fmtNum(BigInt(e.score))}</div>
+                      <div className="nf-label">{t(meta.score)}</div>
                     </div>
                   </HoloPanel>
                 );
@@ -53,7 +56,7 @@ export default function LeaderboardPage() {
             <HoloPanel padded={false}>
               <div className="overflow-x-auto">
                 <table className="nf-table">
-                  <thead><tr><th className="w-16">#</th><th>{entity}</th><th>{board === "faction" ? "Territory" : "Level"}</th><th className="text-right">{meta.score}</th></tr></thead>
+                  <thead><tr><th className="w-16">#</th><th>{entity}</th><th>{board === "faction" ? t("lb.territory") : t("common.level")}</th><th className="text-right">{t(meta.score)}</th></tr></thead>
                   <tbody>
                     {d.entries.map((e) => {
                       const f = faction(e.faction);
@@ -67,11 +70,11 @@ export default function LeaderboardPage() {
                               {board === "clan" ? <Link to={`/clan/${e.userId}`} className="nf-ui text-[15px] font-bold text-ink no-underline hover:text-accent">[{e.clanTag}] {e.username}</Link>
                                 : board === "faction" ? <span className="nf-ui text-[15px] font-bold">{e.username}</span>
                                 : <Link to={`/profile/${e.userId}`} className="nf-ui text-[15px] font-bold text-ink no-underline hover:text-accent">{e.clanTag ? <span className="text-accent">[{e.clanTag}] </span> : null}{e.username}</Link>}
-                              {isMe && <span className="nf-chip text-[10px]">You</span>}
+                              {isMe && <span className="nf-chip text-[10px]">{t("common.you")}</span>}
                             </div>
                           </td>
                           <td className="tabular-nums text-dim">{e.level}</td>
-                          <td className="nf-ui text-right text-[15px] font-bold tabular-nums">{BigInt(e.score).toLocaleString()}</td>
+                          <td className="nf-ui text-right text-[15px] font-bold tabular-nums">{fmtNum(BigInt(e.score))}</td>
                         </tr>
                       );
                     })}

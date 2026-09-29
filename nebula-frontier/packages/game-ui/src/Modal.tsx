@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cx } from "./cx.js";
 import { Icon } from "./Icon.js";
+import { uiLocale } from "./locale.js";
 
 export interface ModalProps {
   open: boolean;
@@ -55,7 +56,7 @@ export function Modal({ open, onClose, title, children, footer, wide, locked, cl
         <header className="nf-panel__header">
           <h2 id={titleId} className="nf-panel__title">{title}</h2>
           {!locked && (
-            <button type="button" className="nf-modal__close" onClick={onClose} aria-label="Close">
+            <button type="button" className="nf-modal__close" onClick={onClose} aria-label={uiLocale().close}>
               <Icon name="close" size={18} />
             </button>
           )}

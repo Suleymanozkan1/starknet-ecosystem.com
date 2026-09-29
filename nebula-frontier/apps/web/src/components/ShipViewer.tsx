@@ -3,6 +3,7 @@ import type { ShipDef } from "@nebula/shared";
 import type { HangarViewer } from "@nebula/game-renderer";
 import { useGraphicsTier } from "../hooks/useGraphicsTier.js";
 import { ShipBlueprint } from "./ShipBlueprint.js";
+import { useT } from "../lib/i18n.js";
 
 export type PreviewMode = "idle" | "engine" | "fire" | "shield" | "damage";
 
@@ -33,6 +34,7 @@ function hasWebGL(): boolean {
  * suspends while the app is backgrounded.
  */
 export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate = true, compare = null, className }: ShipViewerProps) {
+  const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewer, setViewer] = useState<HangarViewer | null>(null);
   const [failed, setFailed] = useState(false);
@@ -115,12 +117,12 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
         ref={canvasRef}
         className="h-full w-full touch-none"
         style={{ display: failed ? "none" : "block", opacity: viewer ? 1 : 0, transition: "opacity .6s" }}
-        aria-label={`${def.name} 3D preview`}
+        aria-label={t("ship.previewAria", { name: def.name })}
       />
       {failed && <ShipBlueprint def={def} />}
       {!viewer && !failed && (
         <div className="absolute inset-0 grid place-items-center">
-          <div className="nf-ui text-[12px] uppercase tracking-[0.3em] text-mute">Rendering hull…</div>
+          <div className="nf-ui text-[12px] uppercase tracking-[0.3em] text-mute">{t("ship.rendering")}</div>
         </div>
       )}
     </div>

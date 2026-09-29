@@ -1,13 +1,15 @@
 import { SHIPS } from "@nebula/config";
 import { StatBar } from "@nebula/game-ui";
+import { fmtNum, useT } from "../lib/i18n.js";
+import type { TKey } from "../lib/i18n.js";
 
-const ROWS: { key: string; label: string; color: string }[] = [
-  { key: "hull", label: "Hull", color: "#34d399" },
-  { key: "shield", label: "Shield", color: "#60a5fa" },
-  { key: "armor", label: "Armor", color: "#cbd5e1" },
-  { key: "speed", label: "Speed", color: "#fbbf24" },
-  { key: "energy", label: "Energy", color: "#fde047" },
-  { key: "cargo", label: "Cargo", color: "#a78bfa" },
+const ROWS: { key: string; label: TKey; color: string }[] = [
+  { key: "hull", label: "stat.hull", color: "#34d399" },
+  { key: "shield", label: "stat.shield", color: "#60a5fa" },
+  { key: "armor", label: "stat.armor", color: "#cbd5e1" },
+  { key: "speed", label: "stat.speed", color: "#fbbf24" },
+  { key: "energy", label: "stat.energy", color: "#fde047" },
+  { key: "cargo", label: "stat.cargo", color: "#a78bfa" },
 ];
 
 /** Max of each stat across the whole ship catalog → bars are comparable between ships. */
@@ -16,6 +18,7 @@ const MAX: Record<string, number> = Object.fromEntries(
 );
 
 export function ShipStatBars({ stats, compare }: { stats: Record<string, number>; compare?: Record<string, number> | null }) {
+  const t = useT();
   return (
     <div className="grid gap-2.5">
       {ROWS.map((r) => {
@@ -25,13 +28,13 @@ export function ShipStatBars({ stats, compare }: { stats: Record<string, number>
         return (
           <div key={r.key} className="relative">
             <StatBar
-              label={r.label}
+              label={t(r.label)}
               value={v}
               max={MAX[r.key] ?? 1}
               color={r.color}
               height={6}
               ghost={false}
-              format={() => (diff === null || diff === 0 ? Math.round(v).toLocaleString() : `${Math.round(v).toLocaleString()} (${diff > 0 ? "+" : ""}${Math.round(diff).toLocaleString()})`)}
+              format={() => (diff === null || diff === 0 ? fmtNum(Math.round(v)) : `${fmtNum(Math.round(v))} (${diff > 0 ? "+" : ""}${fmtNum(Math.round(diff))})`)}
             />
           </div>
         );

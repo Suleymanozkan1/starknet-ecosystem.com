@@ -1,4 +1,5 @@
 import { isNative, isPluginAvailable } from "./platform.js";
+import { tNow } from "../lib/i18n.js";
 
 /**
  * Biometric gate for sensitive actions (withdrawals). On native devices with enrolled biometry the user
@@ -13,9 +14,9 @@ export async function biometricGate(reason: string): Promise<boolean> {
     if (!info.isAvailable && !info.deviceIsSecure) return true;
     await BiometricAuth.authenticate({
       reason,
-      cancelTitle: "Cancel",
+      cancelTitle: tNow("wallet.bioCancel"),
       allowDeviceCredential: true,
-      androidTitle: "Confirm withdrawal",
+      androidTitle: tNow("wallet.bioTitle"),
       androidSubtitle: reason,
     });
     return true;

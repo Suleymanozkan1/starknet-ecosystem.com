@@ -4,6 +4,7 @@ import type { MeResponse } from "@nebula/shared";
 import { api } from "./api.js";
 import { errorMessage, isApiError } from "./http.js";
 import { toast } from "../store/ui.js";
+import { tNow } from "./i18n.js";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,7 +116,7 @@ export function useApiMutation<TVars, TData>(
       await onSuccess?.(data, vars, ctx, mctx);
     },
     onError: (err, vars, ctx, mctx) => {
-      toast.error(errorTitle ?? "Action failed", errorMessage(err));
+      toast.error(errorTitle ?? tNow("common.actionFailed"), errorMessage(err));
       onError?.(err, vars, ctx, mctx);
     },
   });

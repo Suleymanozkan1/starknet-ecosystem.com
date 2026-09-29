@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Rarity } from "@nebula/shared";
 import { cx } from "./cx.js";
+import { uiLocale } from "./locale.js";
 
 export const RARITY_COLORS: Record<Rarity, string> = {
   COMMON: "#a3adbf",
@@ -25,7 +26,7 @@ export function rarityStyle(r: string): CSSProperties {
 export function RarityBadge({ rarity, className, label }: { rarity: Rarity | string; className?: string; label?: string }) {
   return (
     <span className={cx("nf-rarity", className)} style={rarityStyle(rarity)}>
-      {label ?? rarity.toLowerCase()}
+      {label ?? uiLocale().rarity[rarity] ?? rarity.toLowerCase()}
     </span>
   );
 }

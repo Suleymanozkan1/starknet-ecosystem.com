@@ -1,6 +1,7 @@
 import { Icon } from "@nebula/game-ui";
 import type { IconName } from "@nebula/game-ui";
 import { useUi } from "../store/ui.js";
+import { translateServerText, useLanguage } from "../lib/i18n.js";
 
 const KIND: Record<string, { icon: IconName; color: string }> = {
   info: { icon: "info", color: "var(--nf-accent)" },
@@ -14,6 +15,8 @@ const KIND: Record<string, { icon: IconName; color: string }> = {
 export function Toasts() {
   const toasts = useUi((s) => s.toasts);
   const dismiss = useUi((s) => s.dismissToast);
+  // Re-render on language change; texts from the game server / backend are translated at display time.
+  useLanguage();
   return (
     <div className="nf-toasts" aria-live="polite">
       {toasts.map((t) => {
@@ -28,8 +31,8 @@ export function Toasts() {
           >
             <span style={{ color: k.color }} className="mt-0.5"><Icon name={k.icon} size={18} /></span>
             <span className="grid gap-0.5">
-              <span className="nf-ui text-[15px] font-bold uppercase tracking-[0.08em]">{t.title}</span>
-              {t.body && <span className="text-[13px] text-dim">{t.body}</span>}
+              <span className="nf-ui text-[15px] font-bold uppercase tracking-[0.08em]">{translateServerText(t.title)}</span>
+              {t.body && <span className="text-[13px] text-dim">{translateServerText(t.body)}</span>}
             </span>
           </button>
         );

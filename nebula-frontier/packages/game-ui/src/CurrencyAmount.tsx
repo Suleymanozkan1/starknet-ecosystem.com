@@ -2,6 +2,7 @@ import { formatUnits } from "@nebula/shared";
 import type { Currency } from "@nebula/shared";
 import { cx } from "./cx.js";
 import { Icon } from "./Icon.js";
+import { uiLocale } from "./locale.js";
 
 /** Display metadata per currency. `decimals` matches the ledger base units. */
 export const CURRENCY_META: Record<Currency, { decimals: number; symbol: string; color: string; icon: "credits" | "gems" | "crypto" }> = {
@@ -12,11 +13,17 @@ export const CURRENCY_META: Record<Currency, { decimals: number; symbol: string;
 };
 
 function groupDigits(s: string): string {
+  const { groupSeparator, decimalSeparator } = uiLocale();
   const [whole = "0", frac] = s.split(".");
   const neg = whole.startsWith("-");
   const digits = neg ? whole.slice(1) : whole;
-  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${neg ? "-" : ""}${grouped}${frac ? "." + frac : ""}`;
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, groupSeparator);
+  return `${neg ? "-" : ""}${grouped}${frac ? decimalSeparator + frac : ""}`;
+}
+
+/** Display symbol of a currency in the active UI locale. */
+export function currencySymbol(currency: Currency): string {
+  return uiLocale().currencySymbols[currency] ?? CURRENCY_META[currency].symbol;
 }
 
 /** Formats integer base units (string/bigint/number) into a human amount. */
@@ -30,9 +37,11 @@ export function formatAmount(amount: string | bigint | number, currency: Currenc
   }
   if (opts.compact && decimals === 0) {
     const n = Number(raw);
-    if (Math.abs(n) >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-    if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-    if (Math.abs(n) >= 10_000) return `${(n / 1_000).toFixed(1)}K`;
+    const { compact, decimalSeparator } = uiLocale();
+    const fix = (v: number, digits: number): string => v.toFixed(digits).replace(".", decimalSeparator);
+    if (Math.abs(n) >= 1_000_000_000) return `${fix(n / 1_000_000_000, 2)}${compact.billion}`;
+    if (Math.abs(n) >= 1_000_000) return `${fix(n / 1_000_000, 2)}${compact.million}`;
+    if (Math.abs(n) >= 10_000) return `${fix(n / 1_000, 1)}${compact.thousand}`;
   }
   return groupDigits(formatUnits(raw, decimals, opts.maxFraction ?? (decimals > 0 ? 4 : 0)));
 }
@@ -63,7 +72,7 @@ export function CurrencyAmount({
     <span className={cx("nf-currency", className)} style={{ fontSize: size }}>
       {showIcon && <Icon name={meta.icon} size={Math.round(size * 1.05)} style={{ color: meta.color }} />}
       <span>{formatAmount(amount, currency, fmtOpts)}</span>
-      {showSymbol && <span className="nf-currency__sym">{symbol ?? meta.symbol}</span>}
+      {showSymbol && <span className="nf-currency__sym">{symbol ?? currencySymbol(currency)}</span>}
     </span>
   );
 }

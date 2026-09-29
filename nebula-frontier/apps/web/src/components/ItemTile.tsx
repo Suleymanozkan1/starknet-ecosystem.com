@@ -3,6 +3,7 @@ import { Icon, RarityBadge, rarityColor, rarityStyle } from "@nebula/game-ui";
 import type { InventoryItemDto } from "@nebula/shared";
 import { CATEGORY_META, RESOURCE_META } from "../lib/gameMeta.js";
 import type { ResourceId } from "@nebula/shared";
+import { fmtNum, useT } from "../lib/i18n.js";
 
 export const DND_MIME = "application/x-nf-item";
 
@@ -31,6 +32,7 @@ export interface ItemTileProps {
 
 /** Inventory card with rarity frame; draggable onto hangar slots (desktop). */
 export function ItemTile({ item, onClick, selected, draggable, compact }: ItemTileProps) {
+  const t = useT();
   const onDragStart = (e: DragEvent<HTMLButtonElement>): void => {
     e.dataTransfer.setData(DND_MIME, item.id);
     e.dataTransfer.setData("text/plain", item.name);
@@ -51,18 +53,18 @@ export function ItemTile({ item, onClick, selected, draggable, compact }: ItemTi
         <ItemIcon item={item} size={compact ? 24 : 30} />
         <div className="flex flex-col items-end gap-1">
           {item.upgradeLevel > 0 && <span className="nf-display text-[13px] font-bold text-accent">+{item.upgradeLevel}</span>}
-          {item.quantity > 1 && <span className="nf-ui text-[12px] font-bold tabular-nums text-dim">×{item.quantity.toLocaleString()}</span>}
+          {item.quantity > 1 && <span className="nf-ui text-[12px] font-bold tabular-nums text-dim">×{fmtNum(item.quantity)}</span>}
         </div>
       </div>
       <div className={compact ? "nf-ui line-clamp-2 text-[13px] font-bold leading-tight" : "nf-ui line-clamp-2 text-[14.5px] font-bold leading-tight"}>{item.name}</div>
       {!compact && (
         <div className="flex flex-wrap items-center gap-1.5">
           <RarityBadge rarity={item.rarity} />
-          {item.power > 0 && <span className="nf-ui text-[11px] uppercase tracking-[0.12em] text-mute">PWR {Math.round(item.power)}</span>}
+          {item.power > 0 && <span className="nf-ui text-[11px] uppercase tracking-[0.12em] text-mute">{t("item.pwr", { n: Math.round(item.power) })}</span>}
         </div>
       )}
-      {item.equippedOn && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-good shadow-[0_0_8px_var(--nf-good)]" title="Equipped" />}
-      {item.soulbound && !compact && <span className="nf-label text-[9.5px]">Soulbound</span>}
+      {item.equippedOn && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-good shadow-[0_0_8px_var(--nf-good)]" title={t("item.equipped")} />}
+      {item.soulbound && !compact && <span className="nf-label text-[9.5px]">{t("item.soulbound")}</span>}
     </button>
   );
 }

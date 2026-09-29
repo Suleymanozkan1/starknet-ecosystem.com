@@ -2,12 +2,14 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMe } from "../lib/queries.js";
 import { LoadingScreen } from "../components/LoadingScreen.js";
 import { ErrorState } from "../components/QueryState.js";
+import { useT } from "../lib/i18n.js";
 
 /** Requires a session; unauthenticated users are sent to /login?next=<path>. */
 export function RequireAuth() {
   const me = useMe();
   const loc = useLocation();
-  if (me.isLoading) return <LoadingScreen label="Authenticating" />;
+  const t = useT();
+  if (me.isLoading) return <LoadingScreen label={t("loading.auth")} />;
   if (me.error) {
     return (
       <div className="relative z-10 grid min-h-screen place-items-center p-6">

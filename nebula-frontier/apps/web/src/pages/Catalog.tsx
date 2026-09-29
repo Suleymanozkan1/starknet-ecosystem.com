@@ -6,6 +6,8 @@ import { CurrencyAmount, HoloPanel, Icon, RarityBadge, Tabs, rarityColor, rarity
 import type { Rarity } from "@nebula/shared";
 import { useInventory, useShop } from "../lib/queries.js";
 import { humanize } from "../lib/gameMeta.js";
+import { contentText, enumLabel, enumText, fmtDecimalStr, useT } from "../lib/i18n.js";
+import type { TFn, TKey } from "../lib/i18n.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { EmptyState } from "../components/QueryState.js";
 
@@ -21,53 +23,56 @@ interface Row {
   stats: { label: string; value: ReactNode }[];
 }
 
-function rows(kind: Kind): Row[] {
+function rows(kind: Kind, t: TFn): Row[] {
+  const num = (n: number): string => fmtDecimalStr(String(n));
   if (kind === "weapons") {
     return WEAPONS.map((w) => ({
-      id: w.id, name: w.name, rarity: w.rarity, type: `${humanize(w.type)} · ${humanize(w.slot)}`, requiredLevel: w.requiredLevel,
+      id: w.id, name: w.name, rarity: w.rarity, type: `${enumLabel(w.type)} · ${enumLabel(w.slot)}`, requiredLevel: w.requiredLevel,
       stats: [
-        { label: "Damage", value: w.damage },
-        { label: "Rate", value: `${w.fireRate}/s` },
-        { label: "Range", value: w.range },
-        { label: "Element", value: humanize(w.element) },
-        { label: "Crit", value: `${Math.round(w.critChance * 100)}%` },
-        { label: "Energy", value: w.energyCost },
+        { label: t("stat.damage"), value: w.damage },
+        { label: t("stat.rate"), value: t("unit.perSec", { n: num(w.fireRate) }) },
+        { label: t("stat.range"), value: w.range },
+        { label: t("stat.element"), value: enumLabel(w.element) },
+        { label: t("stat.crit"), value: t("common.pct", { n: Math.round(w.critChance * 100) }) },
+        { label: t("stat.energy"), value: w.energyCost },
       ],
     }));
   }
   if (kind === "modules") {
     return MODULES.map((m) => ({
-      id: m.id, name: m.name, rarity: m.rarity, type: `${humanize(m.kind)} · ${humanize(m.slot)}`, requiredLevel: m.requiredLevel, description: m.description,
+      id: m.id, name: m.name, rarity: m.rarity, type: `${enumLabel(m.kind)} · ${enumLabel(m.slot)}`, requiredLevel: m.requiredLevel, description: contentText("module", m.id, m.description),
       stats: [
-        ...Object.entries(m.passive).slice(0, 4).map(([k, v]) => ({ label: humanize(k.replace(/([A-Z])/g, "_$1")), value: `+${v}` })),
-        ...(m.cooldownMs ? [{ label: "Cooldown", value: `${Math.round(m.cooldownMs / 1000)}s` }] : []),
+        ...Object.entries(m.passive).slice(0, 4).map(([k, v]) => ({ label: enumLabel(k.replace(/([A-Z])/g, "_$1")), value: `+${num(v)}` })),
+        ...(m.cooldownMs ? [{ label: t("stat.cooldown"), value: t("unit.sec", { n: Math.round(m.cooldownMs / 1000) }) }] : []),
       ],
     }));
   }
   return DRONES.map((d) => ({
-    id: d.id, name: d.name, rarity: d.rarity, type: humanize(d.type), requiredLevel: d.requiredLevel,
+    id: d.id, name: d.name, rarity: d.rarity, type: enumLabel(d.type), requiredLevel: d.requiredLevel,
     stats: [
-      { label: "Hull", value: d.hull },
-      { label: "Max level", value: d.maxLevel },
-      { label: "Dmg / lvl", value: d.damagePerLevel },
-      ...Object.entries(d.passivePerLevel).slice(0, 2).map(([k, v]) => ({ label: `${humanize(k)} / lvl`, value: `+${v}` })),
+      { label: t("stat.hull"), value: d.hull },
+      { label: t("stat.maxLevel"), value: d.maxLevel },
+      { label: t("stat.dmgPerLvl"), value: d.damagePerLevel },
+      ...Object.entries(d.passivePerLevel).slice(0, 2).map(([k, v]) => ({ label: t("stat.perLvl", { stat: enumText(k, humanize(k)) }), value: `+${num(v)}` })),
     ],
   }));
 }
 
-const TITLES: Record<Kind, { title: string; eyebrow: string; icon: "weapon" | "module" | "drone" }> = {
-  weapons: { title: "Weapons", eyebrow: "Armory", icon: "weapon" },
-  modules: { title: "Modules", eyebrow: "Engineering", icon: "module" },
-  drones: { title: "Drones", eyebrow: "Drone bay", icon: "drone" },
+const TITLES: Record<Kind, { title: TKey; eyebrow: TKey; icon: "weapon" | "module" | "drone" }> = {
+  weapons: { title: "nav.weapons", eyebrow: "catalog.armory", icon: "weapon" },
+  modules: { title: "nav.modules", eyebrow: "catalog.engineering", icon: "module" },
+  drones: { title: "nav.drones", eyebrow: "catalog.droneBay", icon: "drone" },
 };
 
 /** Weapons / Modules / Drones reference: data-driven stats + what you own + live shop prices. */
 export default function CatalogPage({ kind }: { kind: Kind }) {
+  const tr = useT();
   const inv = useInventory();
   const shop = useShop();
   const [owned, setOwned] = useState<"ALL" | "OWNED">("ALL");
   const [search, setSearch] = useState("");
-  const all = useMemo(() => rows(kind), [kind]);
+  // `tr` changes identity with the language, so the translated rows are rebuilt on a language switch.
+  const all = useMemo(() => rows(kind, tr), [kind, tr]);
   const ownedCount = useMemo(() => {
     const m = new Map<string, number>();
     for (const i of inv.data?.items ?? []) m.set(i.itemId, (m.get(i.itemId) ?? 0) + i.quantity);
@@ -87,14 +92,14 @@ export default function CatalogPage({ kind }: { kind: Kind }) {
 
   return (
     <div>
-      <PageHeader eyebrow={t.eyebrow} title={t.title} actions={<Link to="/inventory" className="nf-btn nf-btn--sm nf-btn--ghost no-underline">Inventory</Link>} />
+      <PageHeader eyebrow={tr(t.eyebrow)} title={tr(t.title)} actions={<Link to="/inventory" className="nf-btn nf-btn--sm nf-btn--ghost no-underline">{tr("nav.inventory")}</Link>} />
       <HoloPanel padded={false} className="mb-4">
         <div className="flex flex-wrap items-center justify-between gap-2 pr-3">
-          <Tabs value={owned} onChange={setOwned} items={[{ key: "ALL", label: "All", count: all.length }, { key: "OWNED", label: "Owned", count: all.filter((r) => ownedCount.has(itemIdForDef(r.id))).length }]} />
-          <input className="nf-input my-2 w-56" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search" />
+          <Tabs value={owned} onChange={setOwned} items={[{ key: "ALL", label: tr("common.all"), count: all.length }, { key: "OWNED", label: tr("common.owned"), count: all.filter((r) => ownedCount.has(itemIdForDef(r.id))).length }]} />
+          <input className="nf-input my-2 w-56" placeholder={tr("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} aria-label={tr("common.search")} />
         </div>
       </HoloPanel>
-      {list.length === 0 ? <EmptyState title="Nothing found" icon={t.icon} /> : (
+      {list.length === 0 ? <EmptyState title={tr("catalog.nothing")} icon={t.icon} /> : (
         <div className="nf-grid-cards" style={{ "--card-min": "260px" } as CSSProperties}>
           {list.map((r) => {
             const n = ownedCount.get(itemIdForDef(r.id)) ?? 0;
@@ -105,7 +110,7 @@ export default function CatalogPage({ kind }: { kind: Kind }) {
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-line bg-black/30" style={{ color: rarityColor(r.rarity) }}><Icon name={t.icon} size={24} /></span>
                   <div className="min-w-0 flex-1">
                     <div className="nf-ui truncate text-[16px] font-bold">{r.name}</div>
-                    <div className="nf-label">{r.type} · Lv {r.requiredLevel}+</div>
+                    <div className="nf-label">{r.type} · {tr("common.lvPlus", { n: r.requiredLevel })}</div>
                   </div>
                   <RarityBadge rarity={r.rarity} />
                 </div>
@@ -116,8 +121,8 @@ export default function CatalogPage({ kind }: { kind: Kind }) {
                   ))}
                 </dl>
                 <div className="flex items-center justify-between border-t border-line pt-2.5">
-                  {n > 0 ? <span className="nf-chip" style={{ color: "var(--nf-good)" }}>Owned ×{n}</span> : <span className="text-[12px] text-mute">Not owned</span>}
-                  {price ? <Link to={`/shop?product=${price.id}`} className="no-underline"><CurrencyAmount amount={price.price} currency={price.currency} size={14} /></Link> : <span className="text-[12px] text-mute">Loot / craft</span>}
+                  {n > 0 ? <span className="nf-chip" style={{ color: "var(--nf-good)" }}>{tr("catalog.ownedN", { n })}</span> : <span className="text-[12px] text-mute">{tr("catalog.notOwned")}</span>}
+                  {price ? <Link to={`/shop?product=${price.id}`} className="no-underline"><CurrencyAmount amount={price.price} currency={price.currency} size={14} /></Link> : <span className="text-[12px] text-mute">{tr("catalog.lootCraft")}</span>}
                 </div>
               </article>
             );

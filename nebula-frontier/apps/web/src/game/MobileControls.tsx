@@ -6,9 +6,11 @@ import type { HudSkill, HudView } from "./hudModel.js";
 import type { GameActions } from "./adapter.js";
 import { haptic } from "../native/haptics.js";
 import { useSettings } from "../store/settings.js";
+import { useT } from "../lib/i18n.js";
 
 /** Left virtual joystick → actions.setJoystick(x, y) with dead zone; y is screen-down positive unless inverted. */
 function Joystick({ actions, side }: { actions: GameActions; side: "left" | "right" }) {
+  const t = useT();
   const base = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
   const pointer = useRef<number | null>(null);
@@ -47,7 +49,7 @@ function Joystick({ actions, side }: { actions: GameActions; side: "left" | "rig
       onPointerUp={end}
       onPointerCancel={end}
       role="application"
-      aria-label="Movement joystick"
+      aria-label={t("mc.joystick")}
     >
       <div className="nf-joystick__knob" style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }} />
     </div>
@@ -89,6 +91,7 @@ function pick(skills: HudSkill[], pred: (s: HudSkill) => boolean): HudSkill | un
  * Ultimate, EMP, Shield, Dash. Target row: nearest enemy / player / objective and manual lock.
  */
 export function MobileControls({ hud, actions }: { hud: HudView; actions: GameActions }) {
+  const t = useT();
   const left = useSettings((s) => s.leftHandedControls);
   const abilities = hud.skills.filter((s) => s.kind === "ABILITY");
   const ult = pick(hud.skills, (s) => s.kind === "ULTIMATE");
@@ -103,25 +106,25 @@ export function MobileControls({ hud, actions }: { hud: HudView; actions: GameAc
       <div className="absolute grid gap-3" style={{ [actionSide]: "calc(18px + var(--safe-right))", bottom: "calc(22px + var(--safe-bottom))" } as CSSProperties}>
         <div className="flex items-end gap-3" style={{ flexDirection: left ? "row-reverse" : "row" }}>
           <div className="grid gap-2.5">
-            <TouchButton size={52} icon="ultimate" label="Ultimate" color="var(--nf-credits)" disabled={!ult} cooldown={ult?.remainingMs} onPress={use(ult)} />
-            <TouchButton size={52} icon="zap" label="Ability 2" disabled={!abilities[1]} cooldown={abilities[1]?.remainingMs} onPress={use(abilities[1])} />
-            <TouchButton size={52} icon="zap" label="Ability 1" disabled={!abilities[0]} cooldown={abilities[0]?.remainingMs} onPress={use(abilities[0])} />
+            <TouchButton size={52} icon="ultimate" label={t("mc.ultimate")} color="var(--nf-credits)" disabled={!ult} cooldown={ult?.remainingMs} onPress={use(ult)} />
+            <TouchButton size={52} icon="zap" label={t("mc.ability2")} disabled={!abilities[1]} cooldown={abilities[1]?.remainingMs} onPress={use(abilities[1])} />
+            <TouchButton size={52} icon="zap" label={t("mc.ability1")} disabled={!abilities[0]} cooldown={abilities[0]?.remainingMs} onPress={use(abilities[0])} />
           </div>
           <div className="grid justify-items-center gap-2.5">
             <div className="flex gap-2.5">
-              <TouchButton size={48} icon="emp" label="EMP" color="#a78bfa" disabled={!emp} cooldown={emp?.remainingMs} onPress={use(emp)} />
-              <TouchButton size={48} icon="shield" label="Shield" color="#60a5fa" disabled={!shield} cooldown={shield?.remainingMs} onPress={use(shield)} />
+              <TouchButton size={48} icon="emp" label={t("mc.emp")} color="#a78bfa" disabled={!emp} cooldown={emp?.remainingMs} onPress={use(emp)} />
+              <TouchButton size={48} icon="shield" label={t("stat.shield")} color="#60a5fa" disabled={!shield} cooldown={shield?.remainingMs} onPress={use(shield)} />
             </div>
-            <TouchButton size={96} icon="fire" label="Fire" color="var(--nf-bad)" onPress={() => actions.setFiring(true)} onRelease={() => actions.setFiring(false)} />
-            <TouchButton size={52} icon="dash" label="Dash" onPress={() => actions.dash()} />
+            <TouchButton size={96} icon="fire" label={t("mc.fire")} color="var(--nf-bad)" onPress={() => actions.setFiring(true)} onRelease={() => actions.setFiring(false)} />
+            <TouchButton size={52} icon="dash" label={t("mc.dash")} onPress={() => actions.dash()} />
           </div>
         </div>
       </div>
       <div className="absolute flex gap-2" style={{ [actionSide]: "calc(18px + var(--safe-right))", bottom: "calc(300px + var(--safe-bottom))" } as CSSProperties}>
-        {([["NEAREST_ENEMY", "target", "Enemy"], ["NEAREST_PLAYER", "user", "Player"], ["NEAREST_OBJECTIVE", "missions", "Objective"]] as const).map(([mode, icon, label]) => (
-          <TouchButton key={mode} size={42} icon={icon} label={label} onPress={() => { actions.target(mode); haptic("selection"); }} />
+        {([["NEAREST_ENEMY", "target", "mc.enemy"], ["NEAREST_PLAYER", "user", "mc.player"], ["NEAREST_OBJECTIVE", "missions", "hud.objective"]] as const).map(([mode, icon, label]) => (
+          <TouchButton key={mode} size={42} icon={icon} label={t(label)} onPress={() => { actions.target(mode); haptic("selection"); }} />
         ))}
-        <TouchButton size={42} icon="lock" label="Manual lock (tap a ship)" color={hud.target ? "var(--nf-good)" : undefined} onPress={() => actions.toggleManualLock()} />
+        <TouchButton size={42} icon="lock" label={t("mc.manualLock")} color={hud.target ? "var(--nf-good)" : undefined} onPress={() => actions.toggleManualLock()} />
       </div>
     </>
   );
