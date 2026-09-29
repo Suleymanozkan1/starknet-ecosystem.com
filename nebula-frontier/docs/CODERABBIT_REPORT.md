@@ -300,7 +300,7 @@ Verification: typecheck, lint and build are clean on all workspaces; vitest pass
 - The `GalaxyRoom` ping handler is rate-limited per client.
 
 **Security and operations**
-- `/metrics` requires a `METRICS_TOKEN` bearer token, compared in constant time. Production requires the token (at least 32 characters, documented in `.env.example`) and returns 404 without it.
+- `/metrics` requires a `METRICS_TOKEN` bearer token, compared in constant time. Production requires the token (at least 32 characters, documented in `.env.example`). Without a configured token the route returns 404 in every environment, development included. CodeRabbit verified this on the PR head and resolved the thread.
 - The logger also scrubs `Basic` credentials and credentials in URLs, and its `err` serializer handles non-`Error` values.
 - A failed event-trigger subscription is caught and logged instead of causing an unhandled rejection.
 - `nextEventWindow` guards a non-positive period, and tuning overrides require `minResist < maxResist`.
