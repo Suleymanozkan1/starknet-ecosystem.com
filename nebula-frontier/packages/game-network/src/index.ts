@@ -12,4 +12,4 @@ export {
   GameSession, ROOM_FOR_MAP_TYPE, roomForMap, type GameSessionOptions, type SessionEvents, type TicketResult, type Pose,
 } from "./session.js";
 export { LocalConnection, LOCAL_SERVER_URL, isLocalServerUrl, encodeDemoTicket, decodeDemoTicket } from "./local/connection.js";
-export { LocalWorld, pilotStats, type LocalPilot } from "./local/world.js";
+export { LocalWorld, pilotStats, type LocalGear, type LocalLoadout, type LocalPilot } from "./local/world.js";

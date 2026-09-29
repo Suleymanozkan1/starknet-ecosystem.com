@@ -73,6 +73,31 @@ describe("LocalWorld (demo simulation)", () => {
     expect(reward?.xp).toBeGreaterThan(0);
   });
 
+  it("free-aim fire: holding the trigger shoots along the aim line without a lock", () => {
+    const { world, entities, events } = setup();
+    const me = entities.get(world.localId) as EntitySnapshot;
+    const npc = [...entities.values()].find((e) => e.kind === "NPC") as EntitySnapshot;
+    // Aim away from the NPC: shots fly but hit nothing.
+    me.x = npc.x - 10;
+    me.y = npc.y;
+    world.handle("aim", { x: me.x - 50, y: me.y });
+    world.handle("fire", { firing: true, group: "PRIMARY" });
+    for (let i = 0; i < 10; i++) world.tick(50);
+    const dry = events.filter((e) => e.type === "player_attack") as { type: string; payload: ServerEvents["player_attack"] }[];
+    expect(dry.length).toBeGreaterThan(0);
+    expect(dry.every((e) => !e.payload.hit && e.payload.targetId === "")).toBe(true);
+    expect(npc.hull).toBe(npc.maxHull);
+    // Swing the aim onto the NPC: the same held trigger now hits it (no target lock involved).
+    events.length = 0;
+    for (let i = 0; i < 40; i++) {
+      me.x = npc.x - 10;
+      me.y = npc.y;
+      world.handle("aim", { x: npc.x, y: npc.y });
+      world.tick(50);
+    }
+    expect(events.some((e) => e.type === "player_damage" && (e.payload as ServerEvents["player_damage"]).targetId === npc.id)).toBe(true);
+  });
+
   it("jumps through a portal to its target map", () => {
     const { world, entities, events, faction } = setup();
     const map = MAPS_BY_ID.get(faction.homeMap);

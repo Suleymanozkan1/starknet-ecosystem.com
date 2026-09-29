@@ -21,7 +21,7 @@ import {
   buffModifiers, checkDisplacement, computeStats, coolHeat, createAbilityState, createBrain, deathRepairCost, grantXp,
   isDamageImpossible, isPvpAllowedAt, isSafeAt, isWeakPointHit, maxShotDamage, mineStep, nearestPortal, npcStats,
   pickAsteroidResource, pruneBuffs, regenerate, resetBoss, resolveAreaDamage, resolveHit, resourceHardness, rollAffixes, rollLoot,
-  spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable,
+  spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable, aimTarget, shipHitRadius,
   clampKarma, decayKarma, hasPetAbility, isOutlaw, petBuff, petLevelForXp, petScale, petXpToNext, reputationFor, toMoney,
   type AbilitySlotDef, type EffectiveWeapon, type GameplayEvent, type HitResult, type LootDrop, type Rng, type SimTuning,
 } from "@nebula/game-core";
@@ -469,7 +469,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       packets: new PacketRateLimiter(this.rules.packetRatePerSec, this.rules.packetBurst, now),
       chat: new TokenBucket(this.rules.chatRatePerSec, this.rules.chatBurst, now),
       cooldownTracker: new CooldownViolationTracker(), fireAudit: new FireRateAuditor(), repeated: new RepeatedMovementDetector(),
-      reaction: new ReactionTimeDetector(), spamStrikes: 0, firing: { PRIMARY: false, SECONDARY: false }, docked: null, miningTarget: null,
+      reaction: new ReactionTimeDetector(), spamStrikes: 0, firing: { PRIMARY: false, SECONDARY: false }, aim: { x: 0, y: 0, at: -Infinity }, docked: null, miningTarget: null,
       cargoUsed: 0, visible: new Set(), firstSeen: new Map(), pending: new PendingDelta(), flushing: false, flushRequested: false,
       deathCount: 0, respawnAt: 0, lastRepairCost: 0, joinedAt: now, lastPlaytimeAt: now, lastSurviveAt: now, formation: profile.formation,
       cosmetics: profile.cosmetics, kills: 0, deaths: 0, score: 0, damageDealt: 0, connected: true, left: false, jumpedTo: null,
@@ -585,6 +585,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       case "input": return this.onInput(p, m as ParsedMessages["input"]);
       case "aim": {
         const a = m as ParsedMessages["aim"];
+        p.aim.x = a.x;
+        p.aim.y = a.y;
+        p.aim.at = this.now;
         if (!p.dead && !p.docked) p.lastInput = { ...p.lastInput, heading: Math.atan2(a.y - p.y, a.x - p.x) };
         return;
       }
@@ -809,14 +812,62 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     if (p.dead || p.docked || !p.connected) return;
     if (!p.firing.PRIMARY && !p.firing.SECONDARY) return;
     if (this.now < p.stunnedUntil) return;
-    const target = p.targetId ? this.shipById(p.targetId) : null;
-    if (!target || target.dead || !p.visible.has(target.id) || !this.attackable(p, target)) return;
+    // Free aim: while the trigger is held, guns shoot along the aim line (fresh aim point, else the nose)
+    // and hit the first attackable ship on it — no lock required. Missiles keep homing on a locked target.
+    const aimFresh = this.now - p.aim.at < 1500 && Math.hypot(p.aim.x - p.x, p.aim.y - p.y) > 0.5;
+    const angle = aimFresh ? Math.atan2(p.aim.y - p.y, p.aim.x - p.x) : p.heading;
+    const locked = p.targetId ? this.shipById(p.targetId) : null;
+    const lockedOk = !!locked && !locked.dead && p.visible.has(locked.id) && this.attackable(p, locked);
+    let candidates: { id: string; x: number; y: number; radius: number; ship: ShipActor }[] | null = null;
     for (const w of p.stats.weapons) {
-      if (w.mining) continue;
-      if (!p.firing[w.group]) continue;
-      this.fireWeapon(p, w, target as ShipActor);
-      if (target.dead) break;
+      if (w.mining || !p.firing[w.group]) continue;
+      if (w.group === "SECONDARY" && lockedOk && locked) {
+        this.fireWeapon(p, w, locked as ShipActor);
+        continue;
+      }
+      candidates ??= this.aimCandidates(p, w.range);
+      const hit = aimTarget(p.x, p.y, angle, w.range, candidates.filter((c) => !c.ship.dead));
+      if (hit) this.fireWeapon(p, w, hit.target.ship);
+      else this.fireDry(p, w, angle);
     }
+  }
+
+  /** Attackable ships the player can see within weapon reach (for free-aim ray tests). */
+  private aimCandidates(p: PlayerActor, range: number): { id: string; x: number; y: number; radius: number; ship: ShipActor }[] {
+    const out: { id: string; x: number; y: number; radius: number; ship: ShipActor }[] = [];
+    const reach = Math.max(range, ...p.stats.weapons.map((w) => w.range)) + 30;
+    for (const g of this.grid.query(p.x, p.y, reach)) {
+      const o = g.ref;
+      if (o === p || (o.kind !== "PLAYER" && o.kind !== "NPC" && o.kind !== "BOSS") || o.dead) continue;
+      if (!p.visible.has(o.id) || !this.attackable(p, o)) continue;
+      const scale = o.kind === "PLAYER" ? 1 : (o as NpcActor).def.visual.scale;
+      out.push({ id: o.id, x: o.x, y: o.y, radius: shipHitRadius(scale), ship: o as ShipActor });
+    }
+    return out;
+  }
+
+  /** A shot on a clear line of fire: pays fire-rate/energy/heat/ammo like a hit, the bolt flies to max range. */
+  private fireDry(p: PlayerActor, w: EffectiveWeapon, angle: number): void {
+    const rt = p.weaponRt.get(w.key) ?? { readyAt: 0 };
+    const ammoStack = w.ammo ? p.profile.ammo.get(w.ammo)?.find((s) => s.quantity > 0) : undefined;
+    const r = tryFire(w, rt, p.heat, p.energy, p.stats.heatCapacity, this.now, !w.ammo || !!ammoStack);
+    if (!r.ok) return;
+    p.weaponRt.set(w.key, r.rt);
+    p.heat = r.heat;
+    p.energy = r.energy;
+    if (ammoStack) {
+      ammoStack.quantity--;
+      p.pending.ammo.set(ammoStack.id, (p.pending.ammo.get(ammoStack.id) ?? 0) + 1);
+    }
+    if (p.fireAudit.check(w.key, w.fireRate, this.now)) this.flag(p, "ATTACK_SPEED_HACK", 25, { weapon: w.defId });
+    p.abilities = breakCloak(p.abilities);
+    p.cloaked = false;
+    p.pulseFlags |= EntityFlag.FIRING;
+    this.sendNear(p.x, p.y, ServerEvent.PLAYER_ATTACK, {
+      sourceId: p.id, targetId: "", weaponId: w.defId, weaponType: w.type, hit: false,
+      fromX: p.x, fromY: p.y, toX: p.x + Math.cos(angle) * w.range, toY: p.y + Math.sin(angle) * w.range, color: w.color, style: w.style,
+      travelMs: w.projectileSpeed > 0 ? Math.round((w.range / w.projectileSpeed) * 1000) : 0,
+    });
   }
 
   /** Fire one weapon at a target, enforcing fire rate / energy / heat / ammo / range. */

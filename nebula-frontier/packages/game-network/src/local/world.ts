@@ -14,7 +14,7 @@ import {
   SHIPS_BY_ID, WEAPONS_BY_ID, itemIdForResource,
 } from "@nebula/config";
 import {
-  DEFAULT_TUNING, IDLE_INPUT, activateAbility, applyDash, applyEmp, bossTick, buffModifiers, computeStats, coolHeat,
+  DEFAULT_TUNING, IDLE_INPUT, activateAbility, aimTarget, shipHitRadius, applyDash, applyEmp, bossTick, buffModifiers, computeStats, coolHeat,
   createAbilityState, createBrain, grantXp, isSafeAt, isWeakPointHit, levelForXp, mineStep, nearestPortal, npcStats,
   pickAsteroidResource, pruneBuffs, regenerate, resolveAreaDamage, resolveHit, resourceHardness, rollLoot, spawnPoint,
   stationInRange, stepNpcBrain, stepShip, tryFire,
@@ -29,7 +29,12 @@ export interface LocalPilot {
   factionId: string;
   shipId: string;
   xp: number;
+  /** Equipped gear from the hangar (def ids + upgrade levels); the faction starter loadout when absent. */
+  loadout?: LocalLoadout;
 }
+
+export interface LocalGear { id: string; up: number }
+export interface LocalLoadout { shipUpgrade: number; weapons: LocalGear[]; modules: LocalGear[]; drones: LocalGear[] }
 
 export const LOCAL_TICK_RATE = 20;
 
@@ -75,6 +80,10 @@ interface PlayerActor extends ShipActor {
   cargoUsed: number;
   ammo: Map<string, number>;
   respawnAt: number;
+  /** Latest aim point (map coords) and when it arrived; free-aim fire shoots along this line. */
+  aimX: number;
+  aimY: number;
+  aimAt: number;
 }
 
 interface NpcActor extends ShipActor {
@@ -120,26 +129,29 @@ function blankEntity(id: string, kind: EntityKind, name: string, defId: string, 
   };
 }
 
-function equipped<D>(ids: readonly string[], lookup: (id: string) => D | undefined): Equipped<D>[] {
+function equipped<D>(gear: readonly LocalGear[], lookup: (id: string) => D | undefined): Equipped<D>[] {
   const out: Equipped<D>[] = [];
-  for (const id of ids) {
-    const def = lookup(id);
-    if (def) out.push({ def, upgradeLevel: 0, affixes: [], level: 1 });
+  for (const g of gear) {
+    const def = lookup(g.id);
+    if (def) out.push({ def, upgradeLevel: g.up, affixes: [], level: 1 });
   }
   return out;
 }
+
+const bare = (ids: readonly string[]): LocalGear[] => ids.map((id) => ({ id, up: 0 }));
 
 /** Effective stats of a pilot's ship with the faction starter loadout (the demo has no hangar persistence). */
 export function pilotStats(pilot: LocalPilot): EffectiveStats {
   const faction = FACTIONS_BY_ID.get(pilot.factionId);
   const ship = SHIPS_BY_ID.get(pilot.shipId) ?? (faction ? SHIPS_BY_ID.get(faction.starterShip) : undefined) ?? SHIPS[0];
   if (!ship) throw new Error("No ship definitions available");
-  const lo = faction?.starterLoadout ?? { weapons: [], modules: [], drones: [] };
+  const starter = faction?.starterLoadout ?? { weapons: [], modules: [], drones: [] };
+  const lo: LocalLoadout = pilot.loadout ?? { shipUpgrade: 0, weapons: bare(starter.weapons), modules: bare(starter.modules), drones: bare(starter.drones) };
   const weapons = equipped<WeaponDef>(lo.weapons, (id) => WEAPONS_BY_ID.get(id));
   const modules = equipped<ModuleDef>(lo.modules, (id) => MODULES_BY_ID.get(id));
   return computeStats({
     ship,
-    shipUpgradeLevel: 0,
+    shipUpgradeLevel: lo.shipUpgrade,
     lasers: weapons.filter((w) => w.def.slot === "LASER").slice(0, ship.slots.laser),
     missiles: weapons.filter((w) => w.def.slot === "MISSILE").slice(0, ship.slots.missile),
     generators: modules.filter((m) => m.def.slot === "GENERATOR").slice(0, ship.slots.generator),
@@ -231,12 +243,13 @@ export class LocalWorld {
     const ammo = new Map<string, number>();
     for (const a of faction?.starterLoadout.ammo ?? []) ammo.set(a.itemId, a.quantity);
     // Weapons reference ammo by item def id; map starter stacks (`item_<id>`) onto both spellings.
-    for (const w of stats.weapons) if (w.ammo && !ammo.has(w.ammo)) ammo.set(w.ammo, ammo.get(`item_${w.ammo}`) ?? 200);
+    for (const w of stats.weapons) if (w.ammo && !ammo.has(w.ammo)) ammo.set(w.ammo, ammo.get(`item_${w.ammo}`) ?? 2000);
     return {
       e, stats, weaponRt: new Map(), heat: { heat: 0, overheated: false }, abilities: createAbilityState(), stunnedUntil: 0,
       shieldDisruptedUntil: 0, lastDamagedAt: 0, invulnerableUntil: this.now + RULES.spawnProtectionMs, damageBy: new Map(),
       lastHitBy: new Map(), pulse: 0, pilot, xp: pilot.xp, inputQueue: [], lastInput: { ...IDLE_INPUT }, lastInputAt: 0,
       firing: { PRIMARY: false, SECONDARY: false }, docked: null, miningTarget: null, cargoUsed: 0, ammo, respawnAt: 0,
+      aimX: 0, aimY: 0, aimAt: -Infinity,
     };
   }
 
@@ -317,7 +330,11 @@ export class LocalWorld {
         return;
       }
       case "aim":
-        if (!p.e.dead && !p.docked) p.lastInput = { ...p.lastInput, heading: Math.atan2(num(m.y) - p.e.y, num(m.x) - p.e.x) };
+        if (typeof m.x !== "number" || typeof m.y !== "number" || !Number.isFinite(m.x) || !Number.isFinite(m.y)) return;
+        p.aimX = m.x;
+        p.aimY = m.y;
+        p.aimAt = this.now;
+        if (!p.e.dead && !p.docked) p.lastInput = { ...p.lastInput, heading: Math.atan2(m.y - p.e.y, m.x - p.e.x) };
         return;
       case "fire": {
         const group = m.group === "SECONDARY" ? "SECONDARY" : "PRIMARY";
@@ -461,13 +478,50 @@ export class LocalWorld {
     if (p.e.dead || p.docked) return;
     if (!p.firing.PRIMARY && !p.firing.SECONDARY) return;
     if (this.now < p.stunnedUntil) return;
-    const target = p.e.targetId ? this.npcs.get(p.e.targetId) : undefined;
-    if (!target || target.e.dead || !this.hostileToPlayer(target)) return;
+    // Free aim: shoot along the cursor/stick line (fresh aim point), else straight ahead.
+    const aimFresh = this.now - p.aimAt < 1500 && Math.hypot(p.aimX - p.e.x, p.aimY - p.e.y) > 0.5;
+    const angle = aimFresh ? Math.atan2(p.aimY - p.e.y, p.aimX - p.e.x) : p.e.heading;
+    const locked = p.e.targetId ? this.npcs.get(p.e.targetId) : undefined;
     for (const w of p.stats.weapons) {
       if (w.mining || !p.firing[w.group]) continue;
-      this.fireWeapon(p, w, target);
-      if (target.e.dead) break;
+      // Missiles keep homing on a locked target; guns hit whatever is on the line of fire.
+      if (w.group === "SECONDARY" && locked && !locked.e.dead) {
+        this.fireWeapon(p, w, locked);
+        continue;
+      }
+      const hit = aimTarget(p.e.x, p.e.y, angle, w.range, this.aimCandidates());
+      if (hit) this.fireWeapon(p, w, hit.target.actor);
+      else this.fireDry(p, w, angle);
     }
+  }
+
+  private aimCandidates(): { id: string; x: number; y: number; radius: number; actor: NpcActor }[] {
+    const out: { id: string; x: number; y: number; radius: number; actor: NpcActor }[] = [];
+    for (const n of this.npcs.values()) {
+      if (n.e.dead || !this.hostileToPlayer(n)) continue;
+      out.push({ id: n.e.id, x: n.e.x, y: n.e.y, radius: shipHitRadius(n.def.visual.scale), actor: n });
+    }
+    return out;
+  }
+
+  /** A shot that meets nothing: same fire-rate/energy/heat/ammo costs, the bolt flies to max range. */
+  private fireDry(src: PlayerActor, w: EffectiveWeapon, angle: number): void {
+    const rt = src.weaponRt.get(w.key) ?? { readyAt: 0 };
+    const ammoLeft = w.ammo ? src.ammo.get(w.ammo) ?? 0 : 1;
+    const r = tryFire(w, rt, src.heat, src.e.energy, src.stats.heatCapacity, this.now, !w.ammo || ammoLeft > 0);
+    if (!r.ok) return;
+    src.weaponRt.set(w.key, r.rt);
+    src.heat = r.heat;
+    src.e.energy = r.energy;
+    if (w.ammo) src.ammo.set(w.ammo, ammoLeft - 1);
+    src.pulse |= EntityFlag.FIRING;
+    const toX = src.e.x + Math.cos(angle) * w.range;
+    const toY = src.e.y + Math.sin(angle) * w.range;
+    this.sink.event("player_attack", {
+      sourceId: src.e.id, targetId: "", weaponId: w.defId, weaponType: w.type, hit: false,
+      fromX: src.e.x, fromY: src.e.y, toX, toY, color: w.color, style: w.style,
+      travelMs: w.projectileSpeed > 0 ? Math.round((w.range / w.projectileSpeed) * 1000) : 0,
+    });
   }
 
   private fireWeapon(src: ShipActor, w: EffectiveWeapon, target: ShipActor, fireRateMult = 1): void {

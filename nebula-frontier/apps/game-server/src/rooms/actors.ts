@@ -78,6 +78,8 @@ export interface PlayerActor extends ShipActor {
   reaction: ReactionTimeDetector;
   spamStrikes: number;
   firing: { PRIMARY: boolean; SECONDARY: boolean };
+  /** Latest validated aim point (map coords) and when it arrived — free-aim fire shoots along it. */
+  aim: { x: number; y: number; at: number };
   docked: string | null;
   miningTarget: string | null;
   cargoUsed: number;

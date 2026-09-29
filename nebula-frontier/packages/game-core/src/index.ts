@@ -16,3 +16,4 @@ export * from "./events.js";
 export * from "./zones.js";
 export * from "./spatial.js";
 export * from "./social.js";
+export * from "./aim.js";
