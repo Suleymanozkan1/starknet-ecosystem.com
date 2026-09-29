@@ -202,6 +202,11 @@ export class AdaptiveResolution {
   private ema = 0;
   private overFor = 0;
   private underFor = 0;
+  /** Time left before another change is allowed (each change resizes buffers and costs a frame). */
+  private cooldown = 0;
+  /** Up-scales remaining; spent when a raise is later undone so the ratio cannot ping-pong forever. */
+  private upBudget = 3;
+  private lastWasUp = false;
   ratio: number;
   min: number;
   max: number;
@@ -226,30 +231,38 @@ export class AdaptiveResolution {
   sample(frameMs: number): number | null {
     if (!this.enabled || frameMs <= 0 || frameMs > 1000) return null;
     this.ema = this.ema === 0 ? frameMs : this.ema * 0.92 + frameMs * 0.08;
+    if (this.cooldown > 0) {
+      this.cooldown -= frameMs;
+      return null;
+    }
     if (this.ema > this.targetMs * 1.18) {
       this.overFor += frameMs;
       this.underFor = 0;
-    } else if (this.ema < this.targetMs * 0.8) {
+    } else if (this.ema < this.targetMs * 0.7) {
       this.underFor += frameMs;
       this.overFor = 0;
     } else {
       this.overFor = 0;
       this.underFor = 0;
     }
-    if (this.overFor > 1500 && this.ratio > this.min) {
-      this.ratio = Math.max(this.min, Math.round((this.ratio - 0.1) * 100) / 100);
-      this.overFor = 0;
-      return this.ratio;
+    if (this.overFor > 2000 && this.ratio > this.min) {
+      // A raise that immediately has to be undone means the device sits on the edge: stop raising.
+      if (this.lastWasUp) this.upBudget = Math.max(0, this.upBudget - 1);
+      this.ratio = Math.max(this.min, Math.round((this.ratio - 0.15) * 100) / 100);
+      return this.changed(false);
     }
-    if (this.underFor > 5000 && this.ratio < this.max) {
-      this.ratio = Math.min(this.max, Math.round((this.ratio + 0.05) * 100) / 100);
-      this.underFor = 0;
-      return this.ratio;
+    if (this.underFor > 8000 && this.ratio < this.max && this.upBudget > 0) {
+      this.ratio = Math.min(this.max, Math.round((this.ratio + 0.1) * 100) / 100);
+      return this.changed(true);
     }
     return null;
   }
 
-  get smoothedFrameMs(): number {
-    return this.ema;
+  private changed(up: boolean): number {
+    this.overFor = 0;
+    this.underFor = 0;
+    this.cooldown = 4000;
+    this.lastWasUp = up;
+    return this.ratio;
   }
 }

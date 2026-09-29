@@ -2,7 +2,7 @@ import type { ClientMessages, EntitySnapshot, JoinOptions, RoomName, ServerEvent
 import { FACTIONS } from "@nebula/config";
 import type { Connection, ConnectionEvents, ConnectionStatus, WorldStateView } from "../connection.js";
 import { Emitter } from "../emitter.js";
-import { LOCAL_TICK_RATE, LocalWorld, type LocalPilot } from "./world.js";
+import { LOCAL_TICK_RATE, LocalWorld, type LocalGear, type LocalLoadout, type LocalPilot } from "./world.js";
 
 /** Server URL scheme that selects the offline demo simulation instead of Colyseus. */
 export const LOCAL_SERVER_URL = "local://demo";
@@ -32,16 +32,43 @@ export function decodeDemoTicket(ticket: string): LocalPilot {
     const raw = JSON.parse(new TextDecoder().decode(bytes)) as Partial<Record<keyof LocalPilot, unknown>>;
     const str = (v: unknown, d: string): string => (typeof v === "string" && v.length > 0 && v.length <= 64 ? v : d);
     const xp = typeof raw.xp === "number" && Number.isFinite(raw.xp) && raw.xp >= 0 ? Math.floor(raw.xp) : 0;
-    return {
+    const pilot: LocalPilot = {
       userId: str(raw.userId, fallback.userId),
       name: str(raw.name, fallback.name),
       factionId: str(raw.factionId, fallback.factionId),
       shipId: str(raw.shipId, fallback.shipId),
       xp,
     };
+    const loadout = decodeLoadout(raw.loadout);
+    if (loadout) pilot.loadout = loadout;
+    return pilot;
   } catch {
     return fallback;
   }
+}
+
+function decodeGear(v: unknown): LocalGear[] {
+  if (!Array.isArray(v)) return [];
+  const out: LocalGear[] = [];
+  for (const g of v.slice(0, 32)) {
+    if (!g || typeof g !== "object") continue;
+    const { id, up } = g as { id?: unknown; up?: unknown };
+    if (typeof id !== "string" || id.length === 0 || id.length > 64) continue;
+    out.push({ id, up: typeof up === "number" && Number.isInteger(up) && up >= 0 && up <= 50 ? up : 0 });
+  }
+  return out;
+}
+
+function decodeLoadout(v: unknown): LocalLoadout | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const up = o.shipUpgrade;
+  return {
+    shipUpgrade: typeof up === "number" && Number.isInteger(up) && up >= 0 && up <= 50 ? up : 0,
+    weapons: decodeGear(o.weapons),
+    modules: decodeGear(o.modules),
+    drones: decodeGear(o.drones),
+  };
 }
 
 /**
@@ -142,7 +169,7 @@ export class LocalConnection implements Connection {
       return;
     }
     for (const e of this.entityMap.values()) {
-      if (e.kind === "PLAYER" || e.kind === "NPC" || e.kind === "BOSS" || e.kind === "ASTEROID") this.events.emit("entityChange", e);
+      if (e.kind === "PLAYER" || e.kind === "NPC" || e.kind === "BOSS") this.events.emit("entityChange", e);
     }
   }
 

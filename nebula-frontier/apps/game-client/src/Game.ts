@@ -58,6 +58,8 @@ export class Game {
   private firing = false;
   private secondary = false;
   private cameraSnapped = false;
+  /** Frames left until the renderer pre-compiles the new map's materials (after its entities spawned). */
+  private warmupIn = -1;
   private wasDead = false;
   private wasDocked = false;
   private lastDamageAt = -1e9;
@@ -321,6 +323,7 @@ export class Game {
     this.renderInputs.clear();
     this.kinds.clear();
     this.cameraSnapped = false;
+    this.warmupIn = 3;
     this.moveTo = null;
     this.firing = false;
     this.secondary = false;
@@ -344,8 +347,33 @@ export class Game {
 
   // ------------------------------------------------------------------------------------------ input actions
 
+  /**
+   * Send the current aim point (map coords): the mouse cursor on desktop; on touch the selected target,
+   * else straight ahead along the ship's nose.
+   */
+  private sendAim(now: number): void {
+    if (!this.hasLocalPose) return;
+    if (!this.input.touchMode) {
+      const m = this.input.mouse;
+      if (!m.active || !this.world.screenToMap(m.x, m.y, this.tmpMap)) return;
+    } else {
+      const tid = this.me?.targetId;
+      const t = tid ? this.renderInputs.get(tid) : undefined;
+      if (t && !t.dead) {
+        this.tmpMap.x = t.x;
+        this.tmpMap.y = t.y;
+      } else {
+        this.tmpMap.x = this.localPose.x + Math.cos(this.localPose.heading) * 60;
+        this.tmpMap.y = this.localPose.y + Math.sin(this.localPose.heading) * 60;
+      }
+    }
+    this.session.connection.send("aim", { x: this.tmpMap.x, y: this.tmpMap.y });
+    this.lastAimSent = now;
+  }
+
   private sendFire(on: boolean): void {
     if (this.firing !== on) {
+      if (on) this.sendAim(performance.now());
       this.firing = on;
       this.session.connection.send("fire", { firing: on, group: "PRIMARY" });
     }
@@ -353,6 +381,7 @@ export class Game {
 
   private sendSecondary(on: boolean): void {
     if (this.secondary !== on) {
+      if (on) this.sendAim(performance.now());
       this.secondary = on;
       this.session.connection.send("fire", { firing: on, group: "SECONDARY" });
     }
@@ -661,14 +690,8 @@ export class Game {
     this.input.pollGamepad();
     // 1) frame driver owns input: send + predict BEFORE reading poses
     this.session.advance(now, this.readMove);
-    // aim point for server-side targeting helpers (throttled)
-    if (!this.input.touchMode && now - this.lastAimSent > 120) {
-      const m = this.input.mouse;
-      if (m.active && this.world.screenToMap(m.x, m.y, this.tmpMap)) {
-        this.session.connection.send("aim", { x: this.tmpMap.x, y: this.tmpMap.y });
-        this.lastAimSent = now;
-      }
-    }
+    // aim point: guns fire along it while the trigger is held (free aim), so stream it faster while firing
+    if (now - this.lastAimSent > (this.firing || this.secondary ? 50 : 120)) this.sendAim(now);
     // 2) poses → renderer
     const localId = this.session.localId;
     this.relCtx.selfId = localId;
@@ -723,6 +746,7 @@ export class Game {
       if (boss && !boss.dead && Math.hypot(boss.x - this.localPose.x, boss.y - this.localPose.y) < 160) cam.setBoss(boss.x, boss.y, 25);
       else cam.setBoss(null);
     }
+    if (this.warmupIn >= 0 && this.warmupIn-- === 0) this.world.warmup();
     this.lastFps = this.world.frame(now).fps;
 
     // 4) overlay, audio, hud

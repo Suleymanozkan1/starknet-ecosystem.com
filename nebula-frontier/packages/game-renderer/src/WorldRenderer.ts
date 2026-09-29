@@ -1,6 +1,6 @@
 import {
   AmbientLight, BufferGeometry, Color, DirectionalLight, Float32BufferAttribute, FogExp2, Group, HemisphereLight,
-  LineBasicMaterial, LineLoop, Plane, Raycaster, Scene, Vector2, Vector3, Quaternion,
+  LineBasicMaterial, LineLoop, Plane, Raycaster, Scene, Vector2, Vector3, Quaternion, type Object3D,
 } from "three";
 import type { EntityKind, GraphicsTier, MapDef, Rarity, ZoneType } from "@nebula/shared";
 import { EntityFlag, RARITIES } from "@nebula/shared";
@@ -741,6 +741,28 @@ export class WorldRenderer {
   // ------------------------------------------------------------------------------ frame
 
   /** Advance & render one frame. `now` in milliseconds (rAF timestamp). */
+  /**
+   * Compile every material in the scene up front — including hidden effect pools (beams, projectiles,
+   * explosions, shields…) that `renderer.compile` would skip — so first use in combat does not stall
+   * the frame on shader compilation. Call once the map and its first entities are in the scene.
+   */
+  warmup(): void {
+    const gl = this.backend.webgl;
+    if (!gl) return;
+    const hidden: Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    try {
+      gl.compile(this.scene, this.camera.camera);
+    } finally {
+      for (const o of hidden) o.visible = false;
+    }
+  }
+
   frame(now: number): FrameStats {
     const dt = this.lastNow < 0 ? 1 / 60 : Math.min(0.1, Math.max(0, (now - this.lastNow) / 1000));
     this.lastNow = now;

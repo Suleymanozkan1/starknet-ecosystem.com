@@ -86,6 +86,9 @@ class OverlayScene extends Phaser.Scene {
   private radarG!: Phaser.GameObjects.Graphics;
   private hudG!: Phaser.GameObjects.Graphics;
   private plateTexts: Phaser.GameObjects.Text[] = [];
+  /** Last text/color per nameplate: Text.setText/setColor re-rasterise and re-upload the texture, so skip no-ops. */
+  private plateLabel: string[] = [];
+  private plateColor: string[] = [];
   private floats: FloatText[] = [];
   private frame = 0;
   private reticleSpin = 0;
@@ -170,8 +173,18 @@ class OverlayScene extends Phaser.Scene {
       const t = this.plateTexts[ti++];
       if (!t) break;
       const col = RELATION_COLORS[p.rel];
-      t.setVisible(true).setPosition(p.sx, p.sy - 10).setText(p.level > 0 ? `${p.name}  ${p.level}` : p.name);
-      t.setColor(`#${col.toString(16).padStart(6, "0")}`);
+      const slot = ti - 1;
+      const label = p.level > 0 ? `${p.name}  ${p.level}` : p.name;
+      const color = `#${col.toString(16).padStart(6, "0")}`;
+      t.setVisible(true).setPosition(p.sx, p.sy - 10);
+      if (this.plateLabel[slot] !== label) {
+        this.plateLabel[slot] = label;
+        t.setText(label);
+      }
+      if (this.plateColor[slot] !== color) {
+        this.plateColor[slot] = color;
+        t.setColor(color);
+      }
       const w = 46, x = p.sx - w / 2, y = p.sy - 7;
       g.fillStyle(0x000000, 0.55).fillRect(x - 1, y - 1, w + 2, 7);
       g.fillStyle(0x4cc9f0, 0.95).fillRect(x, y, w * Math.max(0, Math.min(1, p.shield)), 2);
@@ -283,7 +296,9 @@ export class OverlayLayer {
       banner: false,
       audio: { noAudio: true },
       input: { keyboard: false, mouse: false, touch: false, gamepad: false },
-      render: { antialias: true, powerPreference: "low-power" },
+      // maxTextures: 1 — Phaser compiles one quad shader variant per texture count in a batch; with dozens of
+      // text textures on screen that meant up to 16 synchronous shader compiles mid-combat (visible freezes).
+      render: { antialias: true, powerPreference: "low-power", maxTextures: 1 },
       scale: { mode: Phaser.Scale.NONE },
       scene: [scene],
       callbacks: {
