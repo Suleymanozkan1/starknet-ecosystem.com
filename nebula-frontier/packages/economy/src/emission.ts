@@ -1,5 +1,6 @@
 import type { EconomyConfig } from "./config.js";
 import type { TreasuryHealth } from "@nebula/shared";
+import { mulRatioFloor } from "./util.js";
 
 export interface EmissionInput {
   baseRate: number;
@@ -46,8 +47,8 @@ export function emissionFromConfig(cfg: EconomyConfig, health: TreasuryHealth): 
 export function rewardAmountForWeight(weight: number, rate: number, cfg: Pick<EconomyConfig, "emission">): bigint {
   if (!Number.isFinite(weight) || weight <= 0 || rate <= 0) return 0n;
   const base = cfg.emission.baseRate > 0 ? cfg.emission.baseRate : 1;
-  const amount = Math.floor(weight * cfg.emission.rewardUnitLamports * (rate / base));
-  return amount > 0 ? BigInt(amount) : 0n;
+  // Exact bigint unit × float factor (1e-6 precision), floored to lamports.
+  return mulRatioFloor(cfg.emission.rewardUnitLamports, weight * (rate / base));
 }
 
 /** Daily emission ceiling: seasonBudget * rate. */

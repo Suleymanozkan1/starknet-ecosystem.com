@@ -25,7 +25,7 @@
   "treasuryReserveRatio": 0.4,
   "operatingReserveRatio": 0.3,
   "emergencyReserveRatio": 0.1,
-  "minTreasuryReserve": 10000000000,
+  "minTreasuryReserve": "10000000000",
   "rewardAllocation": {
     "LEADERBOARD": 0.3,
     "TOURNAMENT": 0.25,
@@ -40,7 +40,7 @@
     "maxRewardRate": 0.03,
     "activityMultiplierMax": 1.5,
     "seasonMultiplier": 1,
-    "rewardUnitLamports": 100000
+    "rewardUnitLamports": "100000"
   },
   "treasuryHealth": {
     "healthy": 2,
@@ -54,9 +54,9 @@
     }
   },
   "caps": {
-    "daily": 50000000,
-    "weekly": 250000000,
-    "season": 2000000000
+    "daily": "50000000",
+    "weekly": "250000000",
+    "season": "2000000000"
   },
   "eligibility": {
     "minAccountAgeHours": 72,
@@ -79,18 +79,18 @@
     "auctionSale": 0.05,
     "auctionCancellation": 0.02,
     "withdrawalServicePercent": 0.02,
-    "withdrawalFlat": 1000000,
-    "estimatedNetworkFee": 5000,
+    "withdrawalFlat": "1000000",
+    "estimatedNetworkFee": "5000",
     "tradeTax": 0.02
   },
   "withdrawal": {
-    "min": 10000000,
-    "max": 1000000000,
-    "dailyLimit": 2000000000,
+    "min": "10000000",
+    "max": "1000000000",
+    "dailyLimit": "2000000000",
     "cooldownMinutes": 60,
     "minAccountAgeHours": 72,
     "walletChangeLockHours": 48,
-    "reviewThreshold": 500000000
+    "reviewThreshold": "500000000"
   },
   "inflation": {
     "dailyThreshold": 0.02,
@@ -106,7 +106,7 @@
     "liabilityRatioMax": 0.8,
     "withdrawalSpikeMultiplier": 3,
     "depositSpikeMultiplier": 5,
-    "depositSpikeFloorLamports": 10000000000,
+    "depositSpikeFloorLamports": "10000000000",
     "botRiskShareMax": 0.15,
     "inflationSpike": 0.05,
     "abnormalOutflowMultiplier": 4
@@ -114,7 +114,7 @@
   "rewardExpiryDays": 30,
   "tokenomics": {
     "symbol": "NEBX",
-    "maxSupply": 1000000000,
+    "maxSupply": "1000000000",
     "allocation": {
       "TREASURY": 0.2,
       "REWARDS": 0.35,
@@ -127,9 +127,9 @@
     "mintAuthorityDisabledAfterGenesis": true
   },
   "sinks": {
-    "ammoCreditsPerShot": 2,
-    "travelCreditsPerJump": 100,
-    "npcServiceFee": 250
+    "ammoCreditsPerShot": "2",
+    "travelCreditsPerJump": "100",
+    "npcServiceFee": "250"
   },
   "premium": {
     "FREE": {

@@ -1,4 +1,8 @@
 import type { EconomyConfig, SimulationResult, SimulationScenario } from "@nebula/economy";
+import { formatUnits } from "@nebula/shared";
+
+/** Exact lamports (bigint config amount) → whole-token decimal string, e.g. 50000000n → "0.05". */
+export const lamports = (v: bigint): string => formatUnits(v, 9, 9);
 
 export const USER_COUNTS = [1_000, 10_000, 50_000, 100_000, 500_000, 1_000_000];
 export const HORIZONS = [30, 90, 180, 365];
@@ -44,8 +48,8 @@ export function paramsTable(cfg: EconomyConfig): string {
     `| Emission base / hard cap | ${pct(cfg.emission.baseRate)} / ${pct(cfg.emission.maxRewardRate)} of season budget per day |`,
     `| Treasury health thresholds | HEALTHY ≥ ${cfg.treasuryHealth.healthy}, WATCH ≥ ${cfg.treasuryHealth.watch}, WARNING ≥ ${cfg.treasuryHealth.warning}, else CRITICAL |`,
     `| Health multipliers | ${Object.entries(cfg.treasuryHealth.multipliers).map(([k, v]) => `${k} ${v}`).join(", ")} |`,
-    `| Player caps (day / week / season) | ${cfg.caps.daily / 1e9} / ${cfg.caps.weekly / 1e9} / ${cfg.caps.season / 1e9} ${cfg.tokenomics.symbol} |`,
-    `| Withdrawal fee | ${pct(cfg.fees.withdrawalServicePercent)} + ${cfg.fees.withdrawalFlat / 1e9} ${cfg.tokenomics.symbol} + network |`,
+    `| Player caps (day / week / season) | ${lamports(cfg.caps.daily)} / ${lamports(cfg.caps.weekly)} / ${lamports(cfg.caps.season)} ${cfg.tokenomics.symbol} |`,
+    `| Withdrawal fee | ${pct(cfg.fees.withdrawalServicePercent)} + ${lamports(cfg.fees.withdrawalFlat)} ${cfg.tokenomics.symbol} + network |`,
     `| Circuit breakers | coverage < ${cfg.circuitBreaker.reserveCoverageMin}, liability > ${pct(cfg.circuitBreaker.liabilityRatioMax)} of pool, withdrawals > ${cfg.circuitBreaker.withdrawalSpikeMultiplier}× avg, bots > ${pct(cfg.circuitBreaker.botRiskShareMax)} |`
   ].join("\n");
 }

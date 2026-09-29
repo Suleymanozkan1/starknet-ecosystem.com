@@ -155,12 +155,12 @@ export function detectAnomalies(m: EconomyMetrics, cfg: EconomyConfig): Anomaly[
       out.push({ kind: "LIABILITY_TOO_HIGH", severity: "CRITICAL", message: `Outstanding liability is ${(liabilityRatio * 100).toFixed(1)}% of the reward pool`, breakers: [CircuitBreakerMode.REWARD_PAUSE], throttle: true });
     }
   }
-  const wFloor = BigInt(cfg.withdrawal.dailyLimit);
+  const wFloor = cfg.withdrawal.dailyLimit;
   if (spike(m.withdrawals24h, m.withdrawalsAvg7d, cb.withdrawalSpikeMultiplier, wFloor)) {
     out.push({ kind: "WITHDRAWAL_SPIKE", severity: "CRITICAL", message: `Withdrawals 24h ${m.withdrawals24h} vs 7d avg ${m.withdrawalsAvg7d}`, breakers: [CircuitBreakerMode.WITHDRAWAL_REVIEW], throttle: false });
   }
   // Deposits are SOL lamports: the floor must be SOL-denominated, never the NEBX withdrawal limit.
-  if (spike(m.deposits24h, m.depositsAvg7d, cb.depositSpikeMultiplier, BigInt(cb.depositSpikeFloorLamports))) {
+  if (spike(m.deposits24h, m.depositsAvg7d, cb.depositSpikeMultiplier, cb.depositSpikeFloorLamports)) {
     out.push({ kind: "DEPOSIT_SPIKE", severity: "WARN", message: `Deposits 24h ${m.deposits24h} vs 7d avg ${m.depositsAvg7d}`, breakers: [CircuitBreakerMode.WITHDRAWAL_REVIEW], throttle: false });
   }
   if (m.rewardUsers24h >= 20 && m.riskyRewardUsers24h / m.rewardUsers24h > cb.botRiskShareMax) {
@@ -173,14 +173,14 @@ export function detectAnomalies(m: EconomyMetrics, cfg: EconomyConfig): Anomaly[
   } else if (m.inflation.credits.daily > cfg.inflation.dailyThreshold || m.inflation.credits.weekly > cfg.inflation.weeklyThreshold) {
     out.push({ kind: "INFLATION_SPIKE", severity: "WARN", message: "Credit inflation above target", breakers: [], throttle: true });
   }
-  const mFloor = BigInt(cfg.sinks.npcServiceFee) * 100n;
+  const mFloor = cfg.sinks.npcServiceFee * 100n;
   if (spike(m.marketVolume24h, m.marketVolumeAvg7d, cb.abnormalOutflowMultiplier, mFloor) && m.marketTopSellerShare > 0.5) {
     out.push({ kind: "MARKET_MANIPULATION", severity: "CRITICAL", message: `Market volume spike with ${(m.marketTopSellerShare * 100).toFixed(0)}% from one seller`, breakers: [CircuitBreakerMode.MARKET_PAUSE], throttle: false });
   }
   if (m.duplicateClaimSignals1h > cfg.risk.duplicateClaimSignalsMax) {
     out.push({ kind: "DUPLICATE_CLAIMS", severity: "CRITICAL", message: `${m.duplicateClaimSignals1h} duplicate reward attempts in 1h`, breakers: [CircuitBreakerMode.REWARD_PAUSE], throttle: false });
   }
-  const oFloor = BigInt(cfg.caps.daily) * 20n;
+  const oFloor = cfg.caps.daily * 20n;
   if (spike(m.rewardOutflow24h + m.withdrawals24h, m.rewardOutflowAvg7d + m.withdrawalsAvg7d, cb.abnormalOutflowMultiplier, oFloor)) {
     out.push({ kind: "ABNORMAL_OUTFLOW", severity: "CRITICAL", message: "Abnormal NEBX outflow", breakers: [CircuitBreakerMode.WITHDRAWAL_REVIEW], throttle: true });
   }
@@ -225,8 +225,8 @@ export class EconomyController {
     };
     const [cf, nf] = await Promise.all([win(Currency.CREDITS), win(Currency.NEBX)]);
     // Minimum supply before inflation ratios are meaningful (derived from config, not hardcoded).
-    const creditBase = BigInt(c.sinks.npcServiceFee) * 10_000n;
-    const nebxBase = BigInt(c.caps.season);
+    const creditBase = c.sinks.npcServiceFee * 10_000n;
+    const nebxBase = c.caps.season;
     const nebxPrior = await ledgerFlows(db, Currency.NEBX, d8, d1);
     const sumW = async (from: Date, to: Date) =>
       (await db.withdrawal.aggregate({ where: { createdAt: { gte: from, lt: to }, status: { notIn: ["CANCELLED"] } }, _sum: { requested: true } }))._sum.requested ?? 0n;

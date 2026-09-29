@@ -65,8 +65,8 @@ export async function checkWithdrawal(
   const err = (code: string, message: string) => errors.push({ code, message });
 
   let quote: WithdrawalQuote | null = null;
-  if (input.amount < BigInt(w.min)) err("BELOW_MINIMUM", `Minimum withdrawal is ${w.min}`);
-  if (input.amount > BigInt(w.max)) err("ABOVE_MAXIMUM", `Maximum withdrawal is ${w.max}`);
+  if (input.amount < w.min) err("BELOW_MINIMUM", `Minimum withdrawal is ${w.min}`);
+  if (input.amount > w.max) err("ABOVE_MAXIMUM", `Maximum withdrawal is ${w.max}`);
   try {
     quote = withdrawalQuote(input.amount, c);
   } catch {
@@ -92,7 +92,7 @@ export async function checkWithdrawal(
   if (walletLockUntil) err("WALLET_CHANGE_LOCK", `Withdrawals are locked until ${walletLockUntil.toISOString()} after a wallet change`);
 
   const dailyUsed = await withdrawalDailyUsed(db, input.userId, now);
-  if (dailyUsed + input.amount > BigInt(w.dailyLimit)) err("DAILY_LIMIT", "Daily withdrawal limit reached");
+  if (dailyUsed + input.amount > w.dailyLimit) err("DAILY_LIMIT", "Daily withdrawal limit reached");
 
   const last = await db.withdrawal.findFirst({
     where: { userId: input.userId, status: { notIn: [WithdrawalStatus.CANCELLED] } },
@@ -113,7 +113,7 @@ export async function checkWithdrawal(
   // Velocity: many withdrawals in 24h → review.
   const count24 = await db.withdrawal.count({ where: { userId: input.userId, createdAt: { gte: new Date(now.getTime() - DAY_MS) } } });
   if (count24 >= 5) reviewFlags.push("VELOCITY");
-  if (input.amount >= BigInt(w.reviewThreshold)) reviewFlags.push("LARGE_AMOUNT");
+  if (input.amount >= w.reviewThreshold) reviewFlags.push("LARGE_AMOUNT");
   if (await isBreakerActive(db, CircuitBreakerMode.WITHDRAWAL_REVIEW)) reviewFlags.push("BREAKER_WITHDRAWAL_REVIEW");
 
   return { ok: errors.length === 0, errors, reviewFlags, quote, dailyUsed, nextAllowedAt, walletLockUntil };

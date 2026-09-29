@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BASE_PARAMS, defaultEconomyConfig, runEconomySimulation, scenarioParams, withdrawalQuote, type SimulationResult } from "@nebula/economy";
-import { HORIZONS, SCENARIOS, USER_COUNTS, paramsTable, pct, scenarioTable, tok, usd, users } from "./report.js";
+import { HORIZONS, SCENARIOS, USER_COUNTS, lamports, paramsTable, pct, scenarioTable, tok, usd, users } from "./report.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DOCS = resolve(ROOT, "docs");
@@ -58,7 +58,7 @@ function simulationDoc(all: Map<string, SimulationResult[]>, worst: SimulationRe
     "|---|---|",
     `| DAU / registered users | ${pct(BASE_PARAMS.dauRatio)} |`,
     `| Eligible share of DAU (age, playtime, matches) | ${pct(BASE_PARAMS.eligibleShare)} |`,
-    `| Reward weight per eligible DAU per day | ${BASE_PARAMS.weightPerDau} (= ${cfg.emission.rewardUnitLamports / 1e9} ${sym} at base rate) |`,
+    `| Reward weight per eligible DAU per day | ${BASE_PARAMS.weightPerDau} (= ${lamports(cfg.emission.rewardUnitLamports)} ${sym} at base rate) |`,
     `| Marketplace fee revenue per DAU per day | $${BASE_PARAMS.marketFeePerDau} |`,
     `| Infrastructure cost per DAU per day | $${BASE_PARAMS.infraCostPerDau} |`,
     `| RPC cost per on-chain tx | $${BASE_PARAMS.rpcCostPerTx} |`,
@@ -84,9 +84,9 @@ function healthDoc(all: Map<string, SimulationResult[]>, worst: SimulationResult
   const base10k = HORIZONS.map((d) => pick("BASE_GROWTH", 10_000, d));
   const w1m = worst[worst.length - 1] as SimulationResult;
   const w100k = worst.find((r) => r.params.startUsers === 100_000) as SimulationResult;
-  const q = withdrawalQuote(BigInt(cfg.withdrawal.min), cfg);
+  const q = withdrawalQuote(cfg.withdrawal.min, cfg);
   const dauAt = (n: number) => Math.round(n * BASE_PARAMS.dauRatio * BASE_PARAMS.eligibleShare);
-  const capDaily = cfg.caps.daily / 1e9;
+  const capDaily = Number(cfg.caps.daily) / 1e9;
   const crash = pick("MARKET_CRASH", 100_000, 180);
   const bots = pick("HIGH_BOT_ACTIVITY", 100_000, 180);
   const run = pick("HIGH_WITHDRAWAL", 100_000, 180);
@@ -102,7 +102,7 @@ function healthDoc(all: Map<string, SimulationResult[]>, worst: SimulationResult
     "",
     "- **Premium currency (Gems)** bought with devnet SOL via verified on-chain deposits (`PREMIUM_REVENUE:SOL`). Gem packs and prices come from `shop.json` / `ShopProduct`.",
     `- **Marketplace / auction / trade fees** (${pct(cfg.fees.marketplace)} marketplace, ${pct(cfg.fees.auctionSale)} auction sale, ${pct(cfg.fees.auctionListing)} listing, ${pct(cfg.fees.tradeTax)} trade tax) in credits — act as sinks.`,
-    `- **Withdrawal fees**: ${pct(cfg.fees.withdrawalServicePercent)} + ${cfg.fees.withdrawalFlat / 1e9} ${sym} flat + network fee → \`FEE_REVENUE\`.`,
+    `- **Withdrawal fees**: ${pct(cfg.fees.withdrawalServicePercent)} + ${lamports(cfg.fees.withdrawalFlat)} ${sym} flat + network fee → \`FEE_REVENUE\`.`,
     "- Premium/VIP/Elite, battle pass premium and cosmetics (no power sold for crypto).",
     "",
     "## Reward Model",
@@ -110,13 +110,13 @@ function healthDoc(all: Map<string, SimulationResult[]>, worst: SimulationResult
     `- Season reward budget = season revenue × ${pct(cfg.rewardBudgetRatio)} + reward-pool funding recorded from the **real** treasury balance. Never unlimited: no revenue and no funding ⇒ budget 0.`,
     `- Allocation: ${Object.entries(cfg.rewardAllocation).map(([k, v]) => `${k} ${pct(v)}`).join(", ")} (validated ≤ 100%).`,
     `- Emission rate = base ${pct(cfg.emission.baseRate)} × activity × season × treasury-health multiplier × controller throttle, **hard-capped at ${pct(cfg.emission.maxRewardRate)}** of the budget per day.`,
-    `- Per-player caps: ${capDaily} / ${cfg.caps.weekly / 1e9} / ${cfg.caps.season / 1e9} ${sym} (day/week/season). Eligibility: ${cfg.eligibility.minAccountAgeHours}h account age, ${cfg.eligibility.minGameplayMinutes} min play, ${cfg.eligibility.minCompletedMatches} matches, risk ≤ ${cfg.eligibility.maxRiskLevel}, eligible modes only.`,
+    `- Per-player caps: ${capDaily} / ${lamports(cfg.caps.weekly)} / ${lamports(cfg.caps.season)} ${sym} (day/week/season). Eligibility: ${cfg.eligibility.minAccountAgeHours}h account age, ${cfg.eligibility.minGameplayMinutes} min play, ${cfg.eligibility.minCompletedMatches} matches, risk ≤ ${cfg.eligibility.maxRiskLevel}, eligible modes only.`,
     "- Player-facing terms: Battle Rewards, Season Rewards, Tournament Rewards, Marketplace Earnings. Never APY / interest / guaranteed return / passive income / investment.",
     "",
     "## Treasury Model",
     "",
     `- Bootstrap reads the on-chain treasury balance and books only unaccounted funds, split: reward pool ${pct(cfg.rewardBudgetRatio)}, treasury reserve ${pct(cfg.treasuryReserveRatio)}, operating ${pct(cfg.operatingReserveRatio)}, emergency ${pct(cfg.emergencyReserveRatio)}.`,
-    `- Health = available reserve ÷ projected 30-day liabilities: HEALTHY ≥ ${cfg.treasuryHealth.healthy}, WATCH ≥ ${cfg.treasuryHealth.watch}, WARNING ≥ ${cfg.treasuryHealth.warning}, CRITICAL below; minimum reserve ${cfg.minTreasuryReserve / 1e9} ${sym}.`,
+    `- Health = available reserve ÷ projected 30-day liabilities: HEALTHY ≥ ${cfg.treasuryHealth.healthy}, WATCH ≥ ${cfg.treasuryHealth.watch}, WARNING ≥ ${cfg.treasuryHealth.warning}, CRITICAL below; minimum reserve ${lamports(cfg.minTreasuryReserve)} ${sym}.`,
     "- The economy controller (blockchain-service, every 5 min) snapshots supply/flows, detects anomalies and toggles circuit breakers with audit logs.",
     "",
     "## Reward Liability",
@@ -129,11 +129,11 @@ function healthDoc(all: Map<string, SimulationResult[]>, worst: SimulationResult
     "",
     `- Hard bound: outstanding liability ≤ reward pool balance (grant-time check), and daily new liability ≤ season budget × ${pct(cfg.emission.maxRewardRate)}.`,
     `- Cap bound (every eligible DAU maxes the daily cap): 100k users → ${dauAt(100_000).toLocaleString("en-US")} eligible DAU × ${capDaily} = ${(dauAt(100_000) * capDaily).toLocaleString("en-US")} ${sym}/day — but the emission hard cap and pool bound apply first, so actual liability is min(cap bound, budget × rate, pool).`,
-    `- Per-player season maximum: ${cfg.caps.season / 1e9} ${sym}.`,
+    `- Per-player season maximum: ${lamports(cfg.caps.season)} ${sym}.`,
     "",
     "## Withdrawal Exposure",
     "",
-    `- Only claimed rewards (player NEBX balance) can be withdrawn; min ${cfg.withdrawal.min / 1e9}, max ${cfg.withdrawal.max / 1e9}, daily ${cfg.withdrawal.dailyLimit / 1e9} ${sym} per player, ${cfg.withdrawal.cooldownMinutes} min cooldown, ${cfg.withdrawal.walletChangeLockHours}h wallet-change lock, ≥ ${cfg.withdrawal.reviewThreshold / 1e9} ${sym} → manual review.`,
+    `- Only claimed rewards (player NEBX balance) can be withdrawn; min ${lamports(cfg.withdrawal.min)}, max ${lamports(cfg.withdrawal.max)}, daily ${lamports(cfg.withdrawal.dailyLimit)} ${sym} per player, ${cfg.withdrawal.cooldownMinutes} min cooldown, ${cfg.withdrawal.walletChangeLockHours}h wallet-change lock, ≥ ${lamports(cfg.withdrawal.reviewThreshold)} ${sym} → manual review.`,
     `- Minimum withdrawal quote: requested ${q.requested}, service fee ${q.serviceFee}, network fee ${q.networkFee}, final ${q.final} lamports.`,
     `- Bank-run scenario (HIGH_WITHDRAWAL, 100k, 180d): withdrawals ${usd(run.summary.withdrawalsUsd)}, breaker days ${run.summary.breakerDays}, liability exceeded pool: ${run.summary.liabilityEverExceededPool ? "YES" : "never"}.`,
     "- Funds are held in `WITHDRAWAL_RESERVE` at request time; COMPLETED only after on-chain confirmation; failures refund principal + fees.",

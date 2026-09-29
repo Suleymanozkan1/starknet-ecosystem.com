@@ -3,11 +3,12 @@
  * plus id lookup maps and a referential-integrity validator.
  */
 import type {
-  AchievementDef, BattlePassDef, BlueprintDef, DroneDef, EconomyConfigDoc, EventDef, FactionDef, GalaxyDef,
+  AchievementDef, BattlePassDef, BlueprintDef, DroneDef, EconomyConfigDef, EventDef, FactionDef, GalaxyDef,
   GateDef, ItemAffixDef, ItemDef, LootTableDef, MapDef, ModuleDef, NpcDef, NpcFactionDef, PetDef,
   ProgressionConfig, QuestDef, RewardBundle, SeasonDef, ShipDef, ShopProductDef, WeaponDef,
 } from "@nebula/shared";
 import { RESOURCE_IDS, RARITIES, DAMAGE_ELEMENTS } from "@nebula/shared";
+import { parseEconomyConfigDoc, parseShopDoc } from "./money.js";
 
 import shipsJson from "../data/ships.json" with { type: "json" };
 import weaponsJson from "../data/weapons.json" with { type: "json" };
@@ -55,8 +56,9 @@ export const EVENTS = eventsJson as unknown as EventDef[];
 export const SEASONS = seasonsJson as unknown as SeasonDef[];
 export const BATTLE_PASSES = battlepassJson as unknown as BattlePassDef[];
 export const GATES = gatesJson as unknown as GateDef[];
-export const SHOP = shopJson as unknown as ShopProductDef[];
-export const ECONOMY = economyJson as unknown as EconomyConfigDoc;
+// Money documents are parsed (decimal-string base units → bigint) instead of cast.
+export const SHOP: ShopProductDef[] = parseShopDoc(shopJson);
+export const ECONOMY: EconomyConfigDef = parseEconomyConfigDoc(economyJson);
 export const PROGRESSION = progressionJson as unknown as ProgressionConfig;
 
 function byId<T extends { id: string }>(list: readonly T[]): ReadonlyMap<string, T> {
@@ -95,7 +97,7 @@ export interface GameDataSet {
   items: readonly ItemDef[]; itemAffixes: readonly ItemAffixDef[]; blueprints: readonly BlueprintDef[]; maps: readonly MapDef[];
   galaxy: GalaxyDef; factions: readonly FactionDef[]; quests: readonly QuestDef[]; achievements: readonly AchievementDef[];
   events: readonly EventDef[]; seasons: readonly SeasonDef[]; battlePasses: readonly BattlePassDef[]; gates: readonly GateDef[];
-  shop: readonly ShopProductDef[]; economy: EconomyConfigDoc; progression: ProgressionConfig;
+  shop: readonly ShopProductDef[]; economy: EconomyConfigDef; progression: ProgressionConfig;
 }
 
 export const GAME_DATA: GameDataSet = {
@@ -379,7 +381,7 @@ export function validateGameData(data: GameDataSet = GAME_DATA): string[] {
   // Shop
   for (const p of data.shop) {
     const ctx = `shop ${p.sku}`;
-    if (!Number.isInteger(p.price) || p.price < 0) err(`${ctx}: price must be a non-negative integer`);
+    if (typeof p.price !== "bigint" || p.price < 0n) err(`${ctx}: price must be non-negative integer base units`);
     for (const s of p.grants.ships ?? []) if (!shipIds.has(s)) err(`${ctx}: unknown ship "${s}"`);
     checkBundle(ctx, p.grants);
   }

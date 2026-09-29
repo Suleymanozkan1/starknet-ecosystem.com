@@ -16,7 +16,7 @@ export interface CapResult {
 }
 
 export function capLimits(cfg: Pick<EconomyConfig, "caps">): CapUsage {
-  return { daily: BigInt(cfg.caps.daily), weekly: BigInt(cfg.caps.weekly), season: BigInt(cfg.caps.season) };
+  return { daily: cfg.caps.daily, weekly: cfg.caps.weekly, season: cfg.caps.season };
 }
 
 /** Pure: clips `amount` so daily/weekly/season usage never exceeds the configured caps. */

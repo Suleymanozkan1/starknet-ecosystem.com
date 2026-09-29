@@ -7,8 +7,9 @@
  *   preserved) unless SEED_SYNC_CATALOG=true, which re-syncs every catalog row from JSON.
  * - System ledger accounts for every currency, inactive CircuitBreaker rows, EconomyConfig
  *   runtime defaults, FeatureFlag defaults.
- * - A SUPER_ADMIN user from ADMIN_EMAIL / ADMIN_PASSWORD (development defaults are printed only
- *   when NODE_ENV !== "production"; production requires both env vars).
+ * - A SUPER_ADMIN user from ADMIN_EMAIL / ADMIN_PASSWORD (production requires both env vars). Only the
+ *   built-in development password is ever printed (NODE_ENV !== "production" and ADMIN_PASSWORD unset).
+ * - Requires DATABASE_URL (no built-in connection string).
  */
 import "dotenv/config";
 import {
@@ -98,13 +99,16 @@ async function seedSeasonsAndEvents(db: Db) {
     const existed = await db.season.findUnique({ where: { id: s.id } });
     await upsert(() => Promise.resolve(existed), () => db.season.create({ data: { id: s.id, ...data } }), () => db.season.update({ where: { id: s.id }, data }));
     if (!existed || SYNC) {
-      await db.seasonReward.deleteMany({ where: { seasonId: s.id } });
-      await db.seasonReward.createMany({
-        data: [
-          ...s.leaderboardRewards.map((r) => ({ seasonId: s.id, kind: "LEADERBOARD", rankFrom: r.rankFrom, rankTo: r.rankTo, bundle: json(r.bundle) })),
-          ...s.rankedRewards.map((r) => ({ seasonId: s.id, kind: `RANKED:${r.tier}`, rankFrom: r.minRating, rankTo: null, bundle: json(r.bundle) })),
-        ],
-      });
+      // Replace atomically: a failure between delete and create must not leave the season without rewards.
+      await db.$transaction([
+        db.seasonReward.deleteMany({ where: { seasonId: s.id } }),
+        db.seasonReward.createMany({
+          data: [
+            ...s.leaderboardRewards.map((r) => ({ seasonId: s.id, kind: "LEADERBOARD", rankFrom: r.rankFrom, rankTo: r.rankTo, bundle: json(r.bundle) })),
+            ...s.rankedRewards.map((r) => ({ seasonId: s.id, kind: `RANKED:${r.tier}`, rankFrom: r.minRating, rankTo: null, bundle: json(r.bundle) })),
+          ],
+        }),
+      ]);
     } else if (existed.active !== data.active) {
       // Keep season activation in sync with the calendar even without SYNC.
       await db.season.update({ where: { id: s.id }, data: { active: data.active } });
@@ -116,10 +120,18 @@ async function seedSeasonsAndEvents(db: Db) {
   }
 }
 
+/** Shop price as integer base units; throws naming the SKU instead of letting BigInt() fail anonymously. */
+function shopPrice(p: { sku: string; price: unknown }): bigint {
+  const v = p.price;
+  if (typeof v === "bigint" && v >= 0n) return v;
+  if (typeof v === "string" && /^\d+$/.test(v)) return BigInt(v);
+  throw new Error(`[seed] shop product ${p.sku}: price must be a non-negative integer amount of base units (got ${String(v)})`);
+}
+
 async function seedShop(db: Db) {
   for (const p of SHOP) {
     const data = {
-      sku: p.sku, name: p.name, category: p.category, description: p.description, currency: p.currency, price: BigInt(p.price),
+      sku: p.sku, name: p.name, category: p.category, description: p.description, currency: p.currency, price: shopPrice(p),
       grants: json(p.grants), requiredLevel: p.requiredLevel, stock: p.stock ?? null, limitPerUser: p.limitPerUser ?? null,
       featured: p.featured ?? false, active: p.active,
     };
@@ -144,10 +156,13 @@ async function seedWorld(db: Db) {
         const zd = { mapId: m.id, type: z.type, x: z.x, y: z.y, radius: z.radius };
         await db.zone.upsert({ where: { id: z.id }, create: { id: z.id, ...zd }, update: zd });
       }
-      await db.nPCSpawn.deleteMany({ where: { mapId: m.id } });
-      if (m.spawns.length) {
-        await db.nPCSpawn.createMany({ data: m.spawns.map((s) => ({ mapId: m.id, npcId: s.npcId, count: s.count, x: s.x, y: s.y, radius: s.radius })) });
-      }
+      // Replace atomically so a failed insert never leaves the map without spawns.
+      await db.$transaction([
+        db.nPCSpawn.deleteMany({ where: { mapId: m.id } }),
+        ...(m.spawns.length
+          ? [db.nPCSpawn.createMany({ data: m.spawns.map((s) => ({ mapId: m.id, npcId: s.npcId, count: s.count, x: s.x, y: s.y, radius: s.radius })) })]
+          : []),
+      ]);
     }
   }
 }
@@ -198,32 +213,61 @@ async function seedEconomy(db: Db) {
 async function seedAdmin(db: Db) {
   const prod = process.env.NODE_ENV === "production";
   const email = (process.env.ADMIN_EMAIL ?? (prod ? "" : "admin@nebula.local")).toLowerCase();
+  // The built-in dev password is the only one that may ever be printed; an operator-supplied
+  // ADMIN_PASSWORD is a secret and is never logged.
+  const usingDevDefaultPassword = !prod && process.env.ADMIN_PASSWORD === undefined;
   const password = process.env.ADMIN_PASSWORD ?? (prod ? "" : "change-me-dev-only");
   if (!email || !password) {
     console.warn("[seed] ADMIN_EMAIL / ADMIN_PASSWORD not set: skipping admin user (required in production)");
     return;
   }
   if (prod && password.length < 16) throw new Error("ADMIN_PASSWORD must be at least 16 characters in production");
-  let user = await db.user.findUnique({ where: { email } });
-  if (!user) {
-    let username = "admin";
-    if (await db.user.findUnique({ where: { username } })) username = `admin_${Date.now().toString(36)}`;
-    user = await db.user.create({ data: { email, username, passwordHash: await hashPassword(password) } });
-    await db.playerStat.create({ data: { userId: user.id } });
-    if (!prod) console.info(`[seed] created dev admin ${email} / ${password} (development only — change it)`);
+  const resetPassword = process.env.ADMIN_PASSWORD_RESET === "true";
+  // Hash outside the transaction (slow KDF) and only when it will be written.
+  const passwordHash = resetPassword || !(await db.user.findUnique({ where: { email }, select: { id: true } })) ? await hashPassword(password) : null;
+
+  // User, stats, admin record/roles and the audit row commit together; reruns repair partial state.
+  const result = await db.$transaction(async (tx) => {
+    const changes: string[] = [];
+    let user = await tx.user.findUnique({ where: { email }, select: { id: true } });
+    if (!user) {
+      let username = "admin";
+      if (await tx.user.findUnique({ where: { username }, select: { id: true } })) username = `admin_${Date.now().toString(36)}`;
+      user = await tx.user.create({ data: { email, username, passwordHash: passwordHash ?? (await hashPassword(password)) }, select: { id: true } });
+      changes.push("USER_CREATED");
+    } else if (resetPassword) {
+      await tx.user.update({ where: { id: user.id }, data: { passwordHash: passwordHash ?? (await hashPassword(password)) } });
+      changes.push("PASSWORD_RESET");
+    }
+    const userId = user.id;
+    const hadStat = await tx.playerStat.findUnique({ where: { userId }, select: { userId: true } });
+    await tx.playerStat.upsert({ where: { userId }, create: { userId }, update: {} });
+    if (!hadStat) changes.push("PLAYER_STAT_CREATED");
+    const au = await tx.adminUser.findUnique({ where: { userId } });
+    if (!au) {
+      await tx.adminUser.create({ data: { userId, roles: ["SUPER_ADMIN"] } });
+      changes.push("ADMIN_CREATED");
+    } else if (!au.roles.includes("SUPER_ADMIN")) {
+      await tx.adminUser.update({ where: { userId }, data: { roles: [...au.roles, "SUPER_ADMIN"] } });
+      changes.push("SUPER_ADMIN_GRANTED");
+    }
+    if (changes.length) {
+      await tx.auditLog.create({ data: { actorType: "SYSTEM", action: "SEED_ADMIN_ENSURED", targetType: "User", targetId: userId, newValue: json({ changes }) as object } });
+    }
+    return { changes };
+  });
+
+  if (result.changes.includes("USER_CREATED")) {
+    if (usingDevDefaultPassword) console.info(`[seed] created dev admin ${email} / ${password} (built-in development default — change it)`);
     else console.info(`[seed] created admin ${email}`);
-  } else if (process.env.ADMIN_PASSWORD_RESET === "true") {
-    await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password) } });
-    console.info(`[seed] reset admin password for ${email}`);
   }
-  const au = await db.adminUser.findUnique({ where: { userId: user.id } });
-  if (!au) await db.adminUser.create({ data: { userId: user.id, roles: ["SUPER_ADMIN"] } });
-  else if (!au.roles.includes("SUPER_ADMIN")) await db.adminUser.update({ where: { userId: user.id }, data: { roles: [...au.roles, "SUPER_ADMIN"] } });
-  await db.auditLog.create({ data: { actorType: "SYSTEM", action: "SEED_ADMIN_ENSURED", targetType: "User", targetId: user.id } });
+  if (result.changes.includes("PASSWORD_RESET")) console.info(`[seed] reset admin password for ${email}`);
+  if (result.changes.length) console.info(`[seed] admin ${email} ensured (${result.changes.join(", ")})`);
 }
 
 async function main() {
-  const db = createDb(process.env.DATABASE_URL ?? "postgresql://nebula:nebula@localhost:5432/nebula");
+  // createDb() reads DATABASE_URL itself and throws when it is missing: no built-in credentials.
+  const db = createDb();
   const t0 = Date.now();
   try {
     await seedFactions(db);

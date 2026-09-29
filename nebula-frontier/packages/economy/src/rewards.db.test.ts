@@ -13,12 +13,19 @@ import {
   setCircuitBreaker,
   updateEconomyConfig,
   loadEconomyConfig,
+  defaultEconomyConfig,
   getOutstandingLiability,
   reviewReward
 } from "./index.js";
 
 const SOL = 1_000_000_000n;
 let db: Db;
+
+/** The fees subtree in its JSON (stored) form: money leaves as decimal strings. */
+function cfgJsonFees(): Record<string, unknown> {
+  const f = defaultEconomyConfig().fees;
+  return { ...f, withdrawalFlat: f.withdrawalFlat.toString(), estimatedNetworkFee: f.estimatedNetworkFee.toString() };
+}
 
 beforeAll(async () => {
   db = await createIsolatedDb("test_economy_rewards", { truncate: true });
@@ -96,7 +103,7 @@ describe("grantCryptoReward / claimReward", () => {
     const cfg = await loadEconomyConfig(db);
     const big = await grantCryptoReward(db, { userId: u.id, source: "LEADERBOARD", sourceRef: "lb-1", weight: 10_000, reason: "Season Reward" });
     expect(big.status).toBe("GRANTED");
-    expect(big.amount).toBeLessThanOrEqual(BigInt(cfg.caps.daily));
+    expect(big.amount).toBeLessThanOrEqual(cfg.caps.daily);
     const more = await grantCryptoReward(db, { userId: u.id, source: "LEADERBOARD", sourceRef: "lb-2", weight: 10_000, reason: "Season Reward" });
     expect(["CAPPED"]).toContain(more.status);
   });
@@ -120,19 +127,27 @@ describe("config & controller", () => {
   it("rejects allocation > 100% and audits valid changes with old/new value", async () => {
     await expect(updateEconomyConfig(db, "rewardAllocation.LEADERBOARD", 0.9, null, "try to over-allocate")).rejects.toBeInstanceOf(EconomyConfigError);
     await expect(updateEconomyConfig(db, "nope.key", 1, null, "unknown")).rejects.toBeInstanceOf(EconomyConfigError);
-    // Money is integer base units; a subtree cannot smuggle a string past a numeric leaf.
+    // Money is integer base units (decimal string or legacy safe-integer number); a subtree cannot
+    // smuggle a non-integer amount or a string past a numeric (ratio) leaf.
     await expect(updateEconomyConfig(db, "caps.daily", 1.5, null, "fractional")).rejects.toBeInstanceOf(EconomyConfigError);
     await expect(updateEconomyConfig(db, "caps.daily", 2 ** 60, null, "unsafe")).rejects.toBeInstanceOf(EconomyConfigError);
-    await expect(updateEconomyConfig(db, "caps", { daily: "60000000", weekly: 200_000_000, season: 1_000_000_000 }, null, "string leaf")).rejects.toBeInstanceOf(EconomyConfigError);
+    await expect(updateEconomyConfig(db, "caps.daily", "6e7", null, "non-decimal string")).rejects.toBeInstanceOf(EconomyConfigError);
+    await expect(updateEconomyConfig(db, "caps", { daily: "1.5", weekly: "200000000", season: "1000000000" }, null, "fractional string leaf")).rejects.toBeInstanceOf(EconomyConfigError);
+    await expect(updateEconomyConfig(db, "fees", { ...cfgJsonFees(), marketplace: "0.1" }, null, "string ratio leaf")).rejects.toBeInstanceOf(EconomyConfigError);
     await expect(updateEconomyConfig(db, "sinks.npcServiceFee", 0.5, null, "fractional sink")).rejects.toBeInstanceOf(EconomyConfigError);
     try {
       const r = await updateEconomyConfig(db, "caps.daily", 60_000_000, null, "raise daily cap");
-      expect(r.oldValue).toBe(50_000_000);
+      expect(r.oldValue).toBe(50_000_000n);
+      expect(r.newValue).toBe("60000000");
+      expect(r.config.caps.daily).toBe(60_000_000n);
       const log = await db.auditLog.findFirst({ where: { action: "ECONOMY_CONFIG_UPDATE", targetId: "caps.daily" }, orderBy: { createdAt: "desc" } });
-      expect(log?.oldValue).toBe(50_000_000);
-      expect(log?.newValue).toBe(60_000_000);
+      expect(log?.oldValue).toBe("50000000");
+      expect(log?.newValue).toBe("60000000");
+      // Stored as a decimal string and read back as bigint.
+      expect((await db.economyConfig.findUniqueOrThrow({ where: { key: "caps.daily" } })).value).toBe("60000000");
+      expect((await loadEconomyConfig(db)).caps.daily).toBe(60_000_000n);
     } finally {
-      await updateEconomyConfig(db, "caps.daily", 50_000_000, null, "restore");
+      await updateEconomyConfig(db, "caps.daily", "50000000", null, "restore");
     }
   });
 

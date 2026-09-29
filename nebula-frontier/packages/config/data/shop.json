@@ -6,7 +6,7 @@
     "category": "SHIPS",
     "description": "Fast scout hull.",
     "currency": "CREDITS",
-    "price": 60000,
+    "price": "60000",
     "grants": {
       "ships": [
         "ship_wisp"
@@ -22,7 +22,7 @@
     "category": "SHIPS",
     "description": "Dedicated mining hull.",
     "currency": "CREDITS",
-    "price": 80000,
+    "price": "80000",
     "grants": {
       "ships": [
         "ship_prospector"
@@ -38,7 +38,7 @@
     "category": "SHIPS",
     "description": "Pursuit interceptor.",
     "currency": "CREDITS",
-    "price": 180000,
+    "price": "180000",
     "grants": {
       "ships": [
         "ship_kestrel"
@@ -54,7 +54,7 @@
     "category": "SHIPS",
     "description": "Long-range survey vessel.",
     "currency": "CREDITS",
-    "price": 220000,
+    "price": "220000",
     "grants": {
       "ships": [
         "ship_pathfinder"
@@ -70,7 +70,7 @@
     "category": "SHIPS",
     "description": "Field support frigate.",
     "currency": "CREDITS",
-    "price": 300000,
+    "price": "300000",
     "grants": {
       "ships": [
         "ship_mender"
@@ -86,7 +86,7 @@
     "category": "SHIPS",
     "description": "Heavy tank hull.",
     "currency": "CREDITS",
-    "price": 750000,
+    "price": "750000",
     "grants": {
       "ships": [
         "ship_bastion"
@@ -102,7 +102,7 @@
     "category": "SHIPS",
     "description": "Broadside destroyer.",
     "currency": "CREDITS",
-    "price": 800000,
+    "price": "800000",
     "grants": {
       "ships": [
         "ship_harrow"
@@ -118,7 +118,7 @@
     "category": "SHIPS",
     "description": "Electronic warfare hull.",
     "currency": "CREDITS",
-    "price": 1100000,
+    "price": "1100000",
     "grants": {
       "ships": [
         "ship_cipher"
@@ -134,7 +134,7 @@
     "category": "SHIPS",
     "description": "Drone carrier.",
     "currency": "CREDITS",
-    "price": 2400000,
+    "price": "2400000",
     "grants": {
       "ships": [
         "ship_cradle"
@@ -150,7 +150,7 @@
     "category": "SHIPS",
     "description": "Capital battlecruiser.",
     "currency": "CREDITS",
-    "price": 3000000,
+    "price": "3000000",
     "grants": {
       "ships": [
         "ship_sovereign"
@@ -167,7 +167,7 @@
     "category": "SHIPS",
     "description": "Legendary star-core capital ship.",
     "currency": "CREDITS",
-    "price": 9000000,
+    "price": "9000000",
     "grants": {
       "ships": [
         "ship_zenith"
@@ -183,7 +183,7 @@
     "category": "SHIP_PARTS",
     "description": "Crafting components.",
     "currency": "CREDITS",
-    "price": 12000,
+    "price": "12000",
     "grants": {
       "items": [
         {
@@ -202,7 +202,7 @@
     "category": "SHIP_PARTS",
     "description": "Crafting component.",
     "currency": "CREDITS",
-    "price": 20000,
+    "price": "20000",
     "grants": {
       "items": [
         {
@@ -221,7 +221,7 @@
     "category": "WEAPONS",
     "description": "Standard upgrade laser.",
     "currency": "CREDITS",
-    "price": 30000,
+    "price": "30000",
     "grants": {
       "items": [
         {
@@ -240,7 +240,7 @@
     "category": "WEAPONS",
     "description": "Rare cyan laser.",
     "currency": "CREDITS",
-    "price": 110000,
+    "price": "110000",
     "grants": {
       "items": [
         {
@@ -259,7 +259,7 @@
     "category": "WEAPONS",
     "description": "Close-range rocket pod.",
     "currency": "CREDITS",
-    "price": 25000,
+    "price": "25000",
     "grants": {
       "items": [
         {
@@ -278,7 +278,7 @@
     "category": "WEAPONS",
     "description": "Advanced mining laser.",
     "currency": "CREDITS",
-    "price": 70000,
+    "price": "70000",
     "grants": {
       "items": [
         {
@@ -297,7 +297,7 @@
     "category": "MODULES",
     "description": "Active shield restore module.",
     "currency": "CREDITS",
-    "price": 25000,
+    "price": "25000",
     "grants": {
       "items": [
         {
@@ -316,7 +316,7 @@
     "category": "MODULES",
     "description": "Shield generator.",
     "currency": "CREDITS",
-    "price": 45000,
+    "price": "45000",
     "grants": {
       "items": [
         {
@@ -335,7 +335,7 @@
     "category": "MODULES",
     "description": "Speed generator.",
     "currency": "CREDITS",
-    "price": 45000,
+    "price": "45000",
     "grants": {
       "items": [
         {
@@ -354,7 +354,7 @@
     "category": "MODULES",
     "description": "Mining booster module.",
     "currency": "CREDITS",
-    "price": 20000,
+    "price": "20000",
     "grants": {
       "items": [
         {
@@ -373,7 +373,7 @@
     "category": "DRONES",
     "description": "Defensive drone.",
     "currency": "CREDITS",
-    "price": 60000,
+    "price": "60000",
     "grants": {
       "items": [
         {
@@ -392,7 +392,7 @@
     "category": "DRONES",
     "description": "Mining drone.",
     "currency": "CREDITS",
-    "price": 50000,
+    "price": "50000",
     "grants": {
       "items": [
         {
@@ -411,7 +411,7 @@
     "category": "AMMO",
     "description": "Kinetic missile ammunition.",
     "currency": "CREDITS",
-    "price": 9000,
+    "price": "9000",
     "grants": {
       "items": [
         {
@@ -430,7 +430,7 @@
     "category": "AMMO",
     "description": "Guided swarm missiles.",
     "currency": "CREDITS",
-    "price": 5500,
+    "price": "5500",
     "grants": {
       "items": [
         {
@@ -449,7 +449,7 @@
     "category": "AMMO",
     "description": "Unguided rockets.",
     "currency": "CREDITS",
-    "price": 5500,
+    "price": "5500",
     "grants": {
       "items": [
         {
@@ -468,7 +468,7 @@
     "category": "SKINS",
     "description": "Cosmetic hull skin that reshapes the Lumen's wings. No stat changes.",
     "currency": "GEMS",
-    "price": 1200,
+    "price": "1200",
     "grants": {
       "items": [
         {
@@ -488,7 +488,7 @@
     "category": "SKINS",
     "description": "Cosmetic hull skin for the Gale. No stat changes.",
     "currency": "GEMS",
-    "price": 1200,
+    "price": "1200",
     "grants": {
       "items": [
         {
@@ -507,7 +507,7 @@
     "category": "SKINS",
     "description": "Legendary cosmetic skin for the Ember. No stat changes.",
     "currency": "GEMS",
-    "price": 2000,
+    "price": "2000",
     "grants": {
       "items": [
         {
@@ -526,7 +526,7 @@
     "category": "COSMETICS",
     "description": "Cosmetic engine effect.",
     "currency": "GEMS",
-    "price": 600,
+    "price": "600",
     "grants": {
       "items": [
         {
@@ -545,7 +545,7 @@
     "category": "COSMETICS",
     "description": "Cosmetic title for early supporters.",
     "currency": "GEMS",
-    "price": 400,
+    "price": "400",
     "grants": {
       "items": [
         {
@@ -565,7 +565,7 @@
     "category": "BOOSTERS",
     "description": "Three 1-hour XP boosters (convenience).",
     "currency": "GEMS",
-    "price": 150,
+    "price": "150",
     "grants": {
       "items": [
         {
@@ -584,7 +584,7 @@
     "category": "BOOSTERS",
     "description": "Three 1-hour salvage boosters (convenience).",
     "currency": "GEMS",
-    "price": 180,
+    "price": "180",
     "grants": {
       "items": [
         {
@@ -603,7 +603,7 @@
     "category": "BATTLE_PASS",
     "description": "Unlocks the premium cosmetic track of the Season I pass.",
     "currency": "GEMS",
-    "price": 950,
+    "price": "950",
     "grants": {
       "battlePassPremium": true
     },
@@ -619,7 +619,7 @@
     "category": "BATTLE_PASS",
     "description": "Unlocks the premium cosmetic track of the Season II pass.",
     "currency": "GEMS",
-    "price": 950,
+    "price": "950",
     "grants": {
       "battlePassPremium": true
     },
@@ -634,7 +634,7 @@
     "category": "BATTLE_PASS",
     "description": "Unlocks the premium cosmetic track of the Season III pass.",
     "currency": "GEMS",
-    "price": 950,
+    "price": "950",
     "grants": {
       "battlePassPremium": true
     },
@@ -649,7 +649,7 @@
     "category": "PREMIUM",
     "description": "Convenience perks: +10% XP, extra inventory slots, one extra daily quest. Not an investment and has no cash value.",
     "currency": "GEMS",
-    "price": 500,
+    "price": "500",
     "grants": {
       "premium": {
         "tier": "VIP",
@@ -666,7 +666,7 @@
     "category": "PREMIUM",
     "description": "Convenience and cosmetic perks: +20% XP, more inventory, two extra daily quests. Not an investment and has no cash value.",
     "currency": "GEMS",
-    "price": 1000,
+    "price": "1000",
     "grants": {
       "premium": {
         "tier": "ELITE",
@@ -683,7 +683,7 @@
     "category": "BUNDLES",
     "description": "Consumables and a cosmetic badge to get you flying.",
     "currency": "GEMS",
-    "price": 300,
+    "price": "300",
     "grants": {
       "items": [
         {
@@ -716,7 +716,7 @@
     "category": "BUNDLES",
     "description": "Mining boosters and supplies.",
     "currency": "GEMS",
-    "price": 450,
+    "price": "450",
     "grants": {
       "items": [
         {
@@ -742,7 +742,7 @@
     "category": "GEMS",
     "description": "Premium currency for cosmetics and convenience. Purchased with devnet SOL; has no cash value and cannot be withdrawn.",
     "currency": "SOL",
-    "price": 50000000,
+    "price": "50000000",
     "grants": {
       "gems": 100
     },
@@ -756,7 +756,7 @@
     "category": "GEMS",
     "description": "Premium currency pack (+10% bonus). Devnet SOL; no cash value.",
     "currency": "SOL",
-    "price": 250000000,
+    "price": "250000000",
     "grants": {
       "gems": 550
     },
@@ -770,7 +770,7 @@
     "category": "GEMS",
     "description": "Premium currency pack (+20% bonus). Devnet SOL; no cash value.",
     "currency": "SOL",
-    "price": 500000000,
+    "price": "500000000",
     "grants": {
       "gems": 1200
     },
@@ -785,7 +785,7 @@
     "category": "GEMS",
     "description": "Premium currency pack (+30% bonus). Devnet SOL; no cash value.",
     "currency": "SOL",
-    "price": 1000000000,
+    "price": "1000000000",
     "grants": {
       "gems": 2600
     },

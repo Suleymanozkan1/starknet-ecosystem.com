@@ -28,7 +28,7 @@ export async function getGemPacks(db: DbOrTx): Promise<GemPack[]> {
     .filter((p) => Number.isSafeInteger(p.gems) && p.gems > 0 && p.price > 0n);
   if (fromDb.length) return fromDb.sort((a, b) => (a.price < b.price ? -1 : 1));
   return SHOP.filter((p) => p.category === "GEMS" && p.currency === Currency.SOL && p.active && (p.grants.gems ?? 0) > 0)
-    .map((p) => ({ id: p.id, price: BigInt(p.price), gems: p.grants.gems ?? 0 }))
+    .map((p) => ({ id: p.id, price: p.price, gems: p.grants.gems ?? 0 }))
     .sort((a, b) => (a.price < b.price ? -1 : 1));
 }
 

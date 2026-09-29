@@ -5,7 +5,7 @@
  */
 import type {
   BlueprintTier, Currency, DamageElement, DroneType, EventType, GateDifficulty, ItemCategory,
-  ModuleKind, ObjectiveType, PortalKind, PremiumTier, QuestType, Rarity, ResourceId, RewardSource,
+  ModuleKind, ObjectiveType, PortalKind, PremiumTier, QuestType, Rarity, ResourceId, RewardSource, RiskLevel,
   ShipClass, WeaponSlot, WeaponType, ZoneType,
 } from "./enums.js";
 
@@ -443,7 +443,15 @@ export interface BlueprintDef {
   items?: { itemId: string; quantity: number }[];
 }
 
-export interface ShopProductDef {
+/**
+ * A currency base-unit amount (credits/gems integer; NEBX/SOL lamports) as it is stored in the JSON
+ * documents: a decimal integer string (`"10000000000"`), so values above 2^53 keep full precision.
+ * @nebula/config parses these to `bigint`.
+ */
+export type BaseUnitsString = string;
+
+/** Shop product; `Money` is `BaseUnitsString` in shop.json and `bigint` once parsed by @nebula/config. */
+export interface ShopProductShape<Money> {
   id: string;
   sku: string;
   name: string;
@@ -451,7 +459,7 @@ export interface ShopProductDef {
   description: string;
   currency: Currency;
   /** Price in currency base units (credits/gems integer; NEBX/SOL lamports). */
-  price: number;
+  price: Money;
   grants: RewardBundle & { ships?: string[]; premium?: { tier: PremiumTier; days: number }; battlePassPremium?: boolean };
   requiredLevel: number;
   stock?: number;
@@ -459,6 +467,10 @@ export interface ShopProductDef {
   active: boolean;
   featured?: boolean;
 }
+/** shop.json entry (price is a decimal integer string). */
+export type ShopProductDoc = ShopProductShape<BaseUnitsString>;
+/** Parsed shop product (price is exact integer base units). */
+export type ShopProductDef = ShopProductShape<bigint>;
 
 export interface BattlePassTierDef {
   tier: number;
@@ -570,29 +582,51 @@ export interface FactionWarConfig {
   territoryPoints: number;
 }
 
-export interface EconomyConfigDoc {
+/**
+ * Economy policy (economy.json). `Money` is every currency base-unit amount (lamports / credits):
+ * `BaseUnitsString` in the JSON document, `bigint` once parsed by @nebula/config. Ratios,
+ * multipliers, counts and durations stay plain numbers.
+ */
+export interface EconomyConfigShape<Money> {
   currencies: Record<Currency, { decimals: number; symbol: string; onChain: boolean }>;
   rewardBudgetRatio: number;
   treasuryReserveRatio: number;
   operatingReserveRatio: number;
   emergencyReserveRatio: number;
-  minTreasuryReserve: number;
+  minTreasuryReserve: Money;
   rewardAllocation: Record<"LEADERBOARD" | "TOURNAMENT" | "WORLD_EVENTS" | "FACTION_WARS" | "RAIDS" | "ACHIEVEMENTS" | "SPECIAL_CAMPAIGNS", number>;
-  emission: { baseRate: number; maxRewardRate: number; activityMultiplierMax: number; seasonMultiplier: number };
+  emission: { baseRate: number; maxRewardRate: number; activityMultiplierMax: number; seasonMultiplier: number; rewardUnitLamports: Money };
   treasuryHealth: { healthy: number; watch: number; warning: number; multipliers: Record<"HEALTHY" | "WATCH" | "WARNING" | "CRITICAL", number> };
-  caps: { daily: number; weekly: number; season: number };
-  eligibility: { minAccountAgeHours: number; minGameplayMinutes: number; minCompletedMatches: number; claimCooldownMinutes: number; maxRiskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"; eligibleModes: string[] };
-  fees: { marketplace: number; auctionListing: number; auctionSale: number; auctionCancellation: number; withdrawalServicePercent: number; withdrawalFlat: number; estimatedNetworkFee: number; tradeTax: number };
-  withdrawal: { min: number; max: number; dailyLimit: number; cooldownMinutes: number; minAccountAgeHours: number; walletChangeLockHours: number; reviewThreshold: number };
+  caps: { daily: Money; weekly: Money; season: Money };
+  eligibility: { minAccountAgeHours: number; minGameplayMinutes: number; minCompletedMatches: number; claimCooldownMinutes: number; maxRiskLevel: RiskLevel; eligibleModes: string[] };
+  fees: { marketplace: number; auctionListing: number; auctionSale: number; auctionCancellation: number; withdrawalServicePercent: number; withdrawalFlat: Money; estimatedNetworkFee: Money; tradeTax: number };
+  withdrawal: { min: Money; max: Money; dailyLimit: Money; cooldownMinutes: number; minAccountAgeHours: number; walletChangeLockHours: number; reviewThreshold: Money };
   inflation: { dailyThreshold: number; weeklyThreshold: number; responses: { rewardMultiplier: number; dropMultiplier: number; sinkMultiplier: number } };
-  circuitBreaker: { reserveCoverageMin: number; liabilityRatioMax: number; withdrawalSpikeMultiplier: number; depositSpikeMultiplier: number; depositSpikeFloorLamports: number; botRiskShareMax: number; inflationSpike: number; abnormalOutflowMultiplier: number };
+  circuitBreaker: { reserveCoverageMin: number; liabilityRatioMax: number; withdrawalSpikeMultiplier: number; depositSpikeMultiplier: number; depositSpikeFloorLamports: Money; botRiskShareMax: number; inflationSpike: number; abnormalOutflowMultiplier: number };
   rewardExpiryDays: number;
   tokenomics: {
     symbol: string;
-    maxSupply: number;
+    maxSupply: Money;
     allocation: Record<"TREASURY" | "REWARDS" | "LIQUIDITY" | "OPERATIONS" | "MARKETING" | "TEAM" | "ECOSYSTEM", number>;
     mintAuthorityDisabledAfterGenesis: boolean;
   };
-  sinks: { ammoCreditsPerShot: number; travelCreditsPerJump: number; npcServiceFee: number };
+  /** Credit sinks (credits base units). */
+  sinks: { ammoCreditsPerShot: Money; travelCreditsPerJump: Money; npcServiceFee: Money };
   premium: Record<"FREE" | "VIP" | "ELITE", { xpBoost: number; inventorySlots: number; extraDailyQuests: number }>;
+  /** Risk thresholds & bot heuristics. */
+  risk: {
+    mediumScore: number;
+    highScore: number;
+    criticalScore: number;
+    windowDays: number;
+    repeatedRewardsPerDay: number;
+    regularIntervalCvMax: number;
+    clusterSizeWarn: number;
+    duplicateClaimSignalsMax: number;
+    autoReviewWithdrawalRisk: RiskLevel;
+  };
 }
+/** economy.json as stored (money as decimal integer strings). */
+export type EconomyConfigDoc = EconomyConfigShape<BaseUnitsString>;
+/** Parsed economy.json (money as exact bigint base units). */
+export type EconomyConfigDef = EconomyConfigShape<bigint>;

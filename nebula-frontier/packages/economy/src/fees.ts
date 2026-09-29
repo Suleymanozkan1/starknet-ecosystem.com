@@ -48,8 +48,8 @@ export function auctionFees(
  */
 export function withdrawalQuote(requested: bigint, cfg: Pick<EconomyConfig, "fees">): WithdrawalQuote {
   if (requested <= 0n) throw new FeeError("INVALID_AMOUNT", "Amount must be positive");
-  const serviceFee = mulRatioCeil(requested, cfg.fees.withdrawalServicePercent) + BigInt(cfg.fees.withdrawalFlat);
-  const networkFee = BigInt(cfg.fees.estimatedNetworkFee);
+  const serviceFee = mulRatioCeil(requested, cfg.fees.withdrawalServicePercent) + cfg.fees.withdrawalFlat;
+  const networkFee = cfg.fees.estimatedNetworkFee;
   const final = requested - serviceFee - networkFee;
   if (final <= 0n) throw new FeeError("AMOUNT_TOO_SMALL", "Amount does not cover withdrawal fees");
   return { requested, serviceFee, networkFee, final };

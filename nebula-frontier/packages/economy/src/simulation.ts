@@ -183,6 +183,8 @@ export function scenarioParams(s: SimulationScenario, startUsers: number, days: 
 
 const MICRO = 1_000_000;
 const toMicro = (tokens: number): bigint => BigInt(Math.max(0, Math.floor(tokens * MICRO)));
+/** Config lamports (exact bigint) → whole tokens as a float, for this approximate model only. */
+const lamportsToTokens = (lamports: bigint): number => Number(lamports) / 1e9;
 
 /** Runs one scenario. Deterministic for identical params (seeded PRNG). */
 export function runEconomySimulation(scenario: string, params: SimulationParams, cfg: EconomyConfig): SimulationResult {
@@ -237,7 +239,7 @@ export function runEconomySimulation(scenario: string, params: SimulationParams,
     const avg7 = grantHistory.slice(-7).reduce((s, v) => s + v, 0) / Math.max(1, Math.min(7, grantHistory.length));
     const health = computeTreasuryHealth(
       { availableReserve: toMicro(rewardPool + reserve * backingShare), outstandingLiability: toMicro(outstanding), projected30dEmission: toMicro(avg7 * 30) },
-      { treasuryHealth: cfg.treasuryHealth, minTreasuryReserve: 0 }
+      { treasuryHealth: cfg.treasuryHealth, minTreasuryReserve: 0n }
     );
     const emission = computeEmissionRate({
       baseRate: cfg.runtime.rewardRateOverride ?? cfg.emission.baseRate,
@@ -251,8 +253,8 @@ export function runEconomySimulation(scenario: string, params: SimulationParams,
 
     // Grants: demand from eligible humans + undetected bots, limited by per-user daily cap,
     // daily emission cap (pool * rate) and uncommitted pool (liability <= pool).
-    const unitTokens = cfg.emission.rewardUnitLamports / 1e9;
-    const perUserTokens = Math.min(params.weightPerDau * unitTokens * (rate / cfg.emission.baseRate), cfg.caps.daily / 1e9);
+    const unitTokens = lamportsToTokens(cfg.emission.rewardUnitLamports);
+    const perUserTokens = Math.min(params.weightPerDau * unitTokens * (rate / cfg.emission.baseRate), lamportsToTokens(cfg.caps.daily));
     // A bot wave arrives undetected; existing bots get flagged at botDetection per day.
     if (bots > prevBots && bots > 0) undetected = (prevBots * undetected + (bots - prevBots)) / bots;
     prevBots = bots;
@@ -282,7 +284,7 @@ export function runEconomySimulation(scenario: string, params: SimulationParams,
     playerHeld -= withdrawn;
     reserve += fee;
     withdrawHistory.push(withdrawn);
-    const withdrawalTxs = Math.ceil(withdrawn / Math.max(cfg.withdrawal.min / 1e9, 1e-9) / 5) + Math.ceil(claims > 0 ? humans * 0.02 : 0);
+    const withdrawalTxs = Math.ceil(withdrawn / Math.max(lamportsToTokens(cfg.withdrawal.min), 1e-9) / 5) + Math.ceil(claims > 0 ? humans * 0.02 : 0);
 
     // Infra + RPC cost (USD) paid from operating cash, then by selling reserve tokens.
     const infraCostUsd = (dau * params.infraCostPerDau + withdrawalTxs * params.rpcCostPerTx) * (shocked ? params.costShock : 1);
@@ -299,7 +301,7 @@ export function runEconomySimulation(scenario: string, params: SimulationParams,
     const treasuryTokens = rewardPool + reserve;
     // Same rule as production: below a meaningful base (season cap) the ratio is noise.
     const heldStart = playerHeld - claims + withdrawn;
-    const inflation = heldStart >= cfg.caps.season / 1e9 ? (claims - withdrawn) / heldStart : 0;
+    const inflation = heldStart >= lamportsToTokens(cfg.caps.season) ? (claims - withdrawn) / heldStart : 0;
 
     // Controller: same anomaly detection as production
     const metrics: EconomyMetrics = {

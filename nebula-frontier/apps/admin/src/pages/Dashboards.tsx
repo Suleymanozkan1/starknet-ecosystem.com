@@ -93,11 +93,19 @@ function ParamEditor({ eco }: { eco: AdminEconomyResponse }) {
   const [edit, setEdit] = useState<{ name: string; key: string; kind: string; value: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const m = useMutation({
-    mutationFn: ({ key, value, reason }: { key: string; value: number; reason: string }) => api.setConfig(key, value, reason),
+    // Lamport amounts are sent as decimal integer strings (exact beyond 2^53); ratios/numbers as numbers.
+    mutationFn: ({ key, value, reason }: { key: string; value: number | string; reason: string }) => api.setConfig(key, value, reason),
     onSuccess: async () => { setEdit(null); setErr(null); await qc.invalidateQueries({ queryKey: ["economy"] }); },
     onError: (e) => setErr(errorMessage(e)),
   });
-  const display = (kind: string, v: unknown): string => (typeof v !== "number" ? String(v ?? "—") : kind === "ratio" ? pct(v, 2) : kind === "lamports" ? `${sol(v)} (lamports ${int(v)})` : String(v));
+  // Money config values arrive as decimal strings (bigint on the server); older payloads may be numbers.
+  const isLamports = (kind: string, v: unknown): v is string | number => kind === "lamports" && (typeof v === "number" || (typeof v === "string" && /^\d+$/.test(v)));
+  const display = (kind: string, v: unknown): string => (isLamports(kind, v) ? `${sol(v)} (lamports ${int(v)})` : typeof v !== "number" ? String(v ?? "—") : kind === "ratio" ? pct(v, 2) : String(v));
+  const parseEdit = (e: { kind: string; value: string }): number | string | null => {
+    const raw = e.value.trim();
+    if (e.kind === "lamports") return /^\d+$/.test(raw) ? raw : null;
+    return raw !== "" && Number.isFinite(Number(raw)) ? Number(raw) : null;
+  };
   return (
     <HoloPanel title="Economic parameters" actions={!editable ? <span className="nf-chip">Read-only for your role</span> : undefined}>
       <table className="nf-table">
@@ -109,13 +117,13 @@ function ParamEditor({ eco }: { eco: AdminEconomyResponse }) {
               <td><div className="font-ui font-bold">{p.name}</div><div className="text-[11.5px] text-mute">{p.help}</div></td>
               <td className="nf-mono text-dim">{p.key}</td>
               <td className="text-right tabular-nums">{display(p.kind, v)}</td>
-              <td className="text-right">{editable && typeof v === "number" && <NeonButton size="sm" onClick={() => setEdit({ name: p.name, key: p.key, kind: p.kind, value: String(v) })}>Edit</NeonButton>}</td>
+              <td className="text-right">{editable && (typeof v === "number" || isLamports(p.kind, v)) && <NeonButton size="sm" onClick={() => setEdit({ name: p.name, key: p.key, kind: p.kind, value: String(v) })}>Edit</NeonButton>}</td>
             </tr>
           );
         })}</tbody>
       </table>
       <ReasonDialog open={Boolean(edit)} title={`Change ${edit?.name ?? ""}`} busy={m.isPending} onClose={() => { setEdit(null); setErr(null); }}
-        onConfirm={(reason) => edit && Number.isFinite(Number(edit.value)) && m.mutate({ key: edit.key, value: Number(edit.value), reason })}>
+        onConfirm={(reason) => { const value = edit ? parseEdit(edit) : null; if (edit && value !== null) m.mutate({ key: edit.key, value, reason }); }}>
         {edit && (
           <>
             <label className="grid gap-1.5"><span className="font-ui text-[11px] font-bold uppercase tracking-[0.18em] text-mute">New value ({edit.kind === "ratio" ? "0–1 ratio" : edit.kind === "lamports" ? "lamports" : "number"})</span>

@@ -125,7 +125,7 @@ export async function main(argv = process.argv): Promise<E2eResult> {
     console.info(`[e2e] reward grant: ${g.status} ${g.amount} lamports ${g.reasons.join("; ")}`);
     if (g.rewardId && g.status === "GRANTED") await claimReward(db, user.id, g.rewardId);
     const cfg = await loadEconomyConfig(db);
-    const min = BigInt(cfg.withdrawal.min);
+    const min = cfg.withdrawal.min;
     const have = await getBalance(db, userWallet(user.id, Currency.NEBX));
     if (have < min) {
       // The emission policy caps a single day's reward far below the withdrawal minimum on a small

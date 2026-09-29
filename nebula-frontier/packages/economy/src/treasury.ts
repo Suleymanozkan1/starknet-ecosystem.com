@@ -26,7 +26,7 @@ export function computeTreasuryHealth(input: TreasuryHealthInput, cfg: Pick<Econ
   let health: TreasuryHealth =
     coverage >= t.healthy ? TreasuryHealth.HEALTHY : coverage >= t.watch ? TreasuryHealth.WATCH : coverage >= t.warning ? TreasuryHealth.WARNING : TreasuryHealth.CRITICAL;
   // An almost-empty treasury is never "healthy", even with no liabilities yet.
-  if (input.availableReserve < BigInt(cfg.minTreasuryReserve) && (health === TreasuryHealth.HEALTHY || health === TreasuryHealth.WATCH)) {
+  if (input.availableReserve < cfg.minTreasuryReserve && (health === TreasuryHealth.HEALTHY || health === TreasuryHealth.WATCH)) {
     health = TreasuryHealth.WARNING;
   }
   return { health, coverage, projected30dLiability, multiplier: t.multipliers[health] };

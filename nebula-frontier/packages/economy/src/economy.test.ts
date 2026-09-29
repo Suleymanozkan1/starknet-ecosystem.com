@@ -40,8 +40,8 @@ describe("caps", () => {
     expect(r.reasons).toContain("daily cap reached");
   });
   it("weekly and season caps apply independently", () => {
-    expect(applyCaps(50_000_000n, { daily: 0n, weekly: BigInt(cfg.caps.weekly) - 1n, season: 0n }, cfg).allowed).toBe(1n);
-    expect(applyCaps(50_000_000n, { daily: 0n, weekly: 0n, season: BigInt(cfg.caps.season) }, cfg).allowed).toBe(0n);
+    expect(applyCaps(50_000_000n, { daily: 0n, weekly: cfg.caps.weekly - 1n, season: 0n }, cfg).allowed).toBe(1n);
+    expect(applyCaps(50_000_000n, { daily: 0n, weekly: 0n, season: cfg.caps.season }, cfg).allowed).toBe(0n);
   });
   it("passes amounts under every cap untouched", () => {
     const r = applyCaps(1000n, { daily: 0n, weekly: 0n, season: 0n }, cfg);
@@ -102,8 +102,8 @@ describe("emission", () => {
     expect(computeEmissionRate({ baseRate: 0.01, activityMultiplier: -1, seasonMultiplier: 1, treasuryHealthMultiplier: 1, maxRewardRate: 0.03 }).rate).toBe(0);
   });
   it("reward amount scales with weight and rate", () => {
-    expect(rewardAmountForWeight(10, cfg.emission.baseRate, cfg)).toBe(BigInt(10 * cfg.emission.rewardUnitLamports));
-    expect(rewardAmountForWeight(10, cfg.emission.baseRate / 2, cfg)).toBe(BigInt(5 * cfg.emission.rewardUnitLamports));
+    expect(rewardAmountForWeight(10, cfg.emission.baseRate, cfg)).toBe(10n * cfg.emission.rewardUnitLamports);
+    expect(rewardAmountForWeight(10, cfg.emission.baseRate / 2, cfg)).toBe(5n * cfg.emission.rewardUnitLamports);
     expect(rewardAmountForWeight(0, 0.01, cfg)).toBe(0n);
     expect(dailyEmissionCap(100n * SOL, 0.01)).toBe(SOL);
   });
@@ -132,8 +132,8 @@ describe("reward budget", () => {
 describe("fees", () => {
   it("withdrawal quote", () => {
     const q = withdrawalQuote(100_000_000n, cfg);
-    expect(q.serviceFee).toBe(2_000_000n + BigInt(cfg.fees.withdrawalFlat));
-    expect(q.networkFee).toBe(BigInt(cfg.fees.estimatedNetworkFee));
+    expect(q.serviceFee).toBe(2_000_000n + cfg.fees.withdrawalFlat);
+    expect(q.networkFee).toBe(cfg.fees.estimatedNetworkFee);
     expect(q.final).toBe(100_000_000n - q.serviceFee - q.networkFee);
   });
   it("rejects amounts that cannot cover fees", () => {
@@ -154,10 +154,37 @@ describe("fees", () => {
 describe("config", () => {
   it("defaults are valid", () => expect(validateEconomyConfig(defaultEconomyConfig())).toEqual([]));
   it("overrides deep-merge by dot path", () => {
-    const c = applyOverrides([{ key: "caps.daily", value: 1 }, { key: "caps", value: { weekly: 2 } }]);
-    expect(c.caps.daily).toBe(1);
-    expect(c.caps.weekly).toBe(2);
+    const c = applyOverrides([{ key: "caps.daily", value: "1" }, { key: "caps", value: { weekly: "2" } }]);
+    expect(c.caps.daily).toBe(1n);
+    expect(c.caps.weekly).toBe(2n);
     expect(c.caps.season).toBe(cfg.caps.season);
+  });
+  it("defaults expose money as exact bigint base units", () => {
+    expect(typeof cfg.caps.daily).toBe("bigint");
+    expect(typeof cfg.withdrawal.min).toBe("bigint");
+    expect(typeof cfg.fees.withdrawalFlat).toBe("bigint");
+    expect(typeof cfg.tokenomics.maxSupply).toBe("bigint");
+    expect(typeof cfg.withdrawal.cooldownMinutes).toBe("number");
+  });
+  it("parses decimal-string money overrides to bigint beyond 2^53", () => {
+    const big = "90071992547409930000";
+    const c = applyOverrides([{ key: "caps.season", value: big }, { key: "minTreasuryReserve", value: "10000000000" }]);
+    expect(c.caps.season).toBe(90071992547409930000n);
+    expect(c.minTreasuryReserve).toBe(10_000_000_000n);
+    expect(validateEconomyConfig(c)).toEqual([]);
+  });
+  it("accepts legacy safe-integer number overrides (older rows) as bigint", () => {
+    const c = applyOverrides([{ key: "caps.daily", value: 60_000_000 }, { key: "withdrawal", value: { min: 20_000_000 } }]);
+    expect(c.caps.daily).toBe(60_000_000n);
+    expect(c.withdrawal.min).toBe(20_000_000n);
+    expect(c.withdrawal.max).toBe(cfg.withdrawal.max);
+    expect(validateEconomyConfig(c)).toEqual([]);
+  });
+  it("reports money overrides that are not integer base units", () => {
+    for (const value of ["1.5", "-1", "1e9", "", " 5", 1.5, -1, 2 ** 60, true, null]) {
+      const errors = validateEconomyConfig(applyOverrides([{ key: "caps.daily", value }]));
+      expect(errors.some((e) => e.startsWith("caps.daily")), String(value)).toBe(true);
+    }
   });
   it("rejects prototype-reaching config keys and never pollutes Object.prototype", () => {
     expect(isKnownConfigKey("caps.daily")).toBe(true);
@@ -169,7 +196,7 @@ describe("config", () => {
       { key: "caps.constructor.prototype.polluted", value: 1 },
       { key: "caps", value: JSON.parse('{"__proto__":{"polluted":1},"weekly":3}') as unknown }
     ]);
-    expect(c.caps.weekly).toBe(3);
+    expect(c.caps.weekly).toBe(3n);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(Object.getPrototypeOf(c.caps)).toBe(Object.prototype);
   });
