@@ -10,7 +10,7 @@ export function clamp(v: number, min: number, max: number): number {
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
-/** Wrap an angle to [-PI, PI]. Non-finite input yields 0 so callers (e.g. lerpAngle) never produce NaN. */
+/** Wrap an angle to [-PI, PI]. Non-finite input yields 0. */
 export function wrapAngle(a: number): number {
   if (!Number.isFinite(a)) return 0;
   let r = a % TAU;
@@ -18,8 +18,14 @@ export function wrapAngle(a: number): number {
   if (r < -Math.PI) r += TAU;
   return r;
 }
+/**
+ * Interpolate from angle `a` toward `b` along the shortest arc. Never returns NaN: a non-finite start
+ * snaps to the (wrapped) target, a non-finite target keeps `a`, and a non-finite `t` is treated as 0.
+ */
 export function lerpAngle(a: number, b: number, t: number): number {
-  return a + wrapAngle(b - a) * t;
+  if (!Number.isFinite(a)) return wrapAngle(b);
+  if (!Number.isFinite(b)) return a;
+  return a + wrapAngle(b - a) * (Number.isFinite(t) ? t : 0);
 }
 export function dist2(ax: number, ay: number, bx: number, by: number): number {
   const dx = ax - bx;

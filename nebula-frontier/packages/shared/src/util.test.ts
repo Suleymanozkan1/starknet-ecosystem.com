@@ -24,6 +24,9 @@ describe("wrapAngle / lerpAngle", () => {
     expect(wrapAngle(Number.NaN)).toBe(0);
     expect(wrapAngle(Number.POSITIVE_INFINITY)).toBe(0);
     expect(lerpAngle(1, Number.POSITIVE_INFINITY, 0.5)).toBe(1);
+    expect(lerpAngle(Number.NaN, 1, 0.5)).toBe(1);
+    expect(lerpAngle(Number.NEGATIVE_INFINITY, Number.NaN, 0.5)).toBe(0);
+    expect(lerpAngle(1, 2, Number.NaN)).toBe(1);
   });
 });
 
