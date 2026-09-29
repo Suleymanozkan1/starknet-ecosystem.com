@@ -1,14 +1,18 @@
 /** Small, dependency-free helpers shared by client and server. */
 export const TAU = Math.PI * 2;
 
+/** Clamp `v` to [min, max]. NaN input falls back to `min`. Throws on non-finite bounds or min > max. */
 export function clamp(v: number, min: number, max: number): number {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min > max) throw new Error(`Invalid clamp bounds: [${min}, ${max}]`);
   if (Number.isNaN(v)) return min;
   return v < min ? min : v > max ? max : v;
 }
 export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
+/** Wrap an angle to [-PI, PI]. Non-finite input yields 0 so callers (e.g. lerpAngle) never produce NaN. */
 export function wrapAngle(a: number): number {
+  if (!Number.isFinite(a)) return 0;
   let r = a % TAU;
   if (r > Math.PI) r -= TAU;
   if (r < -Math.PI) r += TAU;
@@ -42,18 +46,27 @@ export function mulberry32(seed: number): () => number {
 export function toBigInt(v: string | number | bigint): bigint {
   if (typeof v === "bigint") return v;
   if (typeof v === "number") {
-    if (!Number.isFinite(v) || !Number.isInteger(v)) throw new Error(`Invalid integer amount: ${v}`);
+    if (!Number.isSafeInteger(v)) throw new Error(`Invalid integer amount: ${v}`);
     return BigInt(v);
   }
   if (!/^-?\d+$/.test(v)) throw new Error(`Invalid integer amount: ${v}`);
   return BigInt(v);
 }
-/** Multiply a bigint amount by a decimal ratio using basis points precision (1e6). */
+/**
+ * Multiply a bigint amount by a decimal ratio with parts-per-million precision (ratio is rounded to
+ * the nearest 1e-6). The result is truncated toward zero (bigint division), i.e. floored for
+ * non-negative inputs. Throws if `ratio` is not finite.
+ */
 export function mulRatio(amount: bigint, ratio: number): bigint {
+  if (!Number.isFinite(ratio)) throw new Error(`Invalid ratio: ${ratio}`);
   const scaled = BigInt(Math.round(ratio * 1_000_000));
   return (amount * scaled) / 1_000_000n;
 }
+function assertDecimals(decimals: number): void {
+  if (!Number.isSafeInteger(decimals) || decimals < 0) throw new Error(`Invalid decimals: ${decimals}`);
+}
 export function formatUnits(amount: bigint | string, decimals: number, maxFraction = 4): string {
+  assertDecimals(decimals);
   const v = typeof amount === "string" ? BigInt(amount) : amount;
   const neg = v < 0n;
   const abs = neg ? -v : v;
@@ -62,11 +75,15 @@ export function formatUnits(amount: bigint | string, decimals: number, maxFracti
   const frac = (abs % base).toString().padStart(decimals, "0").slice(0, maxFraction).replace(/0+$/, "");
   return `${neg ? "-" : ""}${whole.toString()}${frac ? "." + frac : ""}`;
 }
+/** Parse a non-negative decimal string into base units. Throws if it has more fraction digits than `decimals`. */
 export function parseUnits(value: string, decimals: number): bigint {
+  assertDecimals(decimals);
   const m = /^(\d+)(?:\.(\d+))?$/.exec(value.trim());
   if (!m) throw new Error(`Invalid decimal amount: ${value}`);
   const whole = BigInt(m[1] ?? "0");
-  const fracStr = (m[2] ?? "").slice(0, decimals).padEnd(decimals, "0");
+  const frac = m[2] ?? "";
+  if (frac.length > decimals) throw new Error(`Too many decimal places (max ${decimals}): ${value}`);
+  const fracStr = frac.padEnd(decimals, "0");
   return whole * 10n ** BigInt(decimals) + (fracStr ? BigInt(fracStr) : 0n);
 }
 

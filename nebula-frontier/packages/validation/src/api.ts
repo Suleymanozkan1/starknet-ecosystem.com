@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   amountSchema, base58SignatureSchema, breakerModeSchema, chatChannelSchema, clanRoleSchema, adminRoleSchema,
   currencySchema, defIdSchema, deviceIdSchema, emailSchema, idSchema, idempotencyKeySchema, itemCategorySchema,
-  passwordSchema, raritySchema, safeTextSchema, solanaAddressSchema, tradeCurrencySchema, usernameSchema, playerUsernameSchema,
+  isoDateTimeSchema, passwordSchema, queryBooleanSchema, raritySchema, safeTextSchema, solanaAddressSchema, tradeCurrencySchema, usernameSchema, playerUsernameSchema,
 } from "./common.js";
 
 // ---------------- Auth ----------------
@@ -203,7 +203,7 @@ export const battlePassClaimSchema = z.object({ tier: z.number().int().min(1).ma
 export const adminUserSearchSchema = z.object({
   q: safeTextSchema(64).optional(),
   riskLevel: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
-  banned: z.coerce.boolean().optional(),
+  banned: queryBooleanSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export const adminBanSchema = z.object({ reason: safeTextSchema(500, 3) });
@@ -235,8 +235,8 @@ export const adminEventSchema = z.object({
   id: defIdSchema,
   name: safeTextSchema(80, 1),
   type: z.string().min(1).max(32),
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date(),
+  startAt: isoDateTimeSchema,
+  endAt: isoDateTimeSchema,
   active: z.boolean().default(true),
   data: z.record(z.string(), z.unknown()).default({}),
   reason: safeTextSchema(500, 3),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeProtectedHeader } from "jose";
+import { SignJWT, decodeProtectedHeader } from "jose";
 import { keyRingFromEnv, parseKeyRing, signAccessToken, signGameTicket, verifyAccessToken, verifyGameTicket } from "./tokens.js";
 
 const A = "a".repeat(40);
@@ -57,5 +57,51 @@ describe("JWT key rotation", () => {
     expect((await verifyGameTicket(ticket, ring)).mapId).toBe("map_x");
     expect((await verifyGameTicket(ticket, C)).jti).toBe("j1");
     await expect(verifyAccessToken(ticket, ring)).rejects.toThrow();
+  });
+
+  it("rejects expired tokens", async () => {
+    const key = new TextEncoder().encode(A);
+    const now = Math.floor(Date.now() / 1000);
+    const expired = await new SignJWT({ username: "pilot", roles: [], sid: "s1" })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user_1")
+      .setIssuedAt(now - 120)
+      .setAudience("api")
+      .setIssuer("nebula-frontier")
+      .setExpirationTime(now - 60)
+      .sign(key);
+    await expect(verifyAccessToken(expired, A)).rejects.toThrow();
+  });
+
+  it("rejects tokens from a foreign issuer", async () => {
+    const foreign = await new SignJWT({ username: "pilot", roles: [], sid: "s1" })
+      .setProtectedHeader({ alg: "HS256", kid: "k1" })
+      .setSubject("user_1")
+      .setIssuedAt()
+      .setAudience("api")
+      .setIssuer("someone-else")
+      .setExpirationTime("60s")
+      .sign(new TextEncoder().encode(A));
+    await expect(verifyAccessToken(foreign, parseKeyRing(`k1:${A}`))).rejects.toThrow();
+  });
+
+  it("rejects tokens whose kid maps to a different key", async () => {
+    // Signed with A but claims kid k2, which the ring maps to B.
+    const forged = await new SignJWT({ username: "pilot", roles: [], sid: "s1" })
+      .setProtectedHeader({ alg: "HS256", kid: "k2" })
+      .setSubject("user_1")
+      .setIssuedAt()
+      .setAudience("api")
+      .setIssuer("nebula-frontier")
+      .setExpirationTime("60s")
+      .sign(new TextEncoder().encode(A));
+    await expect(verifyAccessToken(forged, parseKeyRing(`k2:${B},k1:${A}`))).rejects.toThrow();
+  });
+
+  it("rejects non-positive or non-integer ttl values", async () => {
+    await expect(signAccessToken(claims, A, 0)).rejects.toThrow();
+    await expect(signAccessToken(claims, A, -5)).rejects.toThrow();
+    await expect(signAccessToken(claims, A, 1.5)).rejects.toThrow();
+    await expect(signGameTicket({ sub: "u", username: "p", mapId: "m", jti: "j" }, A, Number.NaN)).rejects.toThrow();
   });
 });

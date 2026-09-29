@@ -10,5 +10,5 @@
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.json"
   },
-  "dependencies": {"@nebula/shared": "workspace:*", "@solana/kit": "^8.4.0", "jose": "^6.1.0", "@node-rs/argon2": "^2.0.2"}
+  "dependencies": {"@nebula/shared": "workspace:*", "jose": "^6.1.0", "@node-rs/argon2": "^2.0.2"}
 }

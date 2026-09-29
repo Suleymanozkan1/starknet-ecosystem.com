@@ -545,9 +545,6 @@ importers:
       '@node-rs/argon2':
         specifier: ^2.0.2
         version: 2.2.1
-      '@solana/kit':
-        specifier: ^8.4.0
-        version: 8.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       jose:
         specifier: ^6.1.0
         version: 6.2.12

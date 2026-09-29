@@ -92,6 +92,10 @@ function candidates(token: string, s: SecretOrKeyRing): SigningKey[] {
   return s.keys;
 }
 
+function assertTtl(ttlSec: number): void {
+  if (!Number.isSafeInteger(ttlSec) || ttlSec <= 0) throw new Error("ttlSec must be a positive integer");
+}
+
 async function verifyWith(token: string, s: SecretOrKeyRing, audience: string): Promise<JWTPayload> {
   const keys = candidates(token, s);
   if (!keys.length) throw new Error("Unknown signing key");
@@ -108,6 +112,7 @@ async function verifyWith(token: string, s: SecretOrKeyRing, audience: string): 
 }
 
 export async function signAccessToken(claims: AccessClaims, secret: SecretOrKeyRing, ttlSec = 900): Promise<string> {
+  assertTtl(ttlSec);
   const { key, kid } = signingKey(secret);
   return new SignJWT({ username: claims.username, roles: claims.roles, sid: claims.sid })
     .setProtectedHeader(kid ? { alg: "HS256", kid } : { alg: "HS256" })
@@ -132,6 +137,7 @@ export async function verifyAccessToken(token: string, secret: SecretOrKeyRing):
 
 /** Short-lived (60s) ticket the web client passes to the game server's onAuth. */
 export async function signGameTicket(claims: GameTicketClaims, secret: SecretOrKeyRing, ttlSec = 60): Promise<string> {
+  assertTtl(ttlSec);
   const { key, kid } = signingKey(secret);
   return new SignJWT({ username: claims.username, mapId: claims.mapId })
     .setProtectedHeader(kid ? { alg: "HS256", kid } : { alg: "HS256" })

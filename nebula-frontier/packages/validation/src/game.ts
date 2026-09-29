@@ -4,7 +4,7 @@
  * (and risk-flags) anything that fails. Numbers are bounded and must be finite.
  */
 import { z } from "zod";
-import type { ClientMessages } from "@nebula/shared";
+import { DroneFormation, type ClientMessages } from "@nebula/shared";
 import { hasControlChars } from "./common.js";
 
 const finite = (min: number, max: number) => z.number().finite().min(min).max(max);
@@ -45,7 +45,7 @@ export const chatMsgSchema = z.object({
     .max(240)
     .refine((s) => !hasControlChars(s), "control characters are not allowed"),
 });
-export const formationMsgSchema = z.object({ formation: z.enum(["STANDARD", "ARROW", "TURTLE", "DIAMOND", "WHEEL"]) });
+export const formationMsgSchema = z.object({ formation: z.enum(Object.values(DroneFormation) as [DroneFormation, ...DroneFormation[]]) });
 export const pingMsgSchema = z.object({ t: finite(0, Number.MAX_SAFE_INTEGER) });
 export const markerMsgSchema = z.object({ x: coord, y: coord, kind: z.enum(["ATTACK", "DEFEND", "MOVE"]) });
 
@@ -77,8 +77,8 @@ export type ClientMessageType = keyof typeof clientMessageSchemas;
  * caller can drop it (and count it towards PACKET_SPAM / anomaly scoring).
  */
 export function parseClientMessage<K extends ClientMessageType>(type: K, payload: unknown): ClientMessages[K] | null {
-  const schema = clientMessageSchemas[type] as z.ZodType | undefined;
-  if (!schema) return null;
+  if (typeof type !== "string" || !Object.hasOwn(clientMessageSchemas, type)) return null;
+  const schema: z.ZodType = clientMessageSchemas[type];
   const res = schema.safeParse(payload ?? {});
   return res.success ? (res.data as ClientMessages[K]) : null;
 }

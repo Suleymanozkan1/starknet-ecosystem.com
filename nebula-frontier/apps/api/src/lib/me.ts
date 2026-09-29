@@ -1,5 +1,5 @@
 import type { DbOrTx } from "@nebula/database";
-import type { AdminRole, ClanRole, MeResponse, PremiumTier, RiskLevel } from "@nebula/shared";
+import type { AdminRole, ClanRole, MeResponse, PremiumTier } from "@nebula/shared";
 import { notFound } from "../errors.js";
 import { balancesDto } from "./balances.js";
 import { progressFor } from "./progression.js";
@@ -38,7 +38,6 @@ export async function buildMe(db: DbOrTx, userId: string): Promise<MeResponse> {
     wallets: u.wallets.map((w) => ({ address: w.address, primary: w.primary, verifiedAt: w.verifiedAt.toISOString() })),
     balances: await balancesDto(db, u.id),
     roles: (u.adminUser?.roles ?? []) as AdminRole[],
-    riskLevel: u.riskLevel as RiskLevel,
     createdAt: u.createdAt.toISOString(),
     restrictions: [
       ...u.restrictions,

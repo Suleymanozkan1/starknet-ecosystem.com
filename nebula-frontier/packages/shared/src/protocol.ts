@@ -3,7 +3,7 @@
  * The client ONLY sends intents (inputs). Every consequence — HP, damage,
  * XP, loot, credits, cooldowns, positions — is decided on the server.
  */
-import type { DamageElement, EntityKind, NpcAiState, Rarity, ResourceId } from "./enums.js";
+import type { DamageElement, DroneFormation, EntityKind, NpcAiState, Rarity, ResourceId } from "./enums.js";
 
 /** Colyseus room names registered by apps/game-server. */
 export const RoomName = {
@@ -54,8 +54,6 @@ export const ClientMsg = {
   RESPAWN: "respawn",
   PING: "ping",
   MARKER: "marker",
-  PET: "pet",
-  REPUTATION: "reputation",
 } as const;
 export type ClientMsg = (typeof ClientMsg)[keyof typeof ClientMsg];
 
@@ -88,7 +86,7 @@ export interface PickupMsg { lootId: string }
 export interface MineMsg { asteroidId: string | null }
 export interface JumpMsg { portalId: string }
 export interface ChatMsg { channel: "LOCAL" | "GLOBAL" | "FACTION" | "CLAN" | "SQUAD"; text: string }
-export interface FormationMsg { formation: string }
+export interface FormationMsg { formation: DroneFormation }
 export interface MarkerMsg { x: number; y: number; kind: "ATTACK" | "DEFEND" | "MOVE" }
 export interface PingMsg { t: number }
 

@@ -4,7 +4,7 @@
  */
 import type {
   AdminRole, CircuitBreakerMode, ClanRole, Currency, DepositStatus, ItemCategory, PremiumTier, Rarity,
-  Reputation, ResourceId, RewardSource, RewardStatus, RiskLevel, TreasuryHealth, WithdrawalStatus,
+  Reputation, ResourceId, RewardSource, RewardStatus, TreasuryHealth, WithdrawalStatus,
 } from "./enums.js";
 
 export interface ApiError { error: { code: string; message: string; details?: unknown; requestId?: string } }
@@ -42,7 +42,6 @@ export interface MeResponse {
   wallets: { address: string; primary: boolean; verifiedAt: string }[];
   balances: BalancesDto;
   roles: AdminRole[];
-  riskLevel: RiskLevel;
   createdAt: string;
   restrictions: string[];
 }

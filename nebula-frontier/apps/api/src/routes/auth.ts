@@ -5,7 +5,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   ACCESS_TOKEN_TTL_SEC, COOKIE_CSRF, COOKIE_REFRESH, NONCE_TTL_SEC, REFRESH_TOKEN_TTL_SEC, createRefreshToken,
-  generateNonce, hashPassword, parseRefreshToken, sha256Hex, signAccessToken, verifyDummyPassword, verifyPassword,
+  generateNonce, hashPassword, parseRefreshToken, safeEqual, sha256Hex, signAccessToken, verifyDummyPassword, verifyPassword,
 } from "@nebula/authentication";
 import { buildLoginMessage, verifyWalletSignature } from "@nebula/blockchain";
 import type { NonceResponse } from "@nebula/shared";
@@ -181,7 +181,7 @@ export default async function authRoutes(app: FastifyInstance): Promise<void> {
       clearAuthCookies(reply, env);
       throw unauthorized("Session revoked", "SESSION_REVOKED");
     }
-    if (session.refreshTokenHash !== parsed.hash) {
+    if (!safeEqual(session.refreshTokenHash, parsed.hash)) {
       const grace = await redis.get(`rt:grace:${parsed.hash}`);
       if (grace === session.id) throw conflict("REFRESH_RACE", "Session was refreshed concurrently; retry with the new cookie");
       // A rotated-out refresh token was presented: assume theft, kill every session.

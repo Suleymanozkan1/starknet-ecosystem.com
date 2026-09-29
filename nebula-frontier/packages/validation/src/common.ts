@@ -71,11 +71,18 @@ export const chatChannelSchema = z.enum(vals(ChatChannel));
 export const breakerModeSchema = z.enum(vals(CircuitBreakerMode));
 export const adminRoleSchema = z.enum(vals(AdminRole));
 
-/** True if the string contains C0 control characters (except tab/newline/CR) or DEL. */
+/**
+ * True if the string contains C0 controls (except tab/newline/CR), DEL, C1 controls, zero-width
+ * characters, bidi embedding/override/isolate controls or a BOM (invisible / text-spoofing chars).
+ */
 export function hasControlChars(s: string): boolean {
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);
-    if ((c < 32 && c !== 9 && c !== 10 && c !== 13) || c === 127) return true;
+    if (c < 32 && c !== 9 && c !== 10 && c !== 13) return true;
+    // DEL + C1 controls.
+    if (c >= 127 && c <= 159) return true;
+    // Zero-width chars / LRM / RLM, bidi embeddings & overrides, bidi isolates, BOM / ZWNBSP.
+    if ((c >= 0x200b && c <= 0x200f) || (c >= 0x202a && c <= 0x202e) || (c >= 0x2066 && c <= 0x2069) || c === 0xfeff) return true;
   }
   return false;
 }
@@ -88,6 +95,12 @@ export const safeTextSchema = (max: number, min = 0) =>
     .min(min)
     .max(max)
     .refine((s) => !hasControlChars(s), "control characters are not allowed");
+
+/** Query-string boolean: only the literal strings "true" / "false" (z.coerce.boolean() maps "false" to true). */
+export const queryBooleanSchema = z.enum(["true", "false"]).transform((v) => v === "true");
+
+/** ISO 8601 date-time string (with Z or offset) in a JSON body, converted to a Date. */
+export const isoDateTimeSchema = z.iso.datetime({ offset: true }).transform((s) => new Date(s));
 
 export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),

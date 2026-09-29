@@ -57,10 +57,12 @@ export function parseRefreshToken(token: string): { sessionId: string; hash: str
   return { sessionId, hash: sha256Hex(secret) };
 }
 
-/** Constant-time string comparison (length leak only). */
+/**
+ * Constant-time string comparison. Both inputs are hashed to fixed-length sha256 digests first,
+ * so neither the content nor the length of the secret leaks through timing.
+ */
 export function safeEqual(a: string, b: string): boolean {
-  const ab = Buffer.from(a);
-  const bb = Buffer.from(b);
-  if (ab.length !== bb.length) return false;
-  return timingSafeEqual(ab, bb);
+  const da = createHash("sha256").update(a).digest();
+  const db = createHash("sha256").update(b).digest();
+  return timingSafeEqual(da, db);
 }
