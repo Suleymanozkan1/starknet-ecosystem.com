@@ -1,0 +1,1408 @@
+// NEBULA FRONTIER — PostgreSQL schema (Prisma 7, driver adapter @prisma/adapter-pg)
+// Money: BigInt base units. Ledger is append-only double-entry (see packages/database/src/ledger.ts).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../packages/database/src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================ IDENTITY ============================
+
+model User {
+  id              String    @id @default(cuid())
+  username        String    @unique
+  email           String?   @unique
+  passwordHash    String?
+  level           Int       @default(1)
+  xp              BigInt    @default(0)
+  honor           BigInt    @default(0)
+  prestige        Int       @default(0)
+  rank            String    @default("cadet")
+  title           String?
+  gearScore       Int       @default(0)
+  seasonScore     BigInt    @default(0)
+  pvpRating       Int       @default(1200)
+  reputation      String    @default("NEUTRAL")
+  karma           Int       @default(0)
+  premiumTier     String    @default("FREE")
+  premiumUntil    DateTime?
+  activeShipId    String?
+  lastMapId       String?
+  lastX           Float?
+  lastY           Float?
+  riskLevel       String    @default("LOW")
+  riskScore       Int       @default(0)
+  restrictions    String[]  @default([])
+  region          String?
+  country         String?
+  birthYear       Int?
+  kycStatus       String    @default("NONE")
+  playtimeSeconds BigInt    @default(0)
+  matchesPlayed   Int       @default(0)
+  bannedAt        DateTime?
+  mutedUntil      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+
+  sessions          Session[]
+  wallets           Wallet[]
+  nonces            WalletNonce[]
+  playerFaction     PlayerFaction?
+  ships             ShipInstance[]
+  inventory         InventoryItem[]
+  resources         PlayerResource[]
+  weaponInstances   WeaponInstance[]
+  moduleInstances   ModuleInstance[]
+  droneInstances    DroneInstance[]
+  pets              Pet[]
+  quests            UserQuest[]
+  achievements      UserAchievement[]
+  battlePass        BattlePass[]
+  clanMember        ClanMember?
+  friends           Friend[]          @relation("friendOwner")
+  friendOf          Friend[]          @relation("friendTarget")
+  notifications     Notification[]
+  mailsReceived     Mail[]            @relation("mailTo")
+  purchases         Purchase[]
+  balanceAccounts   BalanceAccount[]
+  rewards           Reward[]
+  rewardClaims      RewardClaim[]
+  rewardLiabilities RewardLiability[]
+  deposits          Deposit[]
+  withdrawals       Withdrawal[]
+  matchPlayers      GameMatchPlayer[]
+  eventParticipations EventParticipation[]
+  leaderboardEntries LeaderboardEntry[]
+  listings          MarketplaceListing[]
+  auctions          Auction[]
+  bids              AuctionBid[]
+  adminUser         AdminUser?
+  stats             PlayerStat?
+  devices           Device[]
+  riskSignals       RiskSignal[]
+  ledgerEntries     BalanceLedger[]
+  craftJobs         CraftJob[]
+  squadMember       SquadMember?
+  chatMessages      ChatMessage[]
+  upgradeAttempts   UpgradeAttempt[]
+  rewardSettlements RewardSettlement[]
+
+  @@index([level])
+  @@index([pvpRating])
+  @@index([riskLevel])
+  @@index([createdAt])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  deviceId         String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  lastUsedAt       DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Device {
+  id          String   @id @default(cuid())
+  userId      String
+  fingerprint String
+  platform    String
+  pushToken   String?
+  ip          String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([fingerprint])
+  @@index([ip])
+}
+
+model Wallet {
+  id         String    @id @default(cuid())
+  userId     String
+  address    String    @unique
+  chain      String    @default("solana")
+  primary    Boolean   @default(false)
+  verifiedAt DateTime  @default(now())
+  unlinkedAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model WalletNonce {
+  id        String    @id @default(cuid())
+  address   String
+  nonce     String    @unique
+  message   String
+  purpose   String    @default("LOGIN")
+  userId    String?
+  expiresAt DateTime
+  usedAt    DateTime?
+  ip        String?
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([address])
+  @@index([expiresAt])
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  roles     String[]
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorId       String?
+  actorType     String   @default("ADMIN")
+  action        String
+  targetType    String?
+  targetId      String?
+  oldValue      Json?
+  newValue      Json?
+  reason        String?
+  ip            String?
+  requestId     String?
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([actorId])
+  @@index([targetType, targetId])
+}
+
+// ============================ FACTIONS ============================
+
+model Faction {
+  id          String          @id
+  name        String
+  tag         String          @unique
+  color       String
+  homeMap     String
+  score       BigInt          @default(0)
+  territory   Int             @default(0)
+  kills       BigInt          @default(0)
+  resources   BigInt          @default(0)
+  bossKills   Int             @default(0)
+  pvpScore    BigInt          @default(0)
+  members     PlayerFaction[]
+  seasonScores FactionSeasonScore[]
+  updatedAt   DateTime        @updatedAt
+}
+
+/// Per-season faction war standings (the Faction row keeps all-time totals).
+model FactionSeasonScore {
+  factionId String
+  seasonId  String
+  score     BigInt   @default(0)
+  kills     BigInt   @default(0)
+  pvpScore  BigInt   @default(0)
+  resources BigInt   @default(0)
+  bossKills Int      @default(0)
+  updatedAt DateTime @updatedAt
+  faction   Faction  @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@id([factionId, seasonId])
+  @@index([seasonId, score])
+}
+
+model PlayerFaction {
+  userId     String   @id
+  factionId  String
+  reputation Int      @default(0)
+  rank       Int      @default(0)
+  joinedAt   DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  faction    Faction  @relation(fields: [factionId], references: [id])
+
+  @@index([factionId, reputation])
+}
+
+// ============================ SHIPS & GEAR ============================
+
+/// Catalog row mirroring ships.json (synced by seed) so admin can override numbers without deploys.
+model Ship {
+  id        String         @id
+  name      String
+  class     String
+  tier      Int
+  data      Json
+  active    Boolean        @default(true)
+  updatedAt DateTime       @updatedAt
+  instances ShipInstance[]
+  skins     ShipSkin[]
+}
+
+model ShipInstance {
+  id              String        @id @default(cuid())
+  userId          String
+  shipId          String
+  nickname        String?
+  upgradeLevel    Int           @default(0)
+  hullDamage      Int           @default(0)
+  activeLoadoutId String?
+  cosmetics       Json          @default("{}")
+  nftMint         String?
+  createdAt       DateTime      @default(now())
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ship            Ship          @relation(fields: [shipId], references: [id])
+  stats           ShipStats?
+  upgrades        ShipUpgrade[]
+  loadouts        ShipLoadout[]
+
+  @@unique([userId, shipId])
+  @@index([userId])
+}
+
+model ShipStats {
+  shipInstanceId String       @id
+  stats          Json
+  gearScore      Int
+  computedAt     DateTime     @default(now())
+  shipInstance   ShipInstance @relation(fields: [shipInstanceId], references: [id], onDelete: Cascade)
+}
+
+model ShipUpgrade {
+  id             String       @id @default(cuid())
+  shipInstanceId String
+  fromLevel      Int
+  toLevel        Int
+  success        Boolean
+  cost           Json
+  createdAt      DateTime     @default(now())
+  shipInstance   ShipInstance @relation(fields: [shipInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([shipInstanceId])
+}
+
+/// Durable idempotency record for item/ship upgrade attempts: one row per (user, kind, idempotencyKey),
+/// inserted in the same transaction as the cost postings, so a retried request can never re-consume
+/// resources or re-roll the success chance (the stored outcome is returned instead).
+model UpgradeAttempt {
+  id             String   @id @default(cuid())
+  userId         String
+  /// ITEM | SHIP
+  kind           String
+  /// InventoryItem.id or ShipInstance.id
+  targetId       String
+  idempotencyKey String
+  success        Boolean
+  fromLevel      Int
+  toLevel        Int
+  cost           Json
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, idempotencyKey])
+  @@index([targetId])
+}
+
+model ShipLoadout {
+  id             String       @id @default(cuid())
+  shipInstanceId String
+  name           String
+  preset         String       @default("CUSTOM")
+  /// { weapons: (invItemId|null)[], missiles, generators, modules, drones, formation, ammo, cosmetics }
+  config         Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  shipInstance   ShipInstance @relation(fields: [shipInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([shipInstanceId])
+}
+
+model ShipSkin {
+  id       String @id
+  shipId   String?
+  name     String
+  payload  Json
+  rarity   String
+  ship     Ship?  @relation(fields: [shipId], references: [id])
+}
+
+model Weapon {
+  id     String @id
+  name   String
+  type   String
+  rarity String
+  data   Json
+  active Boolean @default(true)
+}
+
+model WeaponInstance {
+  id              String   @id @default(cuid())
+  userId          String
+  weaponId        String
+  inventoryItemId String   @unique
+  heat            Int      @default(0)
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Module {
+  id     String  @id
+  name   String
+  kind   String
+  rarity String
+  data   Json
+  active Boolean @default(true)
+}
+
+model ModuleInstance {
+  id              String   @id @default(cuid())
+  userId          String
+  moduleId        String
+  inventoryItemId String   @unique
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Drone {
+  id     String  @id
+  name   String
+  type   String
+  rarity String
+  data   Json
+  active Boolean @default(true)
+}
+
+model DroneInstance {
+  id              String   @id @default(cuid())
+  userId          String
+  droneId         String
+  inventoryItemId String   @unique
+  level           Int      @default(1)
+  xp              Int      @default(0)
+  skin            String?
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Pet {
+  id        String   @id @default(cuid())
+  userId    String
+  petId     String
+  name      String
+  level     Int      @default(1)
+  xp        Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, petId])
+  @@index([userId])
+}
+
+// ============================ ITEMS & RESOURCES ============================
+
+model Item {
+  id          String          @id
+  name        String
+  category    String
+  rarity      String
+  ref         String?
+  tradeable   Boolean         @default(true)
+  soulbound   Boolean         @default(false)
+  premium     Boolean         @default(false)
+  cosmetic    Boolean         @default(false)
+  powerItem   Boolean         @default(false)
+  nftEligible Boolean         @default(false)
+  stackable   Boolean         @default(false)
+  maxStack    Int             @default(1)
+  baseValue   Int             @default(0)
+  data        Json
+  inventory   InventoryItem[]
+}
+
+model InventoryItem {
+  id           String    @id @default(cuid())
+  userId       String
+  itemId       String
+  quantity     Int       @default(1)
+  upgradeLevel Int       @default(0)
+  affixes      Json      @default("[]")
+  boundAt      DateTime?
+  /// Set while listed/escrowed — prevents equip/sell duplication.
+  lockedBy     String?
+  /// Server-generated origin (loot id, purchase id, craft id) — unique per grant to prevent duplication.
+  originRef    String?   @unique
+  version      Int       @default(0)
+  acquiredAt   DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item         Item      @relation(fields: [itemId], references: [id])
+  weaponInstance WeaponInstance?
+  moduleInstance ModuleInstance?
+  droneInstance  DroneInstance?
+
+  @@index([userId, itemId])
+  @@index([lockedBy])
+}
+
+model Resource {
+  id        String           @id
+  name      String
+  rarity    String
+  baseValue Int
+  players   PlayerResource[]
+}
+
+model PlayerResource {
+  userId     String
+  resourceId String
+  amount     BigInt   @default(0)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource   Resource @relation(fields: [resourceId], references: [id])
+
+  @@id([userId, resourceId])
+}
+
+model CraftJob {
+  id          String    @id @default(cuid())
+  userId      String
+  blueprintId String
+  status      String    @default("IN_PROGRESS")
+  success     Boolean?
+  startedAt   DateTime  @default(now())
+  completesAt DateTime
+  claimedAt   DateTime?
+  /// Client idempotency key of the start request (durable replay protection; null for legacy rows).
+  idempotencyKey String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, status])
+}
+
+// ============================ WORLD ============================
+
+model Galaxy {
+  id      String   @id
+  name    String
+  sectors Sector[]
+}
+
+model Sector {
+  id       String       @id
+  galaxyId String
+  name     String
+  galaxy   Galaxy       @relation(fields: [galaxyId], references: [id])
+  systems  StarSystem[]
+}
+
+model StarSystem {
+  id       String @id
+  sectorId String
+  name     String
+  sector   Sector @relation(fields: [sectorId], references: [id])
+  maps     Map[]
+}
+
+model Map {
+  id       String     @id
+  systemId String
+  name     String
+  pvp      Boolean    @default(false)
+  data     Json
+  system   StarSystem @relation(fields: [systemId], references: [id])
+  zones    Zone[]
+  spawns   NPCSpawn[]
+}
+
+model Zone {
+  id     String @id
+  mapId  String
+  type   String
+  x      Float
+  y      Float
+  radius Float
+  map    Map    @relation(fields: [mapId], references: [id], onDelete: Cascade)
+
+  @@index([mapId])
+}
+
+model GameRoom {
+  id          String    @id
+  roomName    String
+  mapId       String
+  region      String    @default("EU")
+  processId   String
+  clients     Int       @default(0)
+  maxClients  Int
+  createdAt   DateTime  @default(now())
+  disposedAt  DateTime?
+  heartbeatAt DateTime  @default(now())
+
+  @@index([roomName, mapId])
+  @@index([disposedAt])
+}
+
+model GameMatch {
+  id         String            @id @default(cuid())
+  roomId     String?
+  mode       String
+  mapId      String
+  status     String            @default("RUNNING")
+  winnerTeam Int?
+  startedAt  DateTime          @default(now())
+  endedAt    DateTime?
+  metadata   Json              @default("{}")
+  players    GameMatchPlayer[]
+
+  @@index([mode, startedAt])
+}
+
+model GameMatchPlayer {
+  id       String    @id @default(cuid())
+  matchId  String
+  userId   String
+  team     Int       @default(0)
+  kills    Int       @default(0)
+  deaths   Int       @default(0)
+  damage   BigInt    @default(0)
+  score    Int       @default(0)
+  ratingDelta Int    @default(0)
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+  match    GameMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@index([userId])
+}
+
+model NPC {
+  id     String     @id
+  name   String
+  faction String
+  level  Int
+  data   Json
+  spawns NPCSpawn[]
+}
+
+model NPCSpawn {
+  id     String @id @default(cuid())
+  mapId  String
+  npcId  String
+  count  Int
+  x      Float
+  y      Float
+  radius Float
+  map    Map    @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  npc    NPC    @relation(fields: [npcId], references: [id])
+
+  @@index([mapId])
+}
+
+// ============================ PROGRESSION ============================
+
+model PlayerStat {
+  userId         String   @id
+  npcKills       Int      @default(0)
+  playerKills    Int      @default(0)
+  deaths         Int      @default(0)
+  bossKills      Int      @default(0)
+  gatesCompleted Int      @default(0)
+  pvpWins        Int      @default(0)
+  pvpLosses      Int      @default(0)
+  resourcesMined BigInt   @default(0)
+  itemsCrafted   Int      @default(0)
+  mapsVisited    String[] @default([])
+  damageDealt    BigInt   @default(0)
+  bossDamage     BigInt   @default(0)
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Quest {
+  id       String      @id
+  name     String
+  type     String
+  data     Json
+  active   Boolean     @default(true)
+  users    UserQuest[]
+}
+
+model UserQuest {
+  id          String    @id @default(cuid())
+  userId      String
+  questId     String
+  status      String    @default("ACTIVE")
+  progress    Int[]     @default([])
+  periodKey   String    @default("once")
+  acceptedAt  DateTime  @default(now())
+  completedAt DateTime?
+  claimedAt   DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest       Quest     @relation(fields: [questId], references: [id])
+
+  @@unique([userId, questId, periodKey])
+  @@index([userId, status])
+}
+
+model Achievement {
+  id    String            @id
+  name  String
+  data  Json
+  users UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  claimed       Boolean     @default(false)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@id([userId, achievementId])
+}
+
+model Season {
+  id        String         @id
+  number    Int            @unique
+  name      String
+  startAt   DateTime
+  endAt     DateTime
+  active    Boolean        @default(false)
+  revenue   BigInt         @default(0)
+  rewardBudget BigInt      @default(0)
+  data      Json
+  rewards   SeasonReward[]
+  factionScores FactionSeasonScore[]
+}
+
+model SeasonReward {
+  id       String @id @default(cuid())
+  seasonId String
+  kind     String
+  rankFrom Int?
+  rankTo   Int?
+  bundle   Json
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@index([seasonId])
+}
+
+model BattlePass {
+  id            String   @id @default(cuid())
+  userId        String
+  seasonId      String
+  passId        String
+  xp            Int      @default(0)
+  tier          Int      @default(0)
+  premium       Boolean  @default(false)
+  claimedFree   Int[]    @default([])
+  claimedPremium Int[]   @default([])
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId])
+}
+
+// ============================ MARKET ============================
+
+model MarketplaceListing {
+  id              String    @id @default(cuid())
+  sellerId        String
+  inventoryItemId String
+  itemId          String
+  quantity        Int
+  price           BigInt
+  currency        String
+  fee             BigInt    @default(0)
+  status          String    @default("ACTIVE")
+  buyerId         String?
+  expiresAt       DateTime
+  soldAt          DateTime?
+  createdAt       DateTime  @default(now())
+  version         Int       @default(0)
+  seller          User      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([status, itemId, price])
+  @@index([sellerId])
+  @@index([expiresAt])
+}
+
+model Auction {
+  id              String       @id @default(cuid())
+  sellerId        String
+  inventoryItemId String
+  itemId          String
+  quantity        Int
+  type            String
+  currency        String
+  startPrice      BigInt
+  buyoutPrice     BigInt?
+  currentBid      BigInt?
+  currentBidderId String?
+  listingFee      BigInt
+  status          String       @default("ACTIVE")
+  endsAt          DateTime
+  settledAt       DateTime?
+  createdAt       DateTime     @default(now())
+  version         Int          @default(0)
+  seller          User         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  bids            AuctionBid[]
+
+  @@index([status, endsAt])
+  @@index([itemId])
+}
+
+model AuctionBid {
+  id        String   @id @default(cuid())
+  auctionId String
+  bidderId  String
+  amount    BigInt
+  status    String   @default("ACTIVE")
+  ip        String?
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  bidder    User     @relation(fields: [bidderId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId, amount])
+  @@index([bidderId, createdAt])
+}
+
+model Trade {
+  id          String   @id @default(cuid())
+  kind        String
+  referenceId String   @unique
+  sellerId    String
+  buyerId     String
+  itemId      String
+  quantity    Int
+  price       BigInt
+  currency    String
+  fee         BigInt
+  createdAt   DateTime @default(now())
+
+  @@index([sellerId, buyerId])
+  @@index([itemId, createdAt])
+}
+
+// ============================ SOCIAL ============================
+
+model Clan {
+  id           String          @id @default(cuid())
+  name         String          @unique
+  tag          String          @unique
+  logo         String?
+  description  String          @default("")
+  announcement String          @default("")
+  level        Int             @default(1)
+  xp           BigInt          @default(0)
+  bankCredits  BigInt          @default(0)
+  factionId    String?
+  score        BigInt          @default(0)
+  diplomacy    Json            @default("{}")
+  createdAt    DateTime        @default(now())
+  members      ClanMember[]
+  territories  ClanTerritory[]
+  stations     ClanStation[]
+  warsAsA      ClanWar[]       @relation("clanA")
+  warsAsB      ClanWar[]       @relation("clanB")
+  missions     ClanMission[]
+
+  @@index([score])
+}
+
+model ClanMember {
+  userId   String   @id
+  clanId   String
+  role     String   @default("RECRUIT")
+  contribution BigInt @default(0)
+  joinedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clan     Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+
+  @@index([clanId])
+}
+
+model ClanWar {
+  id        String    @id @default(cuid())
+  clanAId   String
+  clanBId   String
+  phase     String    @default("PREPARATION")
+  mapId     String
+  scoreA    Int       @default(0)
+  scoreB    Int       @default(0)
+  winnerId  String?
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime  @default(now())
+  clanA     Clan      @relation("clanA", fields: [clanAId], references: [id], onDelete: Cascade)
+  clanB     Clan      @relation("clanB", fields: [clanBId], references: [id], onDelete: Cascade)
+
+  @@index([phase, startsAt])
+}
+
+/// Clan mission instance derived from a quests.json CLAN quest. Progress = member PlayerStat deltas
+/// since `baseline` (untargeted objectives) + explicit game-server `contributions` (targeted ones).
+model ClanMission {
+  id            String    @id @default(cuid())
+  clanId        String
+  questId       String
+  periodKey     String    @default("once")
+  status        String    @default("ACTIVE")
+  progress      Int[]     @default([])
+  /// { [userId]: { [metric]: number } } member stat snapshot at mission start / first observation
+  baseline      Json      @default("{}")
+  /// { [objectiveIndex]: number } explicit contributions from the game server
+  contributions Json      @default("{}")
+  startedBy     String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  claimedAt     DateTime?
+  clan          Clan      @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  eventReceipts ClanMissionEventReceipt[]
+
+  @@unique([clanId, questId, periodKey])
+  @@index([status])
+}
+
+/// Idempotency receipt: one row per (mission, game-server event id). A replayed progress event
+/// (retried request whose response was lost) hits the unique key and is not counted again.
+model ClanMissionEventReceipt {
+  id        String      @id @default(cuid())
+  missionId String
+  eventId   String
+  userId    String
+  createdAt DateTime    @default(now())
+  mission   ClanMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([missionId, eventId])
+  @@index([createdAt])
+}
+
+model ClanTerritory {
+  id         String   @id @default(cuid())
+  clanId     String
+  mapId      String   @unique
+  capturedAt DateTime @default(now())
+  clan       Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+}
+
+model ClanStation {
+  id        String              @id @default(cuid())
+  clanId    String
+  mapId     String
+  x         Float
+  y         Float
+  hull      Int
+  maxHull   Int
+  shield    Int
+  maxShield Int
+  level     Int                 @default(1)
+  underAttackAt DateTime?
+  createdAt DateTime            @default(now())
+  clan      Clan                @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  modules   ClanStationModule[]
+
+  @@index([mapId])
+}
+
+model ClanStationModule {
+  id        String      @id @default(cuid())
+  stationId String
+  kind      String
+  level     Int         @default(1)
+  station   ClanStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+
+  @@unique([stationId, kind])
+}
+
+model Squad {
+  id        String        @id @default(cuid())
+  leaderId  String
+  createdAt DateTime      @default(now())
+  members   SquadMember[]
+}
+
+model SquadMember {
+  userId  String @id
+  squadId String
+  joinedAt DateTime @default(now())
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([squadId])
+}
+
+model Friend {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  user      User     @relation("friendOwner", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("friendTarget", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([friendId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  channel   String
+  channelKey String  @default("")
+  senderId  String
+  text      String
+  flagged   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([channel, channelKey, createdAt])
+}
+
+model ChatReport {
+  id         String   @id @default(cuid())
+  messageId  String
+  reporterId String
+  reason     String
+  status     String   @default("OPEN")
+  createdAt  DateTime @default(now())
+
+  @@unique([messageId, reporterId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json      @default("{}")
+  readAt    DateTime?
+  pushedAt  DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model Mail {
+  id          String    @id @default(cuid())
+  toUserId    String
+  fromUserId  String?
+  system      Boolean   @default(false)
+  subject     String
+  body        String
+  attachments Json      @default("null")
+  claimedAt   DateTime?
+  readAt      DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  to          User      @relation("mailTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, createdAt])
+}
+
+model Bounty {
+  id        String    @id @default(cuid())
+  targetId  String
+  creatorId String?
+  amount    BigInt
+  currency  String    @default("CREDITS")
+  status    String    @default("ACTIVE")
+  claimedBy String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([targetId, status])
+}
+
+// ============================ SHOP / PURCHASE ============================
+
+model ShopProduct {
+  id            String     @id
+  sku           String     @unique
+  name          String
+  category      String
+  description   String
+  currency      String
+  price         BigInt
+  grants        Json
+  requiredLevel Int        @default(1)
+  stock         Int?
+  limitPerUser  Int?
+  featured      Boolean    @default(false)
+  active        Boolean    @default(true)
+  updatedAt     DateTime   @updatedAt
+  purchases     Purchase[]
+}
+
+model Purchase {
+  id             String      @id @default(cuid())
+  userId         String
+  productId      String
+  quantity       Int
+  currency       String
+  totalPrice     BigInt
+  status         String      @default("COMPLETED")
+  idempotencyKey String
+  refundedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  product        ShopProduct @relation(fields: [productId], references: [id])
+
+  @@unique([userId, idempotencyKey])
+  @@index([createdAt])
+}
+
+// ============================ LEDGER & ECONOMY ============================
+
+/// One row per (owner, type, asset). System accounts have userId = null and key = type.
+model BalanceAccount {
+  id        String          @id @default(cuid())
+  key       String          @unique
+  type      String
+  asset     String
+  userId    String?
+  balance   BigInt          @default(0)
+  /// Whether this account may go negative (issuance/external accounts).
+  allowNegative Boolean     @default(false)
+  version   Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  debits    BalanceLedger[] @relation("debit")
+  credits   BalanceLedger[] @relation("credit")
+
+  @@index([userId, asset])
+  @@index([type, asset])
+}
+
+/// Immutable double-entry journal. Never updated/deleted; corrections use compensating entries.
+model BalanceLedger {
+  id              String         @id @default(cuid())
+  debitAccountId  String
+  creditAccountId String
+  userId          String?
+  type            String
+  asset           String
+  amount          BigInt
+  reference       String
+  /// Unique per logical operation — makes every posting idempotent.
+  idempotencyKey  String         @unique
+  status          String         @default("POSTED")
+  metadata        Json           @default("{}")
+  correlationId   String?
+  createdAt       DateTime       @default(now())
+  debitAccount    BalanceAccount @relation("debit", fields: [debitAccountId], references: [id])
+  creditAccount   BalanceAccount @relation("credit", fields: [creditAccountId], references: [id])
+  user            User?          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@index([reference])
+  @@index([asset, createdAt])
+}
+
+model Reward {
+  id          String   @id @default(cuid())
+  userId      String
+  seasonId    String?
+  source      String
+  sourceRef   String
+  amount      BigInt
+  asset       String   @default("NEBX")
+  status      String   @default("CLAIMABLE")
+  reason      String
+  riskLevel   String   @default("LOW")
+  expiresAt   DateTime?
+  reviewedBy  String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  claims      RewardClaim[]
+
+  @@unique([userId, source, sourceRef])
+  @@index([status, createdAt])
+  @@index([userId, status])
+}
+
+/// Transactional outbox for crypto reward settlement: written inside the claim transaction (quest /
+/// achievement), processed after commit and by a background job with retry + exponential backoff.
+model RewardSettlement {
+  id            String    @id @default(cuid())
+  userId        String
+  source        String
+  sourceRef     String
+  weight        Float
+  reason        String
+  /// PENDING | DONE | FAILED
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  lastError     String?
+  /// Reward engine outcome (GRANTED, DUPLICATE, CAPPED, INELIGIBLE, PENDING_REVIEW...).
+  result        String?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, source, sourceRef])
+  @@index([status, nextAttemptAt])
+}
+
+model RewardClaim {
+  id        String   @id @default(cuid())
+  rewardId  String
+  userId    String
+  amount    BigInt
+  ledgerTxId String?
+  createdAt DateTime @default(now())
+  reward    Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([rewardId])
+  @@index([userId, createdAt])
+}
+
+model RewardLiability {
+  id        String   @id @default(cuid())
+  seasonId  String?
+  userId    String
+  rewardId  String   @unique
+  amount    BigInt
+  asset     String
+  status    String   @default("OUTSTANDING")
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  settledAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([status, asset])
+  @@index([seasonId])
+}
+
+model Deposit {
+  id             String    @id @default(cuid())
+  userId         String
+  walletAddress  String
+  recipient      String
+  asset          String
+  mint           String?
+  amount         BigInt
+  memo           String    @unique
+  purpose        String    @default("BALANCE")
+  /// GEMS deposits: pack and gem count locked at prepare time (credit never re-derives from mutable shop config).
+  productId      String?
+  gems           Int?
+  status         String    @default("PREPARED")
+  signature      String?   @unique
+  slot           BigInt?
+  idempotencyKey String
+  failureReason  String?
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  confirmedAt    DateTime?
+  creditedAt     DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, idempotencyKey])
+  @@index([status])
+}
+
+model Withdrawal {
+  id             String    @id @default(cuid())
+  userId         String
+  address        String
+  asset          String
+  mint           String?
+  requested      BigInt
+  serviceFee     BigInt
+  networkFee     BigInt
+  final          BigInt
+  status         String    @default("PENDING")
+  chainState     String    @default("CREATED")
+  signature      String?   @unique
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime?
+  failureReason  String?
+  riskFlags      String[]  @default([])
+  reviewedBy     String?
+  idempotencyKey String
+  ledgerHoldId   String?
+  lastValidBlockHeight BigInt?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  submittedAt    DateTime?
+  completedAt    DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
+}
+
+/// Every chain operation (withdrawal payout, NFT mint, settlement) flows through this durable queue record.
+model ChainTransaction {
+  id             String    @id @default(cuid())
+  kind           String
+  referenceId    String    @unique
+  state          String    @default("CREATED")
+  signature      String?   @unique
+  attempts       Int       @default(0)
+  lastError      String?
+  payload        Json
+  nextAttemptAt  DateTime  @default(now())
+  confirmedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([state, nextAttemptAt])
+}
+
+model Event {
+  id             String               @id
+  name           String
+  type           String
+  startAt        DateTime
+  endAt          DateTime
+  active         Boolean              @default(true)
+  data           Json
+  participations EventParticipation[]
+
+  @@index([startAt, endAt])
+}
+
+model EventParticipation {
+  id           String   @id @default(cuid())
+  eventId      String
+  userId       String
+  instanceKey  String   @default("")
+  contribution BigInt   @default(0)
+  rewardTier   String?
+  rewarded     Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId, instanceKey])
+  @@index([eventId, contribution])
+}
+
+model Leaderboard {
+  id       String             @id
+  name     String
+  metric   String
+  seasonId String?
+  entries  LeaderboardEntry[]
+}
+
+model LeaderboardEntry {
+  id            String      @id @default(cuid())
+  leaderboardId String
+  userId        String
+  score         BigInt      @default(0)
+  updatedAt     DateTime    @updatedAt
+  leaderboard   Leaderboard @relation(fields: [leaderboardId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leaderboardId, userId])
+  @@index([leaderboardId, score])
+}
+
+model EconomyConfig {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+model EconomySnapshot {
+  id              String   @id @default(cuid())
+  takenAt         DateTime @default(now())
+  asset           String
+  issued          BigInt
+  burned          BigInt
+  spent           BigInt
+  stored          BigInt
+  withdrawn       BigInt
+  deposited       BigInt
+  outstandingLiability BigInt
+  availableReserve BigInt
+  treasuryHealth  String
+  rewardRate      Float
+  dau             Int
+  revenue         BigInt
+  rewardExpense   BigInt
+  data            Json     @default("{}")
+
+  @@index([asset, takenAt])
+}
+
+model CircuitBreaker {
+  mode        String    @id
+  active      Boolean   @default(false)
+  reason      String?
+  triggeredBy String?
+  triggeredAt DateTime?
+  updatedAt   DateTime  @updatedAt
+}
+
+model RiskSignal {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  score     Int
+  details   Json     @default("{}")
+  source    String
+  reviewed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+model FeatureFlag {
+  key       String   @id
+  enabled   Boolean  @default(false)
+  /// Region/country allow/deny lists and account restrictions for compliance-ready gating.
+  rules     Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  props     Json     @default("{}")
+  platform  String?
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
+}
