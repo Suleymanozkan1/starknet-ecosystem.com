@@ -90,6 +90,8 @@ model User {
   craftJobs         CraftJob[]
   squadMember       SquadMember?
   chatMessages      ChatMessage[]
+  upgradeAttempts   UpgradeAttempt[]
+  rewardSettlements RewardSettlement[]
 
   @@index([level])
   @@index([pvpRating])
@@ -288,6 +290,28 @@ model ShipUpgrade {
   shipInstance   ShipInstance @relation(fields: [shipInstanceId], references: [id], onDelete: Cascade)
 
   @@index([shipInstanceId])
+}
+
+/// Durable idempotency record for item/ship upgrade attempts: one row per (user, kind, idempotencyKey),
+/// inserted in the same transaction as the cost postings, so a retried request can never re-consume
+/// resources or re-roll the success chance (the stored outcome is returned instead).
+model UpgradeAttempt {
+  id             String   @id @default(cuid())
+  userId         String
+  /// ITEM | SHIP
+  kind           String
+  /// InventoryItem.id or ShipInstance.id
+  targetId       String
+  idempotencyKey String
+  success        Boolean
+  fromLevel      Int
+  toLevel        Int
+  cost           Json
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, idempotencyKey])
+  @@index([targetId])
 }
 
 model ShipLoadout {
@@ -1111,6 +1135,31 @@ model Reward {
   @@unique([userId, source, sourceRef])
   @@index([status, createdAt])
   @@index([userId, status])
+}
+
+/// Transactional outbox for crypto reward settlement: written inside the claim transaction (quest /
+/// achievement), processed after commit and by a background job with retry + exponential backoff.
+model RewardSettlement {
+  id            String    @id @default(cuid())
+  userId        String
+  source        String
+  sourceRef     String
+  weight        Float
+  reason        String
+  /// PENDING | DONE | FAILED
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  lastError     String?
+  /// Reward engine outcome (GRANTED, DUPLICATE, CAPPED, INELIGIBLE, PENDING_REVIEW...).
+  result        String?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source, sourceRef])
+  @@index([status, nextAttemptAt])
 }
 
 model RewardClaim {

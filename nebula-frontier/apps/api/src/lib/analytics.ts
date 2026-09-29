@@ -59,7 +59,8 @@ export class AnalyticsWriter {
 
   /** Write everything buffered so far (serialised: one flush at a time). */
   async flush(): Promise<void> {
-    if (this.flushing) await this.flushing;
+    // Loop: several callers may wake from the same in-flight flush; only the first may start the next one.
+    while (this.flushing) await this.flushing;
     if (!this.buf.length) return;
     const batch = this.buf.splice(0, this.buf.length);
     this.flushing = (async () => {

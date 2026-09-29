@@ -26,29 +26,36 @@ export default async function marketRoutes(app: FastifyInstance): Promise<void> 
   const { db } = app;
   const market = { preHandler: app.authenticate, config: { rateLimit: app.rateLimits.market } };
 
-  async function toDto(l: ListingRow) {
+  /** Batch DTO mapping: one catalog load and one inventory query for all listings (no N+1). */
+  async function toDtos(listings: readonly ListingRow[]) {
+    if (listings.length === 0) return [];
     const catalog = await getCatalog(db);
-    const def = catalog.items.get(l.itemId);
-    const inv = await db.inventoryItem.findUnique({ where: { id: l.inventoryItemId }, select: { upgradeLevel: true, affixes: true } });
-    return {
-      id: l.id,
-      sellerId: l.sellerId,
-      seller: l.seller?.username ?? null,
-      itemId: l.itemId,
-      name: def?.name ?? l.itemId,
-      category: def?.category ?? null,
-      rarity: def?.rarity ?? null,
-      quantity: l.quantity,
-      upgradeLevel: inv?.upgradeLevel ?? 0,
-      affixes: inv?.affixes ?? [],
-      price: l.price.toString(),
-      currency: l.currency,
-      fee: l.fee.toString(),
-      sellerReceives: (l.price - l.fee).toString(),
-      status: l.status,
-      expiresAt: l.expiresAt.toISOString(),
-      createdAt: l.createdAt.toISOString(),
-    };
+    const invIds = [...new Set(listings.map((l) => l.inventoryItemId))];
+    const invRows = await db.inventoryItem.findMany({ where: { id: { in: invIds } }, select: { id: true, upgradeLevel: true, affixes: true } });
+    const invById = new Map(invRows.map((r) => [r.id, r]));
+    return listings.map((l) => {
+      const def = catalog.items.get(l.itemId);
+      const inv = invById.get(l.inventoryItemId);
+      return {
+        id: l.id,
+        sellerId: l.sellerId,
+        seller: l.seller?.username ?? null,
+        itemId: l.itemId,
+        name: def?.name ?? l.itemId,
+        category: def?.category ?? null,
+        rarity: def?.rarity ?? null,
+        quantity: l.quantity,
+        upgradeLevel: inv?.upgradeLevel ?? 0,
+        affixes: inv?.affixes ?? [],
+        price: l.price.toString(),
+        currency: l.currency,
+        fee: l.fee.toString(),
+        sellerReceives: (l.price - l.fee).toString(),
+        status: l.status,
+        expiresAt: l.expiresAt.toISOString(),
+        createdAt: l.createdAt.toISOString(),
+      };
+    });
   }
 
   async function requireCryptoFeature(req: FastifyRequest, reply: FastifyReply, currency: string) {
@@ -73,7 +80,7 @@ export default async function marketRoutes(app: FastifyInstance): Promise<void> 
       include: { seller: { select: { username: true } } },
     });
     const fees = await getFees(db);
-    return { listings: await Promise.all(rows.map(toDto)), feeRate: fees.marketplace };
+    return { listings: await toDtos(rows), feeRate: fees.marketplace };
   });
 
   app.get("/api/market/mine", { preHandler: app.authenticate }, async (req) => {
@@ -83,7 +90,7 @@ export default async function marketRoutes(app: FastifyInstance): Promise<void> 
       take: 100,
       include: { seller: { select: { username: true } } },
     });
-    return { listings: await Promise.all(rows.map(toDto)) };
+    return { listings: await toDtos(rows) };
   });
 
   app.post("/api/market/list", market, async (req, reply) => {
@@ -106,7 +113,8 @@ export default async function marketRoutes(app: FastifyInstance): Promise<void> 
         }), "listing"),
     );
     const listing = await db.marketplaceListing.findUniqueOrThrow({ where: { id: recordId }, include: { seller: { select: { username: true } } } });
-    return reply.status(201).send({ listing: await toDto(listing), feeRate: fees.marketplace });
+    const [dto] = await toDtos([listing]);
+    return reply.status(201).send({ listing: dto, feeRate: fees.marketplace });
   });
 
   app.post<{ Params: { id: string } }>("/api/market/buy/:id", market, async (req, reply) => {
@@ -167,6 +175,7 @@ export default async function marketRoutes(app: FastifyInstance): Promise<void> 
 
   app.post<{ Params: { id: string } }>("/api/market/cancel/:id", market, async (req) => {
     const listingId = app.parse(idSchema, req.params.id);
+    await assertMarketOpen(db);
     await withSerializableTx(db, async (tx) => {
       const listing = await tx.marketplaceListing.findFirst({ where: { id: listingId, sellerId: req.user.id } });
       if (!listing) throw notFound("Listing");

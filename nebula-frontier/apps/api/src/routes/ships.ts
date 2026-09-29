@@ -11,7 +11,7 @@ import { badRequest, conflict, notFound } from "../errors.js";
 import { getCatalog } from "../lib/catalog.js";
 import { consumeResources } from "../lib/grants.js";
 import { withIdempotency } from "../lib/idempotency.js";
-import { emptyLoadout, loadoutDto, parseLoadout } from "../lib/inventory.js";
+import { emptyLoadout, isUniqueViolation, loadoutDto, parseLoadout, priorUpgradeAttempt, type UpgradeOutcome } from "../lib/inventory.js";
 import { asRecord, toJsonValue } from "../lib/json.js";
 import { MAX_UPGRADE_LEVEL, secureRoll, upgradeCostFor } from "../lib/progression.js";
 import { purchaseProduct } from "../lib/purchase.js";
@@ -107,37 +107,54 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
     const body = app.parse(shipUpgradeSchema, req.body);
     const userId = req.user.id;
     return withIdempotency(app.redis, "ship-upgrade", userId, body.idempotencyKey, async () => {
-      const result = await withSerializableTx(db, async (tx) => {
-        const inst = await tx.shipInstance.findFirst({ where: { id: body.shipInstanceId, userId } });
-        if (!inst) throw notFound("Ship");
-        if (inst.upgradeLevel >= MAX_UPGRADE_LEVEL) throw badRequest("MAX_LEVEL", `Ship is already +${MAX_UPGRADE_LEVEL}`);
-        const cost = upgradeCostFor(inst.upgradeLevel);
-        const ref = `ship-upgrade:${userId}:${body.idempotencyKey}`;
-        if (cost.credits > 0n) {
-          await post(tx, {
-            from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
-            amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: inst.id, idempotencyKey: `${ref}:credits`, userId,
-            metadata: { kind: "SHIP_UPGRADE", from: inst.upgradeLevel },
+      let result: UpgradeOutcome & { shipInstanceId: string };
+      try {
+        result = await withSerializableTx(db, async (tx) => {
+          // Durable idempotency: a retry (even after the Redis cache was lost) returns the stored
+          // outcome instead of consuming the cost again and re-rolling.
+          const prior = await priorUpgradeAttempt(tx, userId, "SHIP", body.idempotencyKey, body.shipInstanceId);
+          if (prior) return { ...prior, shipInstanceId: body.shipInstanceId };
+          const inst = await tx.shipInstance.findFirst({ where: { id: body.shipInstanceId, userId } });
+          if (!inst) throw notFound("Ship");
+          if (inst.upgradeLevel >= MAX_UPGRADE_LEVEL) throw badRequest("MAX_LEVEL", `Ship is already +${MAX_UPGRADE_LEVEL}`);
+          const cost = upgradeCostFor(inst.upgradeLevel);
+          const success = secureRoll() < cost.successChance;
+          const toLevel = success ? cost.toLevel : inst.upgradeLevel;
+          // Claimed before any posting: a concurrent duplicate blocks here and then fails on the unique key.
+          const attempt = await tx.upgradeAttempt.create({
+            data: { userId, kind: "SHIP", targetId: inst.id, idempotencyKey: body.idempotencyKey, success, fromLevel: inst.upgradeLevel, toLevel, cost: toJsonValue(cost) },
           });
-        }
-        if (cost.gems > 0n) {
-          await post(tx, {
-            from: userWallet(userId, Currency.GEMS), to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.GEMS),
-            amount: cost.gems, type: LedgerTxType.PURCHASE, reference: inst.id, idempotencyKey: `${ref}:gems`, userId,
-            metadata: { kind: "SHIP_UPGRADE", from: inst.upgradeLevel },
+          const ref = `ship-upgrade:${userId}:${body.idempotencyKey}`;
+          if (cost.credits > 0n) {
+            await post(tx, {
+              from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
+              amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: inst.id, idempotencyKey: `${ref}:credits`, userId,
+              metadata: { kind: "SHIP_UPGRADE", from: inst.upgradeLevel, attemptId: attempt.id },
+            });
+          }
+          if (cost.gems > 0n) {
+            await post(tx, {
+              from: userWallet(userId, Currency.GEMS), to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.GEMS),
+              amount: cost.gems, type: LedgerTxType.PURCHASE, reference: inst.id, idempotencyKey: `${ref}:gems`, userId,
+              metadata: { kind: "SHIP_UPGRADE", from: inst.upgradeLevel, attemptId: attempt.id },
+            });
+          }
+          await consumeResources(tx, userId, cost.resources);
+          if (success) {
+            const upd = await tx.shipInstance.updateMany({ where: { id: inst.id, upgradeLevel: inst.upgradeLevel }, data: { upgradeLevel: { increment: 1 } } });
+            if (upd.count !== 1) throw conflict("CONCURRENT_UPGRADE", "Ship was upgraded concurrently");
+          }
+          await tx.shipUpgrade.create({
+            data: { shipInstanceId: inst.id, fromLevel: inst.upgradeLevel, toLevel, success, cost: attempt.cost ?? {} },
           });
-        }
-        await consumeResources(tx, userId, cost.resources);
-        const success = secureRoll() < cost.successChance;
-        if (success) {
-          const upd = await tx.shipInstance.updateMany({ where: { id: inst.id, upgradeLevel: inst.upgradeLevel }, data: { upgradeLevel: { increment: 1 } } });
-          if (upd.count !== 1) throw conflict("CONCURRENT_UPGRADE", "Ship was upgraded concurrently");
-        }
-        await tx.shipUpgrade.create({
-          data: { shipInstanceId: inst.id, fromLevel: inst.upgradeLevel, toLevel: success ? cost.toLevel : inst.upgradeLevel, success, cost: toJsonValue(cost) },
+          return { success, fromLevel: attempt.fromLevel, toLevel, cost: attempt.cost, shipInstanceId: inst.id };
         });
-        return { success, fromLevel: inst.upgradeLevel, toLevel: success ? cost.toLevel : inst.upgradeLevel, cost, shipInstanceId: inst.id };
-      });
+      } catch (err) {
+        // A concurrent request with the same key won the unique UpgradeAttempt row.
+        const prior = isUniqueViolation(err) ? await priorUpgradeAttempt(db, userId, "SHIP", body.idempotencyKey, body.shipInstanceId) : null;
+        if (!prior) throw err;
+        result = { ...prior, shipInstanceId: body.shipInstanceId };
+      }
       await refreshShipStats(db, result.shipInstanceId, await getCatalog(db));
       return { ...result, ships: await shipDtos(userId) };
     });

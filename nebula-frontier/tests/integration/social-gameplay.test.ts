@@ -49,8 +49,9 @@ describe("faction war", () => {
     const war = r.json() as { season: { factionId: string; score: string; territory: number; kills: string }[]; allTime: unknown[]; weights: Record<string, number> };
     expect(war.season.map((f) => f.factionId).sort()).toEqual(["aurora", "nova", "vortex"]);
     expect(war.weights.bossKillPoints).toBeGreaterThan(0);
-    const lb = (await ctx.app.inject({ method: "GET", url: "/api/leaderboard?board=faction&limit=3" })).json() as { entries: { faction: string; score: number }[] };
+    const lb = (await ctx.app.inject({ method: "GET", url: "/api/leaderboard?board=faction&limit=3" })).json() as { entries: { faction: string; score: string }[] };
     expect(lb.entries).toHaveLength(3);
-    expect(lb.entries[0]!.score).toBeGreaterThanOrEqual(lb.entries[2]!.score);
+    expect(lb.entries[0]!.score).toMatch(/^\d+$/);
+    expect(BigInt(lb.entries[0]!.score) >= BigInt(lb.entries[2]!.score)).toBe(true);
   });
 });

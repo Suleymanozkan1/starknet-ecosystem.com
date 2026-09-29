@@ -34,6 +34,23 @@ describe("blockchain-service notifier", () => {
     expect(blockchainServiceBaseUrl({})).toBe("http://127.0.0.1:8090");
   });
 
+  it("requires https for non-loopback hosts in production and keeps loopback http allowed", () => {
+    const prod = { NODE_ENV: "production" };
+    expect(() => blockchainServiceBaseUrl({ ...prod, BLOCKCHAIN_SERVICE_URL: "http://svc:1" })).toThrow(/https/);
+    expect(() => blockchainServiceBaseUrl({ ...prod, BLOCKCHAIN_SERVICE_URL: "http://10.0.0.5:8090" })).toThrow(/https/);
+    expect(blockchainServiceBaseUrl({ ...prod, BLOCKCHAIN_SERVICE_URL: "https://svc.internal:8443/" })).toBe("https://svc.internal:8443");
+    for (const loop of ["http://127.0.0.1:8090", "http://127.1.2.3:8090", "http://localhost:8090", "http://[::1]:8090"]) {
+      expect(blockchainServiceBaseUrl({ ...prod, BLOCKCHAIN_SERVICE_URL: loop })).toBe(loop);
+    }
+    expect(blockchainServiceBaseUrl({ ...prod, BLOCKCHAIN_SERVICE_PORT: "9000" })).toBe("http://127.0.0.1:9000");
+  });
+
+  it("rejects malformed URLs, non-http schemes and embedded credentials", () => {
+    expect(() => blockchainServiceBaseUrl({ BLOCKCHAIN_SERVICE_URL: "not a url" })).toThrow(/valid URL/);
+    expect(() => blockchainServiceBaseUrl({ BLOCKCHAIN_SERVICE_URL: "ftp://svc:1" })).toThrow(/http\(s\)/);
+    expect(() => blockchainServiceBaseUrl({ BLOCKCHAIN_SERVICE_URL: "https://u:p@svc:1" })).toThrow(/credentials/);
+  });
+
   it("POSTs the enqueue request with the internal token and honours BLOCKCHAIN_SERVICE_PORT", async () => {
     delete process.env.BLOCKCHAIN_SERVICE_URL;
     process.env.BLOCKCHAIN_SERVICE_PORT = String((server.address() as AddressInfo).port);

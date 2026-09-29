@@ -14,12 +14,17 @@ const bool = z
   .optional()
   .transform((v) => (typeof v === "boolean" ? v : v === "true" || v === "1"));
 
+/** Local development database; never acceptable in production. */
+export const DEV_DATABASE_URL = "postgresql://nebula:nebula@localhost:5432/nebula";
+/** Minimum length of METRICS_TOKEN in production (GET /metrics must never be public there). */
+export const MIN_METRICS_TOKEN_LENGTH = 32;
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(8080),
   API_HOST: z.string().default("0.0.0.0"),
-  DATABASE_URL: z.string().min(1).default("postgresql://nebula:nebula@localhost:5432/nebula"),
+  DATABASE_URL: z.string().min(1).default(DEV_DATABASE_URL),
   REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
   /** Legacy single secrets (used when the *_SECRETS rotation lists are empty). */
   JWT_SECRET: z.string().optional(),
@@ -38,7 +43,7 @@ const envSchema = z.object({
   WALLET_NONCE_BIND_IP: bool,
   /** Honour X-Forwarded-For (set when running behind a trusted reverse proxy / LB). */
   TRUST_PROXY: bool,
-  /** Optional bearer token protecting GET /metrics. */
+  /** Bearer token protecting GET /metrics (optional in development, >= 32 chars required in production). */
   METRICS_TOKEN: z.string().optional(),
   SOLANA_NETWORK: z.string().default("devnet"),
   REGION: z.string().default("EU"),
@@ -69,6 +74,13 @@ export function loadEnv(source: Record<string, string | undefined> = process.env
       if (ring.keys.some((k) => WEAK.test(k.secret))) throw new Error(`${name} secret looks like a development placeholder; refusing to start in production`);
     }
     if (e.SOLANA_NETWORK !== "devnet") throw new Error("This build only supports SOLANA_NETWORK=devnet");
+    const dbUrlProvided = Boolean(overrides.DATABASE_URL ?? source.DATABASE_URL);
+    if (!dbUrlProvided || e.DATABASE_URL === DEV_DATABASE_URL) {
+      throw new Error("DATABASE_URL must be set explicitly in production (the local development default is refused)");
+    }
+    if (!e.METRICS_TOKEN || e.METRICS_TOKEN.trim().length < MIN_METRICS_TOKEN_LENGTH) {
+      throw new Error(`METRICS_TOKEN must be at least ${MIN_METRICS_TOKEN_LENGTH} characters in production (GET /metrics would be public)`);
+    }
   }
   let authDomain = e.AUTH_DOMAIN ?? "";
   if (!authDomain) {

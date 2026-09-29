@@ -43,7 +43,7 @@ export default function LeaderboardPage() {
                         {f && <FactionEmblem path={f.emblem} color={f.color} size={20} framed={false} />}
                         <span className="nf-ui text-[18px] font-bold">{e.clanTag && board !== "clan" && board !== "faction" ? `[${e.clanTag}] ` : ""}{e.username}</span>
                       </div>
-                      <div className="nf-display text-[20px] font-bold tabular-nums">{e.score.toLocaleString()}</div>
+                      <div className="nf-display text-[20px] font-bold tabular-nums">{BigInt(e.score).toLocaleString()}</div>
                       <div className="nf-label">{meta.score}</div>
                     </div>
                   </HoloPanel>
@@ -71,7 +71,7 @@ export default function LeaderboardPage() {
                             </div>
                           </td>
                           <td className="tabular-nums text-dim">{e.level}</td>
-                          <td className="nf-ui text-right text-[15px] font-bold tabular-nums">{e.score.toLocaleString()}</td>
+                          <td className="nf-ui text-right text-[15px] font-bold tabular-nums">{BigInt(e.score).toLocaleString()}</td>
                         </tr>
                       );
                     })}

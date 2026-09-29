@@ -162,11 +162,17 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Params: { id: string } }>("/api/clans/:id/kick", auth, async (req) => {
     const clanId = app.parse(idSchema, req.params.id);
     const { userId } = app.parse(clanMemberSchema, req.body);
-    const me = await myMembership(req.user.id, clanId);
-    const target = await db.clanMember.findUnique({ where: { userId } });
-    if (!target || target.clanId !== clanId) throw notFound("Member");
-    if (!canKickClanMember(me.role, target.role)) throw forbidden("You cannot remove this member", "CLAN_ROLE");
-    await db.clanMember.deleteMany({ where: { userId, clanId, role: target.role } });
+    // Actor and target are re-read and the delete happens in one serializable transaction, so a
+    // concurrent role change / leave cannot be raced (e.g. a demoted officer kicking someone).
+    await withSerializableTx(db, async (tx) => {
+      const me = await tx.clanMember.findUnique({ where: { userId: req.user.id } });
+      if (!me || me.clanId !== clanId) throw forbidden("You are not a member of this clan", "NOT_CLAN_MEMBER");
+      const target = await tx.clanMember.findUnique({ where: { userId } });
+      if (!target || target.clanId !== clanId) throw notFound("Member");
+      if (!canKickClanMember(me.role, target.role)) throw forbidden("You cannot remove this member", "CLAN_ROLE");
+      const del = await tx.clanMember.deleteMany({ where: { userId, clanId, role: target.role } });
+      if (del.count !== 1) throw conflict("CONCURRENT_UPDATE", "Member changed concurrently");
+    });
     await notify(db, userId, "CLAN_KICKED", "Removed from clan", "You were removed from your clan.", { clanId });
     return { ok: true };
   });
@@ -216,17 +222,26 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true, duplicate: false };
   });
 
-  app.post<{ Params: { id: string } }>("/api/clans/:id/treasury/withdraw", auth, async (req) => {
-    const clanId = app.parse(idSchema, req.params.id);
-    const body = app.parse(clanTreasurySchema, req.body);
-    const me = await myMembership(req.user.id, clanId);
-    requireRank(me.role, ClanRole.OFFICER);
-    const key = `clan:${clanId}:wd:${req.user.id}:${body.idempotencyKey}`;
-    if (await db.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } })) return { ok: true, duplicate: true };
-    await withSerializableTx(db, (tx) => treasuryMove(tx, clanId, req.user.id, body.amount, "out", key));
-    await app.audit(req, { action: "CLAN_TREASURY_WITHDRAW", targetType: "Clan", targetId: clanId, newValue: { amount: body.amount.toString() } });
-    return { ok: true, duplicate: false };
-  });
+  app.post<{ Params: { id: string } }>(
+    "/api/clans/:id/treasury/withdraw",
+    { preHandler: app.authenticate, config: { rateLimit: app.rateLimits.withdrawal } },
+    async (req) => {
+      const clanId = app.parse(idSchema, req.params.id);
+      const body = app.parse(clanTreasurySchema, req.body);
+      const key = `clan:${clanId}:wd:${req.user.id}:${body.idempotencyKey}`;
+      if (await db.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } })) return { ok: true, duplicate: true };
+      await withSerializableTx(db, async (tx) => {
+        // Membership and rank are checked inside the transaction that moves the funds, so a member
+        // demoted or kicked concurrently cannot still withdraw.
+        const me = await tx.clanMember.findUnique({ where: { userId: req.user.id } });
+        if (!me || me.clanId !== clanId) throw forbidden("You are not a member of this clan", "NOT_CLAN_MEMBER");
+        requireRank(me.role, ClanRole.OFFICER);
+        await treasuryMove(tx, clanId, req.user.id, body.amount, "out", key);
+      });
+      await app.audit(req, { action: "CLAN_TREASURY_WITHDRAW", targetType: "Clan", targetId: clanId, newValue: { amount: body.amount.toString() } });
+      return { ok: true, duplicate: false };
+    },
+  );
 
   app.patch<{ Params: { id: string } }>("/api/clans/:id/announcement", auth, async (req) => {
     const clanId = app.parse(idSchema, req.params.id);
@@ -368,8 +383,7 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { id: string } }>("/api/clans/:id/missions", auth, async (req) => {
     const clanId = app.parse(idSchema, req.params.id);
     await myMembership(req.user.id, clanId);
-    const active = await db.clanMission.findMany({ where: { clanId, status: "ACTIVE" }, select: { id: true } });
-    for (const m of active) await refreshMission(db, m.id);
+    // Read-only: progress is advanced by the refreshClanMissions job, game-server contributions and claim.
     const rows = await db.clanMission.findMany({ where: { clanId }, orderBy: { startedAt: "desc" } });
     return {
       missions: CLAN_MISSIONS.map((q) => {

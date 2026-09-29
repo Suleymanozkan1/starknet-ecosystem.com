@@ -24,7 +24,17 @@ export async function assertMarketOpen(db: DbOrTx): Promise<void> {
   }
 }
 
-/** Fire-and-forget-safe risk signal: never lets anti-cheat bookkeeping break the request. */
+interface WarnLogger {
+  warn: (obj: object, msg?: string) => void;
+}
+let economyLog: WarnLogger | null = null;
+
+/** Wire the process logger used for non-fatal economy bookkeeping failures (called by buildApp). */
+export function configureEconomyLog(log: WarnLogger | null): void {
+  economyLog = log;
+}
+
+/** Fire-and-forget-safe risk signal: never lets anti-cheat bookkeeping break the request (failures are logged). */
 export async function flagRisk(
   db: Parameters<typeof recordRiskSignal>[0],
   userId: string,
@@ -35,7 +45,8 @@ export async function flagRisk(
 ): Promise<void> {
   try {
     await recordRiskSignal(db, { userId, type, score, details, source });
-  } catch {
-    // Risk scoring must not fail the user-facing operation; the error is visible in DB logs.
+  } catch (err) {
+    // Risk scoring must not fail the user-facing operation, but a lost signal must be visible.
+    economyLog?.warn({ err: err instanceof Error ? err.message : String(err), userId, riskType: type, score, source }, "risk signal not recorded");
   }
 }

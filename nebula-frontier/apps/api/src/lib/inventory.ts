@@ -2,10 +2,10 @@
  * Inventory helpers: server-side item grants (unique originRef => no duplication), loadout JSON
  * shape, equipped-item resolution and DTO mapping.
  */
-import type { DbOrTx, Tx } from "@nebula/database";
+import type { DbOrTx, Prisma, Tx } from "@nebula/database";
 import { PROGRESSION } from "@nebula/config";
 import { RARITY_ORDER, type InventoryItemDto, type ItemCategory, type ItemDef, type LoadoutDto, type Rarity } from "@nebula/shared";
-import { badRequest } from "../errors.js";
+import { badRequest, conflict } from "../errors.js";
 import { asRecord } from "./json.js";
 
 export const SLOT_TYPES = ["weapons", "missiles", "generators", "modules", "drones"] as const;
@@ -78,7 +78,13 @@ export async function isEquipped(db: DbOrTx, userId: string, inventoryItemId: st
 /**
  * Grant items. Stackable items merge into an existing unlocked stack (up to maxStack) and overflow
  * into new rows; non-stackable items create one row each. Every created row carries a unique
- * server-generated `originRef` (`<prefix>:<itemId>:<n>`), so replaying a grant cannot duplicate.
+ * server-generated `originRef` (`<prefix>:<itemId>:<n>`, `n` counted per itemId across all entries,
+ * so repeated itemIds in one grant never collide).
+ *
+ * Replay safety: a replay with the same prefix that has to create a row hits the unique `originRef`
+ * and aborts the transaction; merges into existing stacks are NOT keyed. Callers must therefore
+ * claim the grant source atomically (conditional update / unique row) in the same transaction —
+ * `originRef` is defence in depth, not the sole idempotency guard.
  */
 export async function grantItems(
   tx: Tx,
@@ -88,6 +94,12 @@ export async function grantItems(
   itemDefs: ReadonlyMap<string, ItemDef>,
 ): Promise<string[]> {
   const created: string[] = [];
+  const seq = new Map<string, number>();
+  const nextRef = (itemId: string): string => {
+    const n = seq.get(itemId) ?? 0;
+    seq.set(itemId, n + 1);
+    return `${originPrefix}:${itemId}:${n}`;
+  };
   for (const { itemId, quantity } of items) {
     if (quantity <= 0) continue;
     const def = itemDefs.get(itemId);
@@ -96,7 +108,6 @@ export async function grantItems(
     const stackable = def?.stackable ?? row?.stackable ?? false;
     const maxStack = Math.max(1, def?.maxStack ?? row?.maxStack ?? 1);
     let remaining = quantity;
-    let n = 0;
     if (stackable) {
       const stacks = await tx.inventoryItem.findMany({
         where: { userId, itemId, lockedBy: null, quantity: { lt: maxStack } },
@@ -114,14 +125,14 @@ export async function grantItems(
       }
       while (remaining > 0) {
         const q = Math.min(remaining, maxStack);
-        const r = await tx.inventoryItem.create({ data: { userId, itemId, quantity: q, originRef: `${originPrefix}:${itemId}:${n++}` } });
+        const r = await tx.inventoryItem.create({ data: { userId, itemId, quantity: q, originRef: nextRef(itemId) } });
         created.push(r.id);
         remaining -= q;
       }
     } else {
       for (let i = 0; i < quantity; i++) {
         const r = await tx.inventoryItem.create({
-          data: { userId, itemId, quantity: 1, originRef: `${originPrefix}:${itemId}:${n++}`, boundAt: def?.soulbound ? new Date() : null },
+          data: { userId, itemId, quantity: 1, originRef: nextRef(itemId), boundAt: def?.soulbound ? new Date() : null },
         });
         created.push(r.id);
       }
@@ -174,6 +185,31 @@ export function inventoryDto(row: InventoryRow, def: ItemDef | undefined, equipp
     power: itemPower(def, row.upgradeLevel, affixes),
     acquiredAt: row.acquiredAt.toISOString(),
   };
+}
+
+export type UpgradeKind = "ITEM" | "SHIP";
+
+export interface UpgradeOutcome {
+  success: boolean;
+  fromLevel: number;
+  toLevel: number;
+  cost: Prisma.JsonValue;
+}
+
+/**
+ * Durable upgrade idempotency (independent of the Redis request cache): returns the stored outcome
+ * of an earlier attempt with the same (user, kind, idempotencyKey), or null when there is none.
+ * Reusing a key for a different target is rejected.
+ */
+export async function priorUpgradeAttempt(db: DbOrTx, userId: string, kind: UpgradeKind, idempotencyKey: string, targetId: string): Promise<UpgradeOutcome | null> {
+  const row = await db.upgradeAttempt.findUnique({ where: { userId_kind_idempotencyKey: { userId, kind, idempotencyKey } } });
+  if (!row) return null;
+  if (row.targetId !== targetId) throw conflict("IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used for a different upgrade");
+  return { success: row.success, fromLevel: row.fromLevel, toLevel: row.toLevel, cost: row.cost };
+}
+
+export function isUniqueViolation(err: unknown): boolean {
+  return (err as { code?: string }).code === "P2002" || /Unique constraint/i.test(String((err as { message?: unknown }).message ?? ""));
 }
 
 /** Which loadout slot family an item may occupy. */

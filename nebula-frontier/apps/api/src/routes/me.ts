@@ -1,6 +1,7 @@
 /**
  * Current user, public profiles, username change, faction choice (grants the starter ship/loadout).
  */
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { ACHIEVEMENTS_BY_ID, FACTIONS, FACTIONS_BY_ID, PETS_BY_ID, WEAPONS_BY_ID, MODULES_BY_ID, itemIdForDef } from "@nebula/config";
 import type { Tx } from "@nebula/database";
@@ -14,6 +15,9 @@ import { buildMe } from "../lib/me.js";
 import { loadRules } from "../lib/rules.js";
 import { computeShipStats } from "../lib/ships.js";
 
+/** Compare-and-delete: release a Redis reservation only if it still holds our token. */
+const DEL_IF_OWNER = `if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end`;
+
 export default async function meRoutes(app: FastifyInstance): Promise<void> {
   const { db } = app;
 
@@ -23,21 +27,33 @@ export default async function meRoutes(app: FastifyInstance): Promise<void> {
     const body = app.parse(updateMeSchema, req.body);
     const rules = await loadRules(db);
     const cooldownKey = `username:cooldown:${req.user.id}`;
-    const ttl = await app.redis.ttl(cooldownKey);
-    if (ttl > 0) throw badRequest("USERNAME_COOLDOWN", `Username can be changed again in ${Math.ceil(ttl / 3600)}h`);
-    const taken = await db.user.findFirst({
-      where: { username: { equals: body.username, mode: "insensitive" }, NOT: { id: req.user.id } },
-      select: { id: true },
-    });
-    if (taken) throw conflict("USERNAME_TAKEN", "Username already taken");
-    const before = await db.user.findUniqueOrThrow({ where: { id: req.user.id }, select: { username: true } });
+    // Atomic reservation: SET NX EX both checks and starts the cooldown, so two concurrent changes
+    // cannot both pass a TTL check. The reservation is released (only if still ours) when the change fails.
+    const token = randomUUID();
+    const reserved = await app.redis.set(cooldownKey, token, "EX", rules.usernameChangeCooldownHours * 3600, "NX");
+    if (reserved !== "OK") {
+      const ttl = await app.redis.ttl(cooldownKey);
+      const hours = Math.max(1, Math.ceil(Math.max(ttl, 0) / 3600));
+      throw badRequest("USERNAME_COOLDOWN", `Username can be changed again in ${hours}h`, { retryAfterSeconds: Math.max(ttl, 0) });
+    }
+    let before: { username: string };
     try {
-      await db.user.update({ where: { id: req.user.id }, data: { username: body.username } });
+      const taken = await db.user.findFirst({
+        where: { username: { equals: body.username, mode: "insensitive" }, NOT: { id: req.user.id } },
+        select: { id: true },
+      });
+      if (taken) throw conflict("USERNAME_TAKEN", "Username already taken");
+      before = await db.user.findUniqueOrThrow({ where: { id: req.user.id }, select: { username: true } });
+      try {
+        await db.user.update({ where: { id: req.user.id }, data: { username: body.username } });
+      } catch (err) {
+        if ((err as { code?: string }).code === "P2002") throw conflict("USERNAME_TAKEN", "Username already taken");
+        throw err;
+      }
     } catch (err) {
-      if ((err as { code?: string }).code === "P2002") throw conflict("USERNAME_TAKEN", "Username already taken");
+      await app.redis.eval(DEL_IF_OWNER, 1, cooldownKey, token).catch(() => undefined);
       throw err;
     }
-    await app.redis.set(cooldownKey, "1", "EX", rules.usernameChangeCooldownHours * 3600);
     await app.audit(req, { action: "USERNAME_CHANGE", targetType: "User", targetId: req.user.id, oldValue: before.username, newValue: body.username });
     return buildMe(db, req.user.id);
   });

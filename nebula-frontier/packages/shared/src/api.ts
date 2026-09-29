@@ -245,7 +245,8 @@ export interface LedgerEntryDto {
 export interface LeaderboardResponse {
   board: string;
   season: string | null;
-  entries: { rank: number; userId: string; username: string; faction: string | null; clanTag: string | null; score: number; level: number }[];
+  /** `score` is an exact integer as a decimal string (honor / season / clan / faction scores are bigint server-side). */
+  entries: { rank: number; userId: string; username: string; faction: string | null; clanTag: string | null; score: string; level: number }[];
 }
 
 // ---------------- Quests ----------------

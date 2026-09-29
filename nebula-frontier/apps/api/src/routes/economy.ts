@@ -19,6 +19,23 @@ import {
   type EconomyConfig
 } from "@nebula/economy";
 import type { DbOrTx } from "@nebula/database";
+import { getRewardMint } from "@nebula/blockchain";
+
+/** Reward mint decimals from the blockchain config (REWARD_MINT / REWARD_MINT_DECIMALS). */
+function rewardMintDecimals(): number {
+  try {
+    return getRewardMint().decimals;
+  } catch {
+    // Misconfigured REWARD_MINT address: use the library's mint-less default rather than failing a public rules page.
+    return getRewardMint({}).decimals;
+  }
+}
+
+/** Format an amount in the reward token's base units with the mint's decimals (4 fraction digits). */
+export function formatRewardAmount(n: number | bigint, decimals: number, symbol: string): string {
+  const v = Number(n) / 10 ** decimals;
+  return `${v.toFixed(4)} ${symbol}`;
+}
 
 export function feesDto(cfg: EconomyConfig): FeesResponse {
   return {
@@ -46,8 +63,8 @@ export function rewardDto(r: { id: string; source: string; amount: bigint; statu
 }
 
 /** Player-facing rules text, generated from live config so it can never drift from enforcement. */
-export function rewardRules(cfg: EconomyConfig): string[] {
-  const sol = (n: number) => `${(n / 1e9).toFixed(4)} ${cfg.tokenomics.symbol}`;
+export function rewardRules(cfg: EconomyConfig, decimals: number = rewardMintDecimals()): string[] {
+  const sol = (n: number | bigint) => formatRewardAmount(n, decimals, cfg.tokenomics.symbol);
   const e = cfg.eligibility;
   return [
     "Battle Rewards, Season Rewards and Tournament Rewards are earned through skilled gameplay in eligible modes: " + e.eligibleModes.join(", ") + ".",

@@ -2,7 +2,8 @@
  * Background maintenance jobs run by the API process. Each job takes a short Redis lock so only one
  * API instance executes it per tick; every job is idempotent (conditional status transitions).
  */
-import type { FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
+import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import { post, system, userWallet, withSerializableTx, type Db } from "@nebula/database";
 import { Currency, LedgerAccountType, LedgerTxType } from "@nebula/shared";
 import type { Redis } from "ioredis";
@@ -13,7 +14,8 @@ import { refreshMission } from "../lib/clanMissions.js";
 import { loadEventDefs } from "../lib/events.js";
 import { captureTerritories } from "../lib/territory.js";
 import { releaseEscrowed } from "../lib/escrow.js";
-import { PushType, dispatchPendingPush, notify } from "../lib/notify.js";
+import { PushType, dispatchPendingPush, notify, notifyMany } from "../lib/notify.js";
+import { syncFactionTerritory } from "../lib/factionWar.js";
 
 export async function expireListings(db: Db): Promise<number> {
   const due = await db.marketplaceListing.findMany({ where: { status: "ACTIVE", expiresAt: { lte: new Date() } }, take: 200, select: { id: true, inventoryItemId: true } });
@@ -105,12 +107,14 @@ export async function announceEvents(db: Db, redis: Redis, now = Date.now(), loo
       select: { id: true },
       take: 5000,
     });
-    for (const u of users) {
-      await notify(db, u.id, raid ? PushType.RAID_AVAILABLE : PushType.EVENT_STARTED, raid ? "Raid available" : `${d.name} started`, d.description.slice(0, 180), {
-        eventId: d.id, endsAt: new Date(w.end).toISOString(), maps: d.maps,
-      });
-    }
-    sent += users.length;
+    // One batched insert per chunk; push delivery goes through the rate-limited dispatcher job.
+    sent += await notifyMany(db, {
+      userIds: users.map((u) => u.id),
+      type: raid ? PushType.RAID_AVAILABLE : PushType.EVENT_STARTED,
+      title: raid ? "Raid available" : `${d.name} started`,
+      body: d.description.slice(0, 180),
+      data: { eventId: d.id, endsAt: new Date(w.end).toISOString(), maps: d.maps },
+    });
   }
   return sent;
 }
@@ -166,25 +170,72 @@ export async function cleanupNonces(db: Db): Promise<number> {
   return r.count;
 }
 
+/** Compare-and-delete: only the holder of `token` may release the job lock. */
+const RELEASE_LOCK = `if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end`;
+/** Compare-and-expire: keep the lock while a long run is in progress / trim it to the tick window. */
+const EXTEND_LOCK = `if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("PEXPIRE", KEYS[1], ARGV[2]) else return 0 end`;
+
+interface JobDeps {
+  redis: Pick<Redis, "set" | "eval">;
+  log: Pick<FastifyBaseLogger, "info" | "error">;
+}
+
+/**
+ * One tick of a periodic job. A process-local `running` flag skips overlapping ticks in this
+ * instance; a Redis lock with a unique token makes the job single-instance across the cluster.
+ * The lock is extended while the job runs (a slow run never loses it to another instance). When the
+ * run ends, the lock is kept only for the rest of the tick window (so other instances skip this
+ * tick) or, if the run outlasted the window, released immediately. Both are compare-and-set on the
+ * token, so a lock that another instance acquired is never touched.
+ */
+export function createJobRunner(deps: JobDeps, name: string, ms: number, fn: () => Promise<number>): () => Promise<void> {
+  let running = false;
+  const key = `job:${name}`;
+  const ttlMs = Math.max(1000, ms - 500);
+  return async () => {
+    if (running) return;
+    running = true;
+    const token = `${process.pid}:${randomUUID()}`;
+    const started = Date.now();
+    let keepAlive: NodeJS.Timeout | null = null;
+    try {
+      const lock = await deps.redis.set(key, token, "PX", ttlMs, "NX").catch(() => null);
+      if (lock !== "OK") return;
+      keepAlive = setInterval(() => {
+        void deps.redis.eval(EXTEND_LOCK, 1, key, token, String(ttlMs)).catch(() => undefined);
+      }, Math.max(10, Math.floor(ttlMs / 3)));
+      keepAlive.unref();
+      try {
+        const n = await fn();
+        if (n > 0) deps.log.info({ job: name, processed: n }, "job run");
+      } catch (err) {
+        deps.log.error({ err, job: name }, "job failed");
+      }
+    } finally {
+      if (keepAlive) {
+        clearInterval(keepAlive);
+        const remaining = ttlMs - (Date.now() - started);
+        await (remaining > 0
+          ? deps.redis.eval(EXTEND_LOCK, 1, key, token, String(remaining))
+          : deps.redis.eval(RELEASE_LOCK, 1, key, token)
+        ).catch(() => undefined);
+      }
+      running = false;
+    }
+  };
+}
+
 export function startJobs(app: FastifyInstance): () => void {
   const timers: NodeJS.Timeout[] = [];
   const every = (name: string, ms: number, fn: () => Promise<number>) => {
-    const run = async () => {
-      const lock = await app.redis.set(`job:${name}`, process.pid.toString(), "PX", Math.max(1000, ms - 500), "NX").catch(() => null);
-      if (lock !== "OK") return;
-      try {
-        const n = await fn();
-        if (n > 0) app.log.info({ job: name, processed: n }, "job run");
-      } catch (err) {
-        app.log.error({ err, job: name }, "job failed");
-      }
-    };
+    const run = createJobRunner({ redis: app.redis, log: app.log }, name, ms, fn);
     timers.push(setInterval(() => void run(), ms));
   };
-  every("auction-settle", 15_000, () => settleEndedAuctions(app.db));
+  every("auction-settle", 15_000, () => settleEndedAuctions(app.db, 50, app.log));
   every("listing-expire", 60_000, () => expireListings(app.db));
   every("bounty-expire", 300_000, () => expireBounties(app.db));
   every("clanwar-advance", 60_000, () => advanceClanWars(app.db));
+  every("faction-territory", 60_000, () => syncFactionTerritory(app.db));
   every("nonce-cleanup", 3_600_000, () => cleanupNonces(app.db));
   every("clan-missions", 60_000, () => refreshClanMissions(app.db));
   every("quest-complete", 30_000, () => announceCompletedQuests(app.db, app.redis));

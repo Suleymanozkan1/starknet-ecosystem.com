@@ -12,7 +12,9 @@ import { badRequest, conflict, forbidden, notFound } from "../errors.js";
 import { getCatalog, type Catalog } from "../lib/catalog.js";
 import { consumeResources } from "../lib/grants.js";
 import { withIdempotency } from "../lib/idempotency.js";
-import { equippedMap, inventoryDto, loadoutDto, loadoutItemIds, parseLoadout, slotCount, slotFamilyFor, type SlotType } from "../lib/inventory.js";
+import {
+  equippedMap, inventoryDto, isUniqueViolation, loadoutDto, loadoutItemIds, parseLoadout, priorUpgradeAttempt, slotCount, slotFamilyFor, type SlotType, type UpgradeOutcome,
+} from "../lib/inventory.js";
 import { toJsonValue } from "../lib/json.js";
 import { MAX_UPGRADE_LEVEL, secureRoll, upgradeCostFor } from "../lib/progression.js";
 import { refreshShipStats } from "../lib/ships.js";
@@ -128,38 +130,59 @@ export default async function inventoryRoutes(app: FastifyInstance): Promise<voi
     const userId = req.user.id;
     const catalog = await getCatalog(db);
     return withIdempotency(app.redis, "item-upgrade", userId, body.idempotencyKey, async () => {
-      const out = await withSerializableTx(db, async (tx) => {
-        const item = await tx.inventoryItem.findUnique({ where: { id: body.inventoryItemId } });
-        if (!item || item.userId !== userId) throw notFound("Item");
-        if (item.lockedBy) throw conflict("ITEM_LOCKED", "Item is listed on the market or in escrow");
-        const def = catalog.items.get(item.itemId);
-        if (!def?.powerItem || def.stackable) throw badRequest("NOT_UPGRADABLE", "This item cannot be upgraded");
-        if (item.upgradeLevel >= MAX_UPGRADE_LEVEL) throw badRequest("MAX_LEVEL", `Item is already +${MAX_UPGRADE_LEVEL}`);
-        const cost = upgradeCostFor(item.upgradeLevel);
-        const ref = `item-upgrade:${userId}:${body.idempotencyKey}`;
-        if (cost.credits > 0n) {
-          await post(tx, {
-            from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
-            amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: item.id, idempotencyKey: `${ref}:credits`, userId,
-            metadata: { kind: "ITEM_UPGRADE", from: item.upgradeLevel },
+      const replay = async () => {
+        const prior = await priorUpgradeAttempt(db, userId, "ITEM", body.idempotencyKey, body.inventoryItemId);
+        return prior ? { ...prior, inventoryItemId: body.inventoryItemId } : null;
+      };
+      let out: UpgradeOutcome & { inventoryItemId: string };
+      try {
+        out = await withSerializableTx(db, async (tx) => {
+          // Durable idempotency: a retry (even after the Redis cache was lost) returns the stored
+          // outcome instead of consuming the cost again and re-rolling.
+          const prior = await priorUpgradeAttempt(tx, userId, "ITEM", body.idempotencyKey, body.inventoryItemId);
+          if (prior) return { ...prior, inventoryItemId: body.inventoryItemId };
+          const item = await tx.inventoryItem.findUnique({ where: { id: body.inventoryItemId } });
+          if (!item || item.userId !== userId) throw notFound("Item");
+          if (item.lockedBy) throw conflict("ITEM_LOCKED", "Item is listed on the market or in escrow");
+          const def = catalog.items.get(item.itemId);
+          if (!def?.powerItem || def.stackable) throw badRequest("NOT_UPGRADABLE", "This item cannot be upgraded");
+          if (item.upgradeLevel >= MAX_UPGRADE_LEVEL) throw badRequest("MAX_LEVEL", `Item is already +${MAX_UPGRADE_LEVEL}`);
+          const cost = upgradeCostFor(item.upgradeLevel);
+          const success = secureRoll() < cost.successChance;
+          const toLevel = success ? cost.toLevel : item.upgradeLevel;
+          // Claimed before any posting: a concurrent duplicate blocks here and then fails on the unique key.
+          const attempt = await tx.upgradeAttempt.create({
+            data: { userId, kind: "ITEM", targetId: item.id, idempotencyKey: body.idempotencyKey, success, fromLevel: item.upgradeLevel, toLevel, cost: toJsonValue(cost) },
           });
-        }
-        if (cost.gems > 0n) {
-          await post(tx, {
-            from: userWallet(userId, Currency.GEMS), to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.GEMS),
-            amount: cost.gems, type: LedgerTxType.PURCHASE, reference: item.id, idempotencyKey: `${ref}:gems`, userId,
-            metadata: { kind: "ITEM_UPGRADE", from: item.upgradeLevel },
+          const ref = `item-upgrade:${userId}:${body.idempotencyKey}`;
+          if (cost.credits > 0n) {
+            await post(tx, {
+              from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
+              amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: item.id, idempotencyKey: `${ref}:credits`, userId,
+              metadata: { kind: "ITEM_UPGRADE", from: item.upgradeLevel, attemptId: attempt.id },
+            });
+          }
+          if (cost.gems > 0n) {
+            await post(tx, {
+              from: userWallet(userId, Currency.GEMS), to: system(LedgerAccountType.PREMIUM_REVENUE, Currency.GEMS),
+              amount: cost.gems, type: LedgerTxType.PURCHASE, reference: item.id, idempotencyKey: `${ref}:gems`, userId,
+              metadata: { kind: "ITEM_UPGRADE", from: item.upgradeLevel, attemptId: attempt.id },
+            });
+          }
+          await consumeResources(tx, userId, cost.resources);
+          const upd = await tx.inventoryItem.updateMany({
+            where: { id: item.id, version: item.version, lockedBy: null },
+            data: { version: { increment: 1 }, ...(success ? { upgradeLevel: { increment: 1 } } : {}) },
           });
-        }
-        await consumeResources(tx, userId, cost.resources);
-        const success = secureRoll() < cost.successChance;
-        const upd = await tx.inventoryItem.updateMany({
-          where: { id: item.id, version: item.version, lockedBy: null },
-          data: { version: { increment: 1 }, ...(success ? { upgradeLevel: { increment: 1 } } : {}) },
+          if (upd.count !== 1) throw conflict("CONCURRENT_UPDATE", "Item changed concurrently, retry");
+          return { success, fromLevel: attempt.fromLevel, toLevel, cost: attempt.cost, inventoryItemId: item.id };
         });
-        if (upd.count !== 1) throw conflict("CONCURRENT_UPDATE", "Item changed concurrently, retry");
-        return { success, fromLevel: item.upgradeLevel, toLevel: success ? cost.toLevel : item.upgradeLevel, cost: toJsonValue(cost), inventoryItemId: item.id };
-      });
+      } catch (err) {
+        // A concurrent request with the same key won the unique UpgradeAttempt row.
+        const prior = isUniqueViolation(err) ? await replay() : null;
+        if (!prior) throw err;
+        out = prior;
+      }
       const eq = (await equippedMap(db, userId)).get(out.inventoryItemId);
       if (eq) await refreshShipStats(db, eq, catalog);
       return out;

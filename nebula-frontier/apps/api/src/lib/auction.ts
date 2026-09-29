@@ -61,9 +61,23 @@ export async function settleAuction(db: Db, auctionId: string): Promise<boolean>
   });
 }
 
-export async function settleEndedAuctions(db: Db, limit = 50): Promise<number> {
+interface SettleLogger {
+  error: (obj: object, msg?: string) => void;
+}
+
+/**
+ * Settle every ended auction in the batch. A failing auction is logged and skipped so it cannot
+ * block the rest of the batch (it stays ACTIVE and is retried on the next run).
+ */
+export async function settleEndedAuctions(db: Db, limit = 50, log?: SettleLogger, settle: typeof settleAuction = settleAuction): Promise<number> {
   const due = await db.auction.findMany({ where: { status: "ACTIVE", endsAt: { lte: new Date() } }, select: { id: true }, take: limit, orderBy: { endsAt: "asc" } });
   let n = 0;
-  for (const a of due) if (await settleAuction(db, a.id)) n++;
+  for (const a of due) {
+    try {
+      if (await settle(db, a.id)) n++;
+    } catch (err) {
+      log?.error({ err, auctionId: a.id }, "auction settlement failed");
+    }
+  }
   return n;
 }

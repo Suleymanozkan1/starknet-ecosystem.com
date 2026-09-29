@@ -193,6 +193,7 @@ export default async function auctionRoutes(app: FastifyInstance): Promise<void>
 
   app.post<{ Params: { id: string } }>("/api/auctions/:id/cancel", mutate, async (req) => {
     const auctionId = app.parse(idSchema, req.params.id);
+    await assertMarketOpen(db);
     const fees = await getFees(db);
     await withSerializableTx(db, async (tx) => {
       const a = await tx.auction.findFirst({ where: { id: auctionId, sellerId: req.user.id } });

@@ -31,7 +31,7 @@ export default async function leaderboardRoutes(app: FastifyInstance): Promise<v
         username: r.user.username,
         faction: r.user.playerFaction?.factionId ?? null,
         clanTag: r.user.clanMember?.clan.tag ?? null,
-        score: order === "playerKills" ? r.playerKills : r.npcKills,
+        score: String(order === "playerKills" ? r.playerKills : r.npcKills),
         level: r.user.level,
       }));
     }
@@ -47,7 +47,7 @@ export default async function leaderboardRoutes(app: FastifyInstance): Promise<v
       username: u.username,
       faction: u.playerFaction?.factionId ?? null,
       clanTag: u.clanMember?.clan.tag ?? null,
-      score: Number(order === "honor" ? u.honor : u.seasonScore),
+      score: (order === "honor" ? u.honor : u.seasonScore).toString(),
       level: u.level,
     }));
   }
@@ -67,12 +67,12 @@ export default async function leaderboardRoutes(app: FastifyInstance): Promise<v
         // Seasonal faction war standings (event score + live territory); all-time when no season is active.
         const war = await factionWarStandings(db);
         const rows = war.seasonId ? war.season : war.allTime;
-        entries = rows.slice(0, q.limit).map((f, i) => ({ rank: i + 1, userId: f.factionId, username: f.name, faction: f.factionId, clanTag: f.tag, score: Number(f.score), level: f.territory }));
+        entries = rows.slice(0, q.limit).map((f, i) => ({ rank: i + 1, userId: f.factionId, username: f.name, faction: f.factionId, clanTag: f.tag, score: f.score, level: f.territory }));
         break;
       }
       case "clan": {
         const rows = await db.clan.findMany({ orderBy: { score: "desc" }, take: q.limit });
-        entries = rows.map((c, i) => ({ rank: i + 1, userId: c.id, username: c.name, faction: c.factionId, clanTag: c.tag, score: Number(c.score), level: c.level }));
+        entries = rows.map((c, i) => ({ rank: i + 1, userId: c.id, username: c.name, faction: c.factionId, clanTag: c.tag, score: c.score.toString(), level: c.level }));
         break;
       }
     }

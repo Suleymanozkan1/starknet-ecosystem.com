@@ -10,6 +10,7 @@
  * `Notification.pushedAt` is set only when at least one provider accepted the message. A Redis
  * lock per notification prevents double delivery between the two paths.
  */
+import { randomUUID } from "node:crypto";
 import type { Redis } from "ioredis";
 import type { Db, DbOrTx } from "@nebula/database";
 import { toJsonValue } from "./json.js";
@@ -65,28 +66,81 @@ export async function notify(
   }
 }
 
+/** In-flight delivery lock: longer than one delivery (a few devices x 10 s provider timeout). */
+export const PUSH_LOCK_TTL_SEC = 120;
+/** Marker kept after a permanent (non-retryable) failure so the dispatcher stops retrying the row. */
+const PUSH_GIVEUP_TTL_SEC = 3600;
+const DEL_IF_OWNER = `if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end`;
+
 /** Deliver one notification to all of the user's push devices. Returns true if pushed. */
 export async function deliverNotification(rt: PushRuntime, notificationId: string): Promise<boolean> {
-  const lock = await rt.redis.set(`push:lock:${notificationId}`, "1", "EX", 3600, "NX");
+  const lockKey = `push:lock:${notificationId}`;
+  const token = randomUUID();
+  const lock = await rt.redis.set(lockKey, token, "EX", PUSH_LOCK_TTL_SEC, "NX");
   if (lock !== "OK") return false;
-  const n = await rt.db.notification.findUnique({ where: { id: notificationId } });
-  if (!n || n.pushedAt) return false;
-  const devices = await rt.db.device.findMany({ where: { userId: n.userId, pushToken: { not: null } }, select: { id: true, platform: true, pushToken: true } });
-  let delivered = false;
-  let transient = false;
-  for (const d of devices) {
-    const res = await rt.sender.send(
-      { deviceId: d.id, platform: d.platform, token: d.pushToken as string },
-      { notificationId: n.id, type: n.type, title: n.title, body: n.body, data: (n.data ?? {}) as Record<string, unknown> },
-    );
-    if (res.ok) delivered = true;
-    else if (res.reason === "TRANSPORT_ERROR" || /^HTTP_(5\d\d|429)$/.test(res.reason)) transient = true;
-    else if (res.invalidToken) await rt.db.device.updateMany({ where: { id: d.id, pushToken: d.pushToken }, data: { pushToken: null } });
+  const release = () => rt.redis.eval(DEL_IF_OWNER, 1, lockKey, token).catch(() => undefined);
+  try {
+    const n = await rt.db.notification.findUnique({ where: { id: notificationId } });
+    if (!n || n.pushedAt) return false;
+    const devices = await rt.db.device.findMany({ where: { userId: n.userId, pushToken: { not: null } }, select: { id: true, platform: true, pushToken: true } });
+    let delivered = false;
+    let transient = false;
+    for (const d of devices) {
+      const res = await rt.sender.send(
+        { deviceId: d.id, platform: d.platform, token: d.pushToken as string },
+        { notificationId: n.id, type: n.type, title: n.title, body: n.body, data: (n.data ?? {}) as Record<string, unknown> },
+      );
+      if (res.ok) delivered = true;
+      else if (res.reason === "TRANSPORT_ERROR" || /^HTTP_(5\d\d|429)$/.test(res.reason)) transient = true;
+      else if (res.invalidToken) await rt.db.device.updateMany({ where: { id: d.id, pushToken: d.pushToken }, data: { pushToken: null } });
+    }
+    if (delivered) {
+      await rt.db.notification.updateMany({ where: { id: n.id, pushedAt: null }, data: { pushedAt: new Date() } });
+    } else if (transient) {
+      // Transient provider failure: release the lock so the next dispatcher tick retries (within the window).
+      await release();
+    } else {
+      // Permanent failure: keep the marker long enough that the dispatcher gives up on this row.
+      await rt.redis.set(lockKey, token, "EX", PUSH_GIVEUP_TTL_SEC, "XX");
+    }
+    return delivered;
+  } catch (err) {
+    // DB/Redis failure mid-delivery: never leave the lock behind, or the row would be skipped for good.
+    await release();
+    throw err;
   }
-  if (delivered) await rt.db.notification.updateMany({ where: { id: n.id, pushedAt: null }, data: { pushedAt: new Date() } });
-  // Transient provider failure: release the lock so the next dispatcher tick retries (within the window).
-  else if (transient) await rt.redis.del(`push:lock:${notificationId}`);
-  return delivered;
+}
+
+export interface NotifyManyInput {
+  userIds: readonly string[];
+  type: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}
+
+/** Rows per createMany statement. */
+const NOTIFY_CHUNK = 1000;
+
+/**
+ * Batched `notify()` for fan-out (event announcements, friend presence): the same notification for
+ * many users, written with `createMany` in chunks instead of one INSERT (+ push) per user. Push
+ * delivery for push-worthy types is left to the rate-limited `dispatchPendingPush` job, so callers
+ * never block on providers. Duplicate user ids are collapsed. Returns the number of rows written.
+ */
+export async function notifyMany(db: DbOrTx, input: NotifyManyInput): Promise<number> {
+  const userIds = [...new Set(input.userIds)];
+  if (!userIds.length) return 0;
+  const data = toJsonValue(input.data ?? {});
+  let written = 0;
+  for (let i = 0; i < userIds.length; i += NOTIFY_CHUNK) {
+    const chunk = userIds.slice(i, i + NOTIFY_CHUNK);
+    const res = await db.notification.createMany({
+      data: chunk.map((userId) => ({ userId, type: input.type, title: input.title, body: input.body, data })),
+    });
+    written += res.count;
+  }
+  return written;
 }
 
 /** Background delivery of push-worthy notifications written inside transactions (or by other services). */

@@ -26,6 +26,9 @@ export async function escrowItem(
   create: (target: EscrowTarget) => Promise<{ id: string }>,
   lockPrefix: "listing" | "auction",
 ): Promise<{ recordId: string; target: EscrowTarget }> {
+  // Defence in depth (routes validate too): a zero/negative/fractional quantity would create an empty
+  // or negative split stack, or lock the whole stack while the record claims a smaller amount.
+  if (!Number.isSafeInteger(quantity) || quantity <= 0) throw badRequest("INVALID_QUANTITY", "Quantity must be a positive integer");
   const item = await tx.inventoryItem.findUnique({ where: { id: inventoryItemId } });
   if (!item || item.userId !== userId) throw notFound("Item");
   if (item.lockedBy) throw conflict("ITEM_LOCKED", "Item is already listed or in escrow");

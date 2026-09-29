@@ -16,7 +16,11 @@ import { notify } from "../lib/notify.js";
 import { loadRules } from "../lib/rules.js";
 import { platformOf } from "../lib/sessions.js";
 
-const REPORTS_TO_FLAG = 3;
+/** Open reports on one message that escalate it to the moderation review queue (it is NOT hidden automatically). */
+const REPORTS_TO_ESCALATE = 3;
+
+/** Thrown inside the bounty transaction to roll it back when the ledger posting is a replay. */
+class DuplicateBountyError extends Error {}
 
 export default async function socialRoutes(app: FastifyInstance): Promise<void> {
   const { db, redis } = app;
@@ -235,8 +239,18 @@ export default async function socialRoutes(app: FastifyInstance): Promise<void> 
       if ((err as { code?: string }).code === "P2002") return { ok: true, duplicate: true };
       throw err;
     }
+    // Reports never hide a message on their own (a few coordinated accounts could silence anyone):
+    // reaching the threshold escalates it once to moderators (system audit entry, surfaced with the
+    // OPEN reports in /api/admin/reports); a moderator resolving a report is what hides the message.
     const n = await db.chatReport.count({ where: { messageId: msg.id, status: "OPEN" } });
-    if (n >= REPORTS_TO_FLAG) await db.chatMessage.update({ where: { id: msg.id }, data: { flagged: true } });
+    if (n >= REPORTS_TO_ESCALATE) {
+      const already = await db.auditLog.findFirst({ where: { action: "CHAT_REPORT_ESCALATED", targetType: "ChatMessage", targetId: msg.id }, select: { id: true } });
+      if (!already) {
+        await db.auditLog.create({
+          data: { actorType: "SYSTEM", action: "CHAT_REPORT_ESCALATED", targetType: "ChatMessage", targetId: msg.id, newValue: { openReports: n, senderId: msg.senderId } },
+        });
+      }
+    }
     return { ok: true, duplicate: false };
   });
 
@@ -286,7 +300,7 @@ export default async function socialRoutes(app: FastifyInstance): Promise<void> 
     };
   });
 
-  app.post("/api/bounties", auth, async (req, reply) => {
+  app.post("/api/bounties", { preHandler: app.authenticate, config: { rateLimit: app.rateLimits.purchase } }, async (req, reply) => {
     const body = app.parse(bountyCreateSchema, req.body);
     const me = req.user.id;
     if (body.targetUserId === me) throw badRequest("SELF_BOUNTY", "You cannot place a bounty on yourself");
@@ -297,15 +311,26 @@ export default async function socialRoutes(app: FastifyInstance): Promise<void> 
     const key = `bounty:${me}:${body.idempotencyKey}`;
     const dup = await db.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { reference: true } });
     if (dup) return { id: dup.reference, duplicate: true };
-    const bounty = await withSerializableTx(db, async (tx) => {
-      const b = await tx.bounty.create({ data: { targetId: target.id, creatorId: me, amount: body.amount, expiresAt: new Date(Date.now() + rules.bountyDurationHours * 3_600_000) } });
-      await post(tx, {
-        from: userWallet(me, Currency.CREDITS), to: system(LedgerAccountType.ESCROW, Currency.CREDITS), amount: body.amount,
-        type: LedgerTxType.ESCROW, reference: b.id, idempotencyKey: key, userId: me, metadata: { kind: "BOUNTY", targetId: target.id },
+    let bounty: { id: string };
+    try {
+      bounty = await withSerializableTx(db, async (tx) => {
+        const b = await tx.bounty.create({ data: { targetId: target.id, creatorId: me, amount: body.amount, expiresAt: new Date(Date.now() + rules.bountyDurationHours * 3_600_000) } });
+        const posting = await post(tx, {
+          from: userWallet(me, Currency.CREDITS), to: system(LedgerAccountType.ESCROW, Currency.CREDITS), amount: body.amount,
+          type: LedgerTxType.ESCROW, reference: b.id, idempotencyKey: key, userId: me, metadata: { kind: "BOUNTY", targetId: target.id },
+        });
+        // A concurrent replay already escrowed the funds: roll back this (unfunded) bounty row.
+        if (posting.duplicate) throw new DuplicateBountyError();
+        await notify(tx, target.id, "BOUNTY_PLACED", "A bounty was placed on you", "Other pilots are hunting you. Watch your six.", { bountyId: b.id });
+        return b;
       });
-      await notify(tx, target.id, "BOUNTY_PLACED", "A bounty was placed on you", "Other pilots are hunting you. Watch your six.", { bountyId: b.id });
-      return b;
-    });
+    } catch (err) {
+      if (err instanceof DuplicateBountyError || (err as { code?: string }).code === "P2002") {
+        const winner = await db.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { reference: true } });
+        if (winner) return { id: winner.reference, duplicate: true };
+      }
+      throw err;
+    }
     return reply.status(201).send({ id: bounty.id, duplicate: false });
   });
 

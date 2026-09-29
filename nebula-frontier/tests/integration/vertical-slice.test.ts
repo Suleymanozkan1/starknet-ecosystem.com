@@ -293,8 +293,8 @@ describe.sequential("MVP vertical slice", { timeout: 90_000 }, () => {
     if (cached.length) await app.redis.del(...cached);
     const lb = await S.pilot!.s.req("GET", "/api/leaderboard?board=pvp_kills");
     expect(lb.statusCode).toBe(200);
-    const entries = (lb.json() as { entries: { userId: string; score: number }[] }).entries;
-    expect(entries.find((e) => e.userId === S.pilot!.s.userId)?.score).toBeGreaterThanOrEqual(1);
+    const entries = (lb.json() as { entries: { userId: string; score: string }[] }).entries;
+    expect(Number(entries.find((e) => e.userId === S.pilot!.s.userId)?.score ?? "0")).toBeGreaterThanOrEqual(1);
 
     await until(async () => (await db.reward.count({ where: { userId: S.pilot!.s.userId, source: "PVP" } })) > 0, 10_000);
     const reward = await db.reward.findFirstOrThrow({ where: { userId: S.pilot!.s.userId, source: "PVP" } });

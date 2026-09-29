@@ -16,17 +16,31 @@ export async function factionTerritory(db: Db): Promise<Map<string, number>> {
   return out;
 }
 
+/**
+ * Keep the denormalised `Faction.territory` column current for other readers. Runs from the
+ * background jobs (never from the public standings GET); conditional updates make it idempotent.
+ * Returns the number of factions whose territory changed.
+ */
+export async function syncFactionTerritory(db: Db): Promise<number> {
+  const territory = await factionTerritory(db);
+  const all = await db.faction.findMany({ select: { id: true, territory: true } });
+  let changed = 0;
+  for (const f of all) {
+    const t = territory.get(f.id) ?? 0;
+    if (f.territory === t) continue;
+    const upd = await db.faction.updateMany({ where: { id: f.id, territory: { not: t } }, data: { territory: t } });
+    changed += upd.count;
+  }
+  return changed;
+}
+
+/** Read-only standings (public GET): territory is computed live, nothing is written. */
 export async function factionWarStandings(db: Db): Promise<FactionWarResponse> {
   const war = PROGRESSION.factionWar ?? { npcKillPoints: 0, pvpKillPoints: 0, resourcePointsPer100: 0, bossKillPoints: 0, territoryPoints: 0 };
   const seasonId = await activeSeasonId(db);
   const territory = await factionTerritory(db);
   const all = await db.faction.findMany();
   const seasonRows = seasonId ? await db.factionSeasonScore.findMany({ where: { seasonId } }) : [];
-  // Keep the denormalised Faction.territory column current for other readers.
-  for (const f of all) {
-    const t = territory.get(f.id) ?? 0;
-    if (f.territory !== t) await db.faction.update({ where: { id: f.id }, data: { territory: t } });
-  }
   const standing = (id: string, m: { score: bigint; kills: bigint; pvpScore: bigint; resources: bigint; bossKills: number } | undefined): FactionWarStanding => {
     const def = FACTIONS.find((f) => f.id === id);
     const t = territory.get(id) ?? 0;

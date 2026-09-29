@@ -17,6 +17,7 @@ import { REDACT_PATHS } from "./lib/logger.js";
 import { AnalyticsWriter } from "./lib/analytics.js";
 import { createMetrics } from "./lib/metrics.js";
 import { configurePush } from "./lib/notify.js";
+import { configureEconomyLog } from "./lib/economy.js";
 import { PushSender, defaultTransport, pushConfigFromEnv, type PushTransport } from "./lib/push.js";
 import { registerCore, registerSecurity } from "./plugins/core.js";
 import "./types.js";
@@ -113,7 +114,8 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.addHook("onSend", async (req, reply) => {
     reply.header("x-request-id", req.id);
     reply.header("x-correlation-id", req.correlationId || req.id);
-    if (req.url.startsWith("/api/")) reply.header("cache-control", "no-store");
+    // Every API response is per-user or live state (including /health, /metrics and 404s): never cache.
+    reply.header("cache-control", "no-store");
   });
   app.addHook("onResponse", async (req, reply) => {
     metrics.httpDuration.observe(
@@ -125,6 +127,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   const pushSender = new PushSender(pushConfigFromEnv(opts.pushEnv ?? process.env, app.log), opts.pushTransport ?? defaultTransport, app.log);
   if (!pushSender.enabled) app.log.info("push notifications disabled (no FCM/APNs credentials); notifications are in-app only");
   configurePush({ db, redis, sender: pushSender });
+  configureEconomyLog(app.log);
   const analytics = new AnalyticsWriter(db, { log: app.log });
   app.decorate("pushSender", pushSender);
   app.decorate("analytics", analytics);
@@ -157,6 +160,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   app.addHook("onClose", async () => {
     await analytics.close();
     configurePush(null);
+    configureEconomyLog(null);
     if (ownsRedis) await redis.quit().catch(() => undefined);
     if (ownsDb) await db.$disconnect().catch(() => undefined);
   });

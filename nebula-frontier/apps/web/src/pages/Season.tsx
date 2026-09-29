@@ -34,7 +34,7 @@ export default function SeasonPage() {
                 </HoloPanel>
                 <HoloPanel title="Your standing">
                   <div className="grid grid-cols-2 gap-3">
-                    <div><div className="nf-label">Season points</div><div className="nf-display text-[24px] font-bold">{mine ? mine.score.toLocaleString() : "—"}</div></div>
+                    <div><div className="nf-label">Season points</div><div className="nf-display text-[24px] font-bold">{mine ? BigInt(mine.score).toLocaleString() : "—"}</div></div>
                     <div><div className="nf-label">Rank</div><div className="nf-display text-[24px] font-bold">{mine ? `#${mine.rank}` : "Unranked"}</div></div>
                   </div>
                 </HoloPanel>
