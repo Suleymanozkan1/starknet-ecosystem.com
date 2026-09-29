@@ -92,6 +92,7 @@ model User {
   chatMessages      ChatMessage[]
   upgradeAttempts   UpgradeAttempt[]
   rewardSettlements RewardSettlement[]
+  flushes           PlayerFlush[]
 
   @@index([level])
   @@index([pvpRating])
@@ -484,6 +485,17 @@ model PlayerResource {
   resource   Resource @relation(fields: [resourceId], references: [id])
 
   @@id([userId, resourceId])
+}
+
+/// Applied gameplay-delta flushes (game-server). The flush transaction inserts its stable flush id first, so a
+/// retried flush whose earlier attempt actually committed is recognised and never re-applies its increments.
+model PlayerFlush {
+  id        String   @id
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model CraftJob {

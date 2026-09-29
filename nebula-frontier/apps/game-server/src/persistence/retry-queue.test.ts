@@ -73,3 +73,37 @@ describe("FinalFlushRetryQueue", () => {
     expect(await metric("flush_dropped")).toBe(before + 2);
   });
 });
+
+describe("FinalFlushRetryQueue ordering per pilot", () => {
+  it("skips a pilot's newer entries in the same pass once an older one fails (other pilots unaffected)", async () => {
+    const older = delta(1);
+    const newer = delta(2);
+    const other = delta(3);
+    let failOlder = true;
+    const flushed: PendingDelta[] = [];
+    const t: FlushTarget = {
+      async flush(_userId, d) {
+        if (d === older && failOlder) throw new Error("db down");
+        flushed.push(d);
+        return ok;
+      },
+    };
+    let now = 0;
+    const q = new FinalFlushRetryQueue(t, log, { baseDelayMs: 1000, now: () => now });
+    q.enqueue("u1", older, [], new Set(), ctx);
+    q.enqueue("u1", newer, [], new Set(), ctx);
+    q.enqueue("u2", other, [], new Set(), ctx);
+    await q.retryDue(true);
+    expect(flushed).toEqual([other]); // newer u1 delta must not overtake the failed older one
+    expect(q.size).toBe(2);
+    failOlder = false;
+    now = 1000; // older's backoff (2000ms) not elapsed yet: newer still waits
+    await q.retryDue();
+    expect(flushed).toEqual([other]);
+    now = 5000;
+    await q.retryDue();
+    expect(flushed).toEqual([other, older, newer]);
+    expect(q.size).toBe(0);
+    q.stop();
+  });
+});

@@ -22,7 +22,7 @@ import {
   isDamageImpossible, isPvpAllowedAt, isSafeAt, isWeakPointHit, maxShotDamage, mineStep, nearestPortal, npcStats,
   pickAsteroidResource, pruneBuffs, regenerate, resetBoss, resolveAreaDamage, resolveHit, resourceHardness, rollAffixes, rollLoot,
   spawnPoint, stationInRange, stepNpcBrain, stepShip, tryFire, applyQuestEvent, repairCost, isAffixable,
-  clampKarma, decayKarma, hasPetAbility, isOutlaw, petBuff, petLevelForXp, petScale, petXpToNext, reputationFor,
+  clampKarma, decayKarma, hasPetAbility, isOutlaw, petBuff, petLevelForXp, petScale, petXpToNext, reputationFor, toMoney,
   type AbilitySlotDef, type EffectiveWeapon, type GameplayEvent, type HitResult, type LootDrop, type Rng, type SimTuning,
 } from "@nebula/game-core";
 import {
@@ -37,6 +37,7 @@ import { EventEngine, type ActiveEvent } from "../services/events.js";
 import { loadRules, DEFAULT_RULES, type GameRules } from "../services/rules.js";
 import { TicketError } from "../services/tickets.js";
 import { JoinError, loadActiveQuests, loadPlayer } from "../persistence/player.js";
+import { qualifyContributors } from "./contribution.js";
 import { DuplicateLootError, PendingDelta, type FlushContext, type FlushResult } from "../persistence/writer.js";
 import { activeSeasonId, bossEventId } from "../persistence/catalog.js";
 import type { ActorBase, AsteroidActor, LootActor, NpcActor, ParsedInput, PetActor, PlayerActor, ShipActor } from "./actors.js";
@@ -1173,7 +1174,9 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     const contributors = [...n.damageBy.entries()]
       .map(([id, dmg]) => ({ p: this.players.get(id), dmg }))
       .filter((c): c is { p: PlayerActor; dmg: number } => !!c.p);
-    const totalDmg = contributors.reduce((s, c) => s + c.dmg, 0);
+    // Reward scaling counts only QUALIFIED contributors (share ≥ bossMinContribution): a low-damage alt must not
+    // raise a raid's reward scale or the per-pilot contribution factors. `contributors` stays the full list.
+    const { qualified, totalDmg } = qualifyContributors(contributors, this.rules.bossMinContribution);
     let credited: PlayerActor | null = null;
     if (contributors.length) {
       const top = contributors.reduce((a, b) => (b.dmg > a.dmg ? b : a));
@@ -1183,15 +1186,14 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     }
     if (boss) this.broadcast(ServerEvent.KILL_FEED, { killer: credited?.name ?? killer?.name ?? "?", victim: n.name, weapon: "", pvp: false });
 
-    const scale = this.rewardScale(n, contributors.length);
+    const scale = this.rewardScale(n, qualified.length);
     const rewardMult = n.rewardMult * scale;
     if (rewardMult <= 0) {
       // No rewards (e.g. under-manned raid); kill still counts for match/quest bookkeeping below.
     } else if (this.shareRewards(n) && totalDmg > 0) {
-      for (const c of contributors) {
+      for (const c of qualified) {
         const share = c.dmg / totalDmg;
-        if (share < this.rules.bossMinContribution) continue;
-        const factor = Math.max(0.1, Math.min(1, share * contributors.length));
+        const factor = Math.max(0.1, Math.min(1, share * qualified.length));
         this.grantNpcRewards(c.p, n, factor * rewardMult, `${n.uid}`);
         if (boss) c.p.pending.bossKills++;
         this.rollLootFor(n, c.p, true, scale);
@@ -1218,7 +1220,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     if (honor) p.pending.addBoard("season_score", honor);
     p.pending.npcKills++;
     p.pending.addBoard("npc_kills", 1);
-    if (credits > 0) p.pending.issuance.push({ asset: "CREDITS", amount: credits, key: `kill:${keyBase}:${p.userId}`, reason: `npc_kill:${n.def.id}`, meta: { npc: n.def.id, map: this.map.id } });
+    if (credits > 0) p.pending.issuance.push({ asset: "CREDITS", amount: toMoney(credits), key: `kill:${keyBase}:${p.userId}`, reason: `npc_kill:${n.def.id}`, meta: { npc: n.def.id, map: this.map.id } });
     this.emitTo(p.client, ServerEvent.REWARD, { xp, honor, credits, seasonPoints: honor, reason: `Destroyed ${n.name}` });
     this.questEvent(p, { type: "KILL", npcId: n.def.id, boss: n.kind === "BOSS", mapId: this.map.id });
   }
@@ -1314,7 +1316,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
       }
     }
     try {
-      await this.svc.persistence.grantLoot(p.userId, { lootId, items: items.map((i) => ({ itemId: i.itemId, quantity: i.quantity, affixes: i.affixes })), credits, gems, resources });
+      await this.svc.persistence.grantLoot(p.userId, { lootId, items: items.map((i) => ({ itemId: i.itemId, quantity: i.quantity, affixes: i.affixes })), credits: toMoney(credits), gems: toMoney(gems), resources });
     } catch (e) {
       if (e instanceof DuplicateLootError) {
         this.processedLoot.delete(lootId); // loot stays removed from `this.loot`, so repeats are still rejected
@@ -1531,7 +1533,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     for (const [k, v] of Object.entries(b.resources ?? {})) if (v) resources[k as ResourceId] = Math.round(v * mult);
     const items = (b.items ?? []).filter((i) => ITEMS_BY_ID.has(i.itemId)).map((i) => ({ itemId: i.itemId, quantity: i.quantity, affixes: [] as unknown[] }));
     try {
-      await this.svc.persistence.grantLoot(p.userId, { lootId: refBase, items, credits, gems, resources });
+      await this.svc.persistence.grantLoot(p.userId, { lootId: refBase, items, credits: toMoney(credits), gems: toMoney(gems), resources });
     } catch (e) {
       if (!(e instanceof DuplicateLootError)) this.log.error({ err: e, refBase }, "bundle grant failed");
       return;
@@ -2285,16 +2287,18 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     try {
       res = await this.svc.persistence.flush(p.userId, delta, p.profile.quests.values(), p.profile.achievements, this.flushContext(p));
     } catch (e) {
-      // Only an uncommitted transaction may restore the delta (it will be re-applied by the next flush).
+      // Keep the failed delta as a separate part with its own flushId (NOT merged into the newer increments):
+      // if its transaction did commit before the error surfaced, the retry recognises the id and skips it.
       errorsTotal.inc({ component: "persistence", code: "flush" });
       this.log.error({ err: e, userId: p.userId }, "flush failed; will retry");
-      delta.mergeFrom(p.pending);
-      p.pending = delta;
+      p.pending.carryFailed(delta);
       p.flushing = false;
       return false;
     }
     // Post-commit bookkeeping: failures here must NEVER re-queue the committed delta (double increments).
     try {
+      // Only whole resource units are persisted; the fractional rest rides along with the next flush.
+      for (const [id, rest] of res.resourceRemainder) p.pending.addResource(id, rest);
       if (res.level > p.level && !p.left) {
         p.level = res.level;
         this.sendNear(p.x, p.y, ServerEvent.PLAYER_LEVEL_UP, { userId: p.userId, level: p.level, entityId: p.id });

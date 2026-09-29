@@ -10,6 +10,7 @@ import { GateDifficulty, MatchMode, RoomName, ServerEvent, type GateDef, type Re
 import { ServerError } from "@colyseus/core";
 import { BaseGameRoom } from "./BaseGameRoom.js";
 import type { NpcActor, PlayerActor } from "./actors.js";
+import { qualifyContributors, raidCryptoWeight, raidRewardScale } from "./contribution.js";
 
 export class GateRoom extends BaseGameRoom {
   readonly roomKind: RoomName = RoomName.GATE;
@@ -218,8 +219,9 @@ export class GateRoom extends BaseGameRoom {
  *
  * Anti-exploit (a solo pilot must not farm a small, weakened raid for full rewards):
  * - daily entry limit per pilot (`game.rules.raidDailyEntries`, counted from GameMatchPlayer rows of RAID matches);
- * - rewards require at least `ceil(raidSize × raidMinPilotsFraction)` distinct contributors, and are scaled by
- *   `min(1, contributors / raidSize)` (XP/credits/loot/crypto weight). Admission is enforced server-side.
+ * - rewards require at least `ceil(raidSize × raidMinPilotsFraction)` distinct QUALIFIED contributors (damage share
+ *   ≥ `bossMinContribution`, so low-damage alts do not count), and are scaled by `min(1, qualified / raidSize)`
+ *   (XP/credits/loot/crypto weight). Admission is enforced server-side.
  */
 export class RaidRoom extends GateRoom {
   override readonly roomKind: RoomName = RoomName.RAID;
@@ -245,8 +247,7 @@ export class RaidRoom extends GateRoom {
   /** Reward scale for the raid boss based on how many pilots actually fought it. */
   protected override rewardScale(n: NpcActor, contributors: number): number {
     if (n.tag !== "raidboss") return 1;
-    if (contributors < this.minPilots()) return 0;
-    return Math.min(1, contributors / this.raidSize);
+    return raidRewardScale(contributors, this.raidSize, this.minPilots());
   }
 
   protected override setupWorld(): void {
@@ -309,17 +310,18 @@ export class RaidRoom extends GateRoom {
     if (n.tag !== "raidboss" || this.completed) return;
     this.completed = true;
     this.state.match.phase = "ENDED";
-    const total = contributors.reduce((s, c) => s + c.dmg, 0);
-    const scale = this.rewardScale(n, contributors.length);
+    // Only qualified contributors (share ≥ bossMinContribution) count toward scale and crypto weight; the full
+    // `contributors` list is still used for match accounting below.
+    const { qualified, totalDmg: total } = qualifyContributors(contributors, this.rules.bossMinContribution);
+    const scale = this.rewardScale(n, qualified.length);
     if (scale <= 0) {
       this.broadcast(ServerEvent.NOTICE, { level: "warn", text: `Raid rewards require at least ${this.minPilots()} pilots` });
     }
-    for (const c of contributors) {
+    for (const c of qualified) {
       const share = total > 0 ? c.dmg / total : 0;
-      if (share < this.rules.bossMinContribution) continue;
       this.questEvent(c.p, { type: "KILL", npcId: n.def.id, boss: true, mapId: this.map.id });
       if (scale > 0) {
-        void this.crypto(c.p, "RAID", `raid:${this.roomId}:${c.p.userId}`, Math.max(0.2, Math.min(3, share * contributors.length)) * scale, `${n.name} defeated (raid ${this.raidSize})`, this.matchId ?? undefined);
+        void this.crypto(c.p, "RAID", `raid:${this.roomId}:${c.p.userId}`, raidCryptoWeight(share, qualified.length, scale), `${n.name} defeated (raid ${this.raidSize})`, this.matchId ?? undefined);
       }
     }
     try {

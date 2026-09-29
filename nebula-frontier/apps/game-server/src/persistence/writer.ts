@@ -9,26 +9,44 @@
  *   from the kill/loot id, so a retried flush can never double-credit.
  * - Loot items are inserted with a unique `originRef` (duplicate pickup is
  *   rejected by the database, not just by memory).
+ * - Increment-based writes (XP, honor, counters, resources, leaderboards, faction war) are made idempotent by a
+ *   stable per-delta `flushId`: the flush transaction first inserts a `PlayerFlush(id)` row, and a retried
+ *   flush whose earlier attempt already committed finds that row and applies nothing a second time.
  * - Redis never holds any of this state.
  */
+import { randomUUID } from "node:crypto";
 import { ACHIEVEMENTS, ITEMS_BY_ID, PROGRESSION } from "@nebula/config";
 import { grantCryptoReward } from "@nebula/economy";
 import { post, system, userWallet, getBalance, withSerializableTx, type Db, type Tx } from "@nebula/database";
 import { clampKarma, contributionTier, factionWarPoints, levelForXp, newlyUnlockedAchievements, petLevelForXp, rankFor, reputationFor } from "@nebula/game-core";
 import type { AchievementDef, Currency, EventDef, PetDef, ResourceId, RewardBundle, RewardSource } from "@nebula/shared";
 import { LedgerAccountType } from "@nebula/shared";
+import { createLogger, errorsTotal, type Logger } from "@nebula/telemetry";
 import { activeSeasonId, type LeaderboardId } from "./catalog.js";
 import type { QuestRuntime } from "./player.js";
 
 export interface Issuance {
   asset: Extract<Currency, "CREDITS" | "GEMS">;
-  amount: number;
+  /** Integer base units (use `toMoney` from @nebula/game-core to convert a computed number). */
+  amount: bigint;
   key: string;
   reason: string;
   meta?: Record<string, unknown>;
 }
 
+/** Whole units of a (possibly fractional / non-finite) in-memory amount; never throws, never negative. */
+export function wholeUnits(n: number): bigint {
+  return Number.isFinite(n) && n >= 1 ? BigInt(Math.floor(n)) : 0n;
+}
+
 export class PendingDelta {
+  /**
+   * Stable idempotency id, assigned when the delta is detached and handed to `Persistence.flush`. Every retry of
+   * this delta reuses it; a delta that has one never receives new increments (see `carryFailed`).
+   */
+  flushId: string | null = null;
+  /** Older deltas whose flush failed, oldest first. Each is retried with its OWN `flushId` before this delta. */
+  carried: PendingDelta[] = [];
   xp = 0;
   honor = 0;
   seasonScore = 0;
@@ -59,11 +77,12 @@ export class PendingDelta {
     return this.xp === 0 && this.honor === 0 && this.seasonScore === 0 && this.npcKills === 0 && this.playerKills === 0 && this.deaths === 0
       && this.bossKills === 0 && this.gatesCompleted === 0 && this.pvpWins === 0 && this.pvpLosses === 0 && this.damageDealt === 0
       && this.bossDamage === 0 && this.resourcesMined === 0 && this.playtimeSec === 0 && Math.round(this.karma) === 0 && this.petXp === 0 && this.resources.size === 0 && this.issuance.length === 0
-      && this.ammo.size === 0 && this.boards.size === 0 && this.mapsVisited.size === 0 && this.eventContrib.size === 0 && this.position === null;
+      && this.ammo.size === 0 && this.boards.size === 0 && this.mapsVisited.size === 0 && this.eventContrib.size === 0 && this.position === null
+      && this.carried.length === 0;
   }
 
   addResource(id: string, n: number): void {
-    if (n > 0) this.resources.set(id, (this.resources.get(id) ?? 0) + n);
+    if (Number.isFinite(n) && n > 0) this.resources.set(id, (this.resources.get(id) ?? 0) + n);
   }
   addBoard(id: LeaderboardId, n: number): void {
     if (n !== 0) this.boards.set(id, (this.boards.get(id) ?? 0) + n);
@@ -75,17 +94,15 @@ export class PendingDelta {
     else this.eventContrib.set(k, { eventId, instanceKey, amount });
   }
 
-  /** Merge a failed flush back so nothing is lost (idempotent parts are safe to retry). */
-  mergeFrom(o: PendingDelta): void {
-    const numKeys = ["xp", "honor", "seasonScore", "npcKills", "playerKills", "deaths", "bossKills", "gatesCompleted", "pvpWins", "pvpLosses", "damageDealt", "bossDamage", "resourcesMined", "playtimeSec", "karma", "petXp"] as const;
-    for (const k of numKeys) this[k] += o[k];
-    for (const [k, v] of o.resources) this.addResource(k, v);
-    this.issuance.unshift(...o.issuance);
-    for (const [k, v] of o.ammo) this.ammo.set(k, (this.ammo.get(k) ?? 0) + v);
-    for (const [k, v] of o.boards) this.addBoard(k, v);
-    for (const m of o.mapsVisited) this.mapsVisited.add(m);
-    for (const e of o.eventContrib.values()) this.addEvent(e.eventId, e.instanceKey, e.amount);
-    this.position ??= o.position;
+  /**
+   * Keep a failed flush so nothing is lost. The failed delta is NOT merged into this one: its transaction may
+   * have committed before the error surfaced, so it stays a separate part that is retried with its own
+   * `flushId` (a committed part is then recognised and skipped) ahead of this delta's newer increments.
+   */
+  carryFailed(failed: PendingDelta): void {
+    const parts = [...failed.carried, failed];
+    failed.carried = [];
+    this.carried.unshift(...parts);
   }
 }
 
@@ -115,6 +132,8 @@ export interface FlushResult {
   honor: number;
   rank: string;
   newAchievements: AchievementDef[];
+  /** Fractional resource amounts that were not persisted (only whole units are); carry them into the next delta. */
+  resourceRemainder: Map<string, number>;
 }
 
 export class DuplicateLootError extends Error {
@@ -127,8 +146,9 @@ export class DuplicateLootError extends Error {
 export interface LootGrant {
   lootId: string;
   items: { itemId: string; quantity: number; affixes: unknown[] }[];
-  credits: number;
-  gems: number;
+  /** Integer base units (`toMoney` from @nebula/game-core). */
+  credits: bigint;
+  gems: bigint;
   resources: Partial<Record<ResourceId, number>>;
 }
 
@@ -138,14 +158,48 @@ function isUniqueViolation(e: unknown): boolean {
 
 export class Persistence {
   readonly db: Db;
-  constructor(db: Db) {
+  private readonly log: Logger;
+  constructor(db: Db, log?: Logger) {
     this.db = db;
+    this.log = log ?? createLogger({ name: "game-server-persistence" });
   }
 
-  /** Flush one player's pending delta atomically. */
+  /**
+   * Flush one player's pending delta. Carried (previously failed) parts go first, oldest first, each in its own
+   * transaction under its own stable `flushId`; a part is removed from `d.carried` once it has committed.
+   */
   async flush(userId: string, d: PendingDelta, quests: Iterable<QuestRuntime>, unlocked: Set<string>, ctx: FlushContext = { factionId: null, pet: null }): Promise<FlushResult> {
+    const newAchievements: AchievementDef[] = [];
+    const resourceRemainder = new Map<string, number>();
+    let systemBountyPlaced = false;
+    const collect = (r: FlushResult): void => {
+      newAchievements.push(...r.newAchievements);
+      systemBountyPlaced ||= r.systemBountyPlaced;
+      for (const [id, v] of r.resourceRemainder) resourceRemainder.set(id, (resourceRemainder.get(id) ?? 0) + v);
+    };
+    for (let part = d.carried[0]; part; part = d.carried[0]) {
+      collect(await this.flushPart(userId, part, [], unlocked, ctx));
+      d.carried.shift();
+    }
+    const res = await this.flushPart(userId, d, quests, unlocked, ctx);
+    collect(res);
+    return { ...res, newAchievements, systemBountyPlaced, resourceRemainder };
+  }
+
+  /** One idempotent flush transaction for a single delta (no carried parts). */
+  private async flushPart(userId: string, part: PendingDelta, quests: Iterable<QuestRuntime>, unlocked: Set<string>, ctx: FlushContext): Promise<FlushResult> {
     const dirtyQuests = [...quests].filter((q) => q.dirty);
+    const flushId = (part.flushId ??= randomUUID());
+    const resourceRemainder = new Map<string, number>();
+    for (const [id, v] of part.resources) {
+      const rem = Number.isFinite(v) ? v - Math.floor(v) : 0;
+      if (rem > 0) resourceRemainder.set(id, rem);
+    }
     const res = await this.db.$transaction(async (tx) => {
+      // Idempotency guard: ON CONFLICT DO NOTHING (keeps the transaction usable, unlike a caught P2002). When the
+      // id already exists an earlier attempt of this exact delta committed; re-apply nothing, just re-derive state.
+      const claim = await tx.playerFlush.createMany({ data: [{ id: flushId, userId }], skipDuplicates: true });
+      const d = claim.count === 1 ? part : new PendingDelta();
       const user = await tx.user.update({
         where: { id: userId },
         data: {
@@ -182,20 +236,24 @@ export class Persistence {
         update: inc,
       });
 
-      for (const [resourceId, amount] of d.resources) {
+      for (const [resourceId, raw] of d.resources) {
+        // Mining yields fractional units: persist whole units only (BigInt of a fraction would throw and
+        // abort every retry of this flush); the remainder is reported back via `resourceRemainder`.
+        const amount = wholeUnits(raw);
+        if (amount <= 0n) continue;
         await tx.playerResource.upsert({
           where: { userId_resourceId: { userId, resourceId } },
-          create: { userId, resourceId, amount: BigInt(amount) },
-          update: { amount: { increment: BigInt(amount) } },
+          create: { userId, resourceId, amount },
+          update: { amount: { increment: amount } },
         });
       }
 
       for (const is of d.issuance) {
-        if (is.amount <= 0) continue;
+        if (is.amount <= 0n) continue;
         await post(tx, {
           from: system(LedgerAccountType.GAME_ISSUANCE, is.asset),
           to: userWallet(userId, is.asset),
-          amount: BigInt(Math.floor(is.amount)),
+          amount: is.amount,
           type: "GAME_ISSUANCE",
           reference: is.reason,
           idempotencyKey: is.key,
@@ -318,7 +376,7 @@ export class Persistence {
         }
       }
 
-      return { xp, level, honor, rank, newAchievements: fresh, karma, reputation, hasBounty, systemBountyPlaced, pet };
+      return { xp, level, honor, rank, newAchievements: fresh, karma, reputation, hasBounty, systemBountyPlaced, pet, resourceRemainder };
     }, { timeout: 20_000, maxWait: 10_000 });
     for (const q of dirtyQuests) q.dirty = false;
     for (const a of res.newAchievements) unlocked.add(a.id);
@@ -339,19 +397,20 @@ export class Persistence {
           });
         }
         for (const [asset, amount] of [["CREDITS", g.credits], ["GEMS", g.gems]] as const) {
-          if (amount <= 0) continue;
+          if (amount <= 0n) continue;
           const r = await post(tx, {
-            from: system(LedgerAccountType.GAME_ISSUANCE, asset), to: userWallet(userId, asset), amount: BigInt(Math.floor(amount)),
+            from: system(LedgerAccountType.GAME_ISSUANCE, asset), to: userWallet(userId, asset), amount,
             type: "GAME_ISSUANCE", reference: `loot:${g.lootId}`, idempotencyKey: `loot:${g.lootId}:${asset}`, userId,
           });
           if (r.duplicate) throw new DuplicateLootError(`loot ${g.lootId} ${asset} already granted`);
         }
-        for (const [resourceId, amount] of Object.entries(g.resources)) {
-          if (!amount || amount <= 0) continue;
+        for (const [resourceId, raw] of Object.entries(g.resources)) {
+          const amount = wholeUnits(raw ?? 0);
+          if (amount <= 0n) continue;
           await tx.playerResource.upsert({
             where: { userId_resourceId: { userId, resourceId } },
-            create: { userId, resourceId, amount: BigInt(amount) },
-            update: { amount: { increment: BigInt(amount) } },
+            create: { userId, resourceId, amount },
+            update: { amount: { increment: amount } },
           });
         }
       });
@@ -481,15 +540,23 @@ export class Persistence {
     const paid: { bountyId: string; amount: bigint }[] = [];
     for (const b of open) {
       if (b.creatorId === killerId || b.currency !== "CREDITS" || b.amount <= 0n) continue;
-      await withSerializableTx(this.db, async (tx) => {
-        const claim = await tx.bounty.updateMany({ where: { id: b.id, status: "ACTIVE", expiresAt: { gt: now } }, data: { status: "CLAIMED", claimedBy: killerId } });
-        if (claim.count !== 1) return;
-        await post(tx, {
-          from: system(LedgerAccountType.ESCROW, "CREDITS"), to: userWallet(killerId, "CREDITS"), amount: b.amount,
-          type: "ESCROW", reference: b.id, idempotencyKey: `bounty:${b.id}`, userId: killerId, metadata: { kind: "BOUNTY_CLAIMED", targetId: victimId },
+      // Isolated per bounty: one failing payout must not stop the others. `paid` is only updated after the
+      // transaction committed (withSerializableTx may re-run the callback on serialization conflicts).
+      try {
+        const claimed = await withSerializableTx(this.db, async (tx) => {
+          const claim = await tx.bounty.updateMany({ where: { id: b.id, status: "ACTIVE", expiresAt: { gt: now } }, data: { status: "CLAIMED", claimedBy: killerId } });
+          if (claim.count !== 1) return false;
+          await post(tx, {
+            from: system(LedgerAccountType.ESCROW, "CREDITS"), to: userWallet(killerId, "CREDITS"), amount: b.amount,
+            type: "ESCROW", reference: b.id, idempotencyKey: `bounty:${b.id}`, userId: killerId, metadata: { kind: "BOUNTY_CLAIMED", targetId: victimId },
+          });
+          return true;
         });
-        paid.push({ bountyId: b.id, amount: b.amount });
-      });
+        if (claimed) paid.push({ bountyId: b.id, amount: b.amount });
+      } catch (err) {
+        errorsTotal.inc({ component: "persistence", code: "bounty_payout" });
+        this.log.error({ err, bountyId: b.id, victimId, killerId }, "bounty payout failed");
+      }
     }
     return paid;
   }

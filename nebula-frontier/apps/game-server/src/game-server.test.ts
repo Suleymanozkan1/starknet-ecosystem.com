@@ -71,8 +71,12 @@ let svc: GameServices;
 let secret: KeyRing;
 let mockApi: Server;
 const clanEvents: { userId: string; event: { type: string; npcId?: string } }[] = [];
+// Env vars this suite overrides; restored in afterAll so other suites in the same worker are unaffected.
+const OVERRIDDEN_ENV = ["INTERNAL_SERVICE_TOKEN", "API_INTERNAL_URL", "GAME_TICK_RATE", "LOG_LEVEL"] as const;
+const savedEnv = new Map<string, string | undefined>();
 
 beforeAll(async () => {
+  for (const k of OVERRIDDEN_ENV) savedEnv.set(k, process.env[k]);
   shieldTestIpcFromPm2();
   process.env.GAME_TICK_RATE = "20";
   process.env.LOG_LEVEL = "warn";
@@ -115,6 +119,10 @@ afterAll(async () => {
   await colyseus?.shutdown();
   await db?.$disconnect();
   mockApi?.close();
+  for (const [k, v] of savedEnv) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
 });
 
 async function joinSector(mapId: string, o: { faction?: string; level?: number; credits?: number } = {}) {
@@ -299,7 +307,7 @@ describe("combat, rewards & loot persistence", () => {
     const res = await db.playerResource.findUniqueOrThrow({ where: { userId_resourceId: { userId: user.id, resourceId: "TITANIUM" } } });
     expect(Number(res.amount)).toBe(7);
     // Database-level duplicate protection (e.g. after a crash/replay) — never granted twice.
-    await expect(svc.persistence.grantLoot(user.id, { lootId: loot.id, items: [{ itemId: "item_repair_kit", quantity: 2, affixes: [] }], credits: 150, gems: 0, resources: {} })).rejects.toBeInstanceOf(DuplicateLootError);
+    await expect(svc.persistence.grantLoot(user.id, { lootId: loot.id, items: [{ itemId: "item_repair_kit", quantity: 2, affixes: [] }], credits: 150n, gems: 0n, resources: {} })).rejects.toBeInstanceOf(DuplicateLootError);
     expect(await getBalance(db, userWallet(user.id, "CREDITS"))).toBe(150n);
     expect(LOOT_TABLES_BY_ID.size).toBeGreaterThan(0);
     await client.leave();
@@ -600,6 +608,43 @@ describe("clan war", () => {
     expect(Number(sb.score)).toBe(0);
     await ca.leave().catch(() => undefined);
     await cb.leave().catch(() => undefined);
+  });
+});
+
+describe("clan war admission and reward claim", () => {
+  const setup = async (phase: string, mapId = "map_eclipse_arena") => {
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const [clanA, clanB, clanC] = await Promise.all(["A", "B", "C"].map((t) => db.clan.create({ data: { name: `War ${t}${suffix}`, tag: `${t}${suffix}` } })));
+    const war = await db.clanWar.create({ data: { clanAId: clanA!.id, clanBId: clanB!.id, phase, mapId, startsAt: new Date(Date.now() - 1000), endsAt: new Date(Date.now() + 3_600_000) } });
+    const member = async (clanId: string) => {
+      const u = await createPlayerUser(db, { faction: "aurora", level: 15 });
+      await db.clanMember.create({ data: { userId: u.id, clanId, role: "LEADER" } });
+      return u;
+    };
+    return { clanA: clanA!, clanB: clanB!, clanC: clanC!, war, member };
+  };
+  const mapId = "map_eclipse_arena";
+  const join = async (u: { id: string; username: string }, instanceKey?: string) =>
+    colyseus.sdk.joinOrCreate(RoomName.CLAN_WAR, { ticket: await ticketFor(secret, u, mapId), mapId, ...(instanceKey ? { instanceKey } : {}) });
+
+  it("rejects joins without a war, for a war that is not active, and from a clan outside the war", async () => {
+    const { war, clanC, clanA, member } = await setup("BATTLE");
+    const a = await member(clanA.id);
+    await expect(join(a)).rejects.toThrow(/CLAN_WAR_REQUIRED/);
+    const declared = await setup("DECLARED");
+    await expect(join(await member(declared.clanA.id), declared.war.id)).rejects.toThrow(/CLAN_WAR_NOT_ACTIVE/);
+    const ok = await join(a, war.id);
+    await expect(join(await member(clanC.id), war.id)).rejects.toThrow(/CLAN_NOT_IN_WAR/);
+    await ok.leave().catch(() => undefined);
+  });
+
+  it("never awards a war that another match already rewarded", async () => {
+    const { war, clanA, clanB, member } = await setup("BATTLE");
+    await db.clanWar.update({ where: { id: war.id }, data: { phase: "REWARDED" } });
+    await expect(join(await member(clanA.id), war.id)).rejects.toThrow(/CLAN_WAR_NOT_ACTIVE/);
+    const [sa, sb] = await Promise.all([db.clan.findUniqueOrThrow({ where: { id: clanA.id } }), db.clan.findUniqueOrThrow({ where: { id: clanB.id } })]);
+    expect(sa.score).toBe(0n);
+    expect(sb.score).toBe(0n);
   });
 });
 

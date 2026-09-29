@@ -235,7 +235,9 @@ describe.sequential("MVP vertical slice", { timeout: 90_000 }, () => {
     await r.flushAll(false);
     const inv = await db.inventoryItem.findMany({ where: { userId: S.pilot!.s.userId, originRef: { startsWith: "loot:" } } });
     const credits = await getBalance(db, userWallet(S.pilot!.s.userId, "CREDITS"));
-    expect(inv.length > 0 || credits > 0n).toBe(true);
+    // Loot rolls are random: a drop may be items, credits or only resources, so accept any of them.
+    const resources = await db.playerResource.aggregate({ where: { userId: S.pilot!.s.userId }, _sum: { amount: true } });
+    expect(inv.length > 0 || credits > 0n || (resources._sum.amount ?? 0n) > 0n).toBe(true);
   });
 
   it("inventory + equip: open inventory, equip an item into the active loadout (server-validated)", async () => {

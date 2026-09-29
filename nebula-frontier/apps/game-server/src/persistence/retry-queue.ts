@@ -108,14 +108,22 @@ export class FinalFlushRetryQueue {
   }
 
   private async pass(force: boolean): Promise<void> {
-    // Oldest first and sequential, so several queued deltas of one pilot apply in order.
+    // Oldest first and sequential, so several queued deltas of one pilot apply in order. Once an older entry of a
+    // pilot is not persisted in this pass (backoff pending or failed), that pilot's newer entries wait too: they
+    // carry absolute writes (quest progress, position) that must never land before the older delta.
+    const blocked = new Set<string>();
     for (const e of [...this.entries]) {
-      if (!force && e.nextAt > this.now()) continue;
+      if (blocked.has(e.userId)) continue;
+      if (!force && e.nextAt > this.now()) {
+        blocked.add(e.userId);
+        continue;
+      }
       try {
         await this.target.flush(e.userId, e.delta, e.quests, e.achievements, e.ctx);
         this.entries.splice(this.entries.indexOf(e), 1);
         this.log.info({ userId: e.userId, attempts: e.attempts + 1 }, "queued final flush persisted");
       } catch (err) {
+        blocked.add(e.userId);
         e.attempts++;
         errorsTotal.inc({ component: "persistence", code: "flush_retry" });
         if (e.attempts >= this.maxAttempts) {
