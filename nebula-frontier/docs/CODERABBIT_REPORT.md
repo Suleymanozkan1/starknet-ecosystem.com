@@ -20,7 +20,7 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 |---|---|---|---|
 | [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 queued |
 | [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Round 2 (refreshed branch, 86 files): 14 findings, all fixed in `424ae31` |
-| [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API (`apps/api`) | 64 | The 93-file review failed at 23:12 UTC (CodeRabbit gave no reason), so the slice was split; retry at 00:00 UTC |
+| [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API (`apps/api`) | 64 | Full review (after the 93-file attempt failed and the slice was split): 40 findings, all fixed in `ff7c7ca`, with a reply on every thread |
 | [#8](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/8) | shared, validation, authentication, Prisma | 30 | Split from #4; review queued at 01:02 UTC |
 | [#5](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/5) | web app | 91 | Queued (rate limit) |
 | [#6](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/6) | game client, renderer, networking | 72 | Queued (rate limit) |
@@ -30,13 +30,13 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 
 | Metric | Count |
 |---|---|
-| Files reviewed | 160 (PR #2 75 + PR #3 85) |
-| Findings | 86 (PR #2: 22 + 2 + 16; PR #3: 32 + 14) |
+| Files reviewed | 224 (PR #2 75 + PR #3 85 + PR #4 64) |
+| Findings | 126 (PR #2: 22 + 2 + 16; PR #3: 32 + 14; PR #4: 40) |
 | Critical | 1 |
-| High (CodeRabbit "Major") | 41 |
-| Warning (CodeRabbit "Minor") | 34 |
-| Info (CodeRabbit "Trivial"/nitpick) | 10 |
-| Fixed | 85 |
+| High (CodeRabbit "Major") | 55 |
+| Warning (CodeRabbit "Minor") | 51 |
+| Info (CodeRabbit "Trivial"/nitpick) | 19 |
+| Fixed | 125 |
 | Accepted as already addressed | 1 (PR #3 BC-05/BC-07 audit paths, already correct) |
 | Remaining open | 0 from completed rounds |
 
@@ -178,6 +178,55 @@ Verification after the fixes:
 | Audit header out of date | Trivial | Updated |
 
 Verification: lint clean, typecheck and build pass on every workspace, and the full vitest suite passes (60 files, 464 tests).
+
+## PR #4 — API (`apps/api`, 64 files)
+
+40 findings: 14 Major, 17 Minor, 9 Trivial. All are fixed in `ff7c7ca`, and every thread has a reply. Three parallel work groups were each assigned their own files, and the combined result was validated as a whole.
+
+**Money and economy integrity**
+- Item and ship upgrades now record each attempt durably (a new `UpgradeAttempt` table, keyed by user, kind and idempotency key). A retry returns the stored outcome without rolling again or consuming resources.
+- Crypto rewards from progress and quest claims go into a durable `RewardSettlement` outbox inside the claim transaction. A background job retries them with backoff, capped at 1 h, and marks a row FAILED after 8 attempts.
+- Bounties are duplicate-safe under concurrent retries. Before this, a second bounty could be created without any credits backing it.
+- The purchase fallback now also compares quantity.
+- Gear stats count only items the ship owner holds that are not locked.
+- A pet unlock is now an explicit serializable request that binds the pet item, so one item can no longer unlock pets on several accounts.
+- The loadout PUT uses an optimistic `updatedAt` guard.
+- Grants with duplicate item IDs get unique `originRef` values.
+- Crafting reads equipped items inside its transaction.
+
+**Authorization and races**
+- Clan treasury withdrawals and kicks re-check membership and role inside the serializable transaction; withdrawals use the strict withdrawal rate limit.
+- Clan-mission baselines are tied to the member's join time, so leaving and rejoining can no longer inflate progress. Mission stats use bigint arithmetic.
+- The username cooldown is reserved atomically in Redis.
+- Market and auction cancels respect MARKET_PAUSE.
+
+**Operations and security**
+- Production requires `DATABASE_URL` and a `METRICS_TOKEN` of at least 32 characters.
+- `cache-control: no-store` is set on every response.
+- Feature-flag rules are validated with zod, and malformed rules disable the flag.
+- RPC errors are sanitized before they reach admins.
+- Admin mail caps come from `@nebula/config`.
+- The blockchain-service URL must use https in production unless it points at loopback.
+
+**Jobs and delivery**
+- Jobs run through `createJobRunner`: each job has a running guard and a tokenized Redis lock that is extended while the job runs.
+- Idempotency and notification locks use tokens, with compare-and-delete on release.
+- The HTTP/2 push client has an overall timeout.
+- Notifications are inserted in batches (`notifyMany`).
+- A single failing auction no longer blocks settlement of the rest of the batch.
+- Analytics flushes are serialized.
+- Faction-war standings are read-only, with territory sync moved to a job.
+- The market DTOs no longer run one query per listing.
+
+**Other**
+- Leaderboard scores are sent as exact decimal strings, and the shared DTO and web pages were updated to match.
+- Reward decimals come from the mint.
+- Chat reports go to moderation instead of hiding the message automatically.
+- GET requests for clan missions and pets no longer write.
+
+A regression surfaced during validation: a game-server test expected a fixed base XP, but a live event (1.3× XP) became active when the date changed. The test now derives the expected XP from the room's multiplier.
+
+Verification: lint clean; typecheck and build pass on all workspaces; the full vitest suite, 535 tests in 78 files, was green after that test fix.
 
 ## Remaining / follow-up
 
