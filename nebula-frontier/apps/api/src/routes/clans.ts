@@ -224,7 +224,7 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
 
   app.post<{ Params: { id: string } }>(
     "/api/clans/:id/treasury/withdraw",
-    { preHandler: app.authenticate, config: { rateLimit: app.rateLimits.withdrawal } },
+    { preHandler: [app.authenticate, app.rateLimitWithdrawal], config: { rateLimit: app.rateLimits.withdrawal } },
     async (req) => {
       const clanId = app.parse(idSchema, req.params.id);
       const body = app.parse(clanTreasurySchema, req.body);

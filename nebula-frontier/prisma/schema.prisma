@@ -486,8 +486,11 @@ model CraftJob {
   startedAt   DateTime  @default(now())
   completesAt DateTime
   claimedAt   DateTime?
+  /// Client idempotency key of the start request (durable replay protection; null for legacy rows).
+  idempotencyKey String?
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, idempotencyKey])
   @@index([userId, status])
 }
 

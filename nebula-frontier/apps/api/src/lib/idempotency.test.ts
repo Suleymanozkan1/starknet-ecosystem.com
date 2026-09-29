@@ -55,14 +55,15 @@ describe("withIdempotency", () => {
     expect(await redis.get(k)).toBeNull();
   });
 
-  it("does not overwrite a key another request now owns with its result", async () => {
+  it("does not overwrite a key another request now owns and reports the lost lock", async () => {
     const key = randomUUID();
     const k = `idem:t:u:${key}`;
-    const r = await withIdempotency(redis, "t", "u", key, async () => {
-      await redis.set(k, "__pending__:someone-else", "PX", 5000);
-      return 7;
-    });
-    expect(r).toBe(7);
+    await expect(
+      withIdempotency(redis, "t", "u", key, async () => {
+        await redis.set(k, "__pending__:someone-else", "PX", 5000);
+        return 7;
+      }),
+    ).rejects.toMatchObject({ code: "IDEMPOTENCY_LOCK_LOST" });
     expect(await redis.get(k)).toBe("__pending__:someone-else");
     await redis.del(k);
   });

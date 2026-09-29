@@ -6,7 +6,9 @@
  *
  * The pending lock carries a unique token and is extended while `fn` runs, so a slow request never
  * loses it to a duplicate; the result write and the failure cleanup are compare-and-set /
- * compare-and-delete on that token, so one request can never overwrite or delete another's key.
+ * compare-and-delete on that token, so one request can never overwrite or delete another's key. If the
+ * result write finds the key no longer ours, the call fails with 409 IDEMPOTENCY_LOCK_LOST (callers'
+ * durable idempotency makes the retry return the committed outcome).
  */
 import { randomUUID } from "node:crypto";
 import type { Redis } from "ioredis";
@@ -68,11 +70,16 @@ export async function withIdempotency<T>(
   }
   clearInterval(keepAlive);
   const json = JSON.stringify(result, (_x, v: unknown) => (typeof v === "bigint" ? v.toString() : v));
+  let stored: unknown;
   try {
-    await redis.eval(SET_IF_OWNER, 1, k, token, json, String(TTL_SEC));
+    stored = await redis.eval(SET_IF_OWNER, 1, k, token, json, String(TTL_SEC));
   } catch (err) {
     await redis.eval(DEL_IF_OWNER, 1, k, token).catch(() => undefined);
     throw err;
   }
+  // Lost ownership (lock expired and another request took the key): the result was not cached, so
+  // do not report an uncached success. Callers persist their outcome durably (unique idempotency
+  // rows / ledger keys), so the client's retry replays the stored outcome instead of re-running.
+  if (Number(stored) !== 1) throw conflict("IDEMPOTENCY_LOCK_LOST", "Idempotency lock was lost; retry the request to fetch its result");
   return result;
 }

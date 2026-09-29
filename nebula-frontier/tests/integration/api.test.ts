@@ -110,6 +110,26 @@ describe("pilot progression", () => {
     expect(await credits(ctx.db, s.userId)).toBe(38_000n);
   });
 
+  it("crafting start is durably idempotent: a replay after Redis cache loss and concurrent duplicates charge once", async () => {
+    const s = await registerUser(ctx.app);
+    await ctx.db.user.update({ where: { id: s.userId }, data: { level: 10 } });
+    await fund(ctx.db, s.userId, 50_000n);
+    await ctx.db.playerResource.createMany({ data: [{ userId: s.userId, resourceId: "TITANIUM", amount: 200n }, { userId: s.userId, resourceId: "PLASMA_ORE", amount: 60n }] });
+    const k = key();
+    const first = await s.req("POST", "/api/crafting/start", { blueprintId: "bp_laser_mk2", idempotencyKey: k });
+    expect(first.statusCode).toBe(200);
+    const job = first.json() as { id: string };
+    // Simulate a lost Redis result cache: the durable CraftJob row must still dedupe the retry.
+    await ctx.app.redis.del(`idem:craft:${s.userId}:${k}`);
+    const replay = await s.req("POST", "/api/crafting/start", { blueprintId: "bp_laser_mk2", idempotencyKey: k });
+    expect(replay.statusCode).toBe(200);
+    expect((replay.json() as { id: string }).id).toBe(job.id);
+    expect(await credits(ctx.db, s.userId)).toBe(38_000n);
+    expect(await ctx.db.craftJob.count({ where: { userId: s.userId } })).toBe(1);
+    const ti = await ctx.db.playerResource.findUniqueOrThrow({ where: { userId_resourceId: { userId: s.userId, resourceId: "TITANIUM" } } });
+    expect(ti.amount).toBe(140n);
+  });
+
   it("ships: upgrade consumes costs server-side, loadouts CRUD, unlock via shop", async () => {
     const s = await registerUser(ctx.app);
     await s.req("POST", "/api/me/faction", { factionId: "nova" });

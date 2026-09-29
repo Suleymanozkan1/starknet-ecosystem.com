@@ -228,6 +228,13 @@ A regression surfaced during validation: a game-server test expected a fixed bas
 
 Verification: lint clean; typecheck and build pass on all workspaces; the full vitest suite, 535 tests in 78 files, was green after that test fix.
 
+**Round 2 (CodeRabbit re-check of the fix replies).** CodeRabbit confirmed 38 threads and asked for two more changes, both now fixed:
+- The clan treasury withdrawal now also runs the `app.rateLimitWithdrawal` preHandler after `app.authenticate`. Before this, only the per-minute limit applied; now the per-hour withdrawal limit applies too, as on the wallet route.
+- Craft starts are durably idempotent. `CraftJob.idempotencyKey` is a new column with a unique (userId, idempotencyKey) index, added by the non-destructive migration `20260930090000_craft_job_idempotency`. A retry reads the stored job inside the transaction, and a concurrent duplicate that hits the unique key (P2002) gets the winner's job. Either way, nothing is charged twice even if the Redis cache is lost. When `withIdempotency` finds the key no longer ours at result-write time, it now fails with 409 `IDEMPOTENCY_LOCK_LOST` instead of returning an uncached success; callers are durably idempotent, so the retry returns the committed outcome.
+- New tests: a Redis-loss replay test for crafting, and an updated test for a lost lock.
+
+Verification after round 2: typecheck and lint clean; vitest 536 tests in 78 files, all green.
+
 ## Remaining / follow-up
 
 - PR #2 round 4 and PR #3 round 3: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).

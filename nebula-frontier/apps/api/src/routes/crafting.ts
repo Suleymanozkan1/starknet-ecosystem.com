@@ -12,7 +12,7 @@ import { badRequest, conflict, forbidden, notFound } from "../errors.js";
 import { getCatalog } from "../lib/catalog.js";
 import { consumeResources } from "../lib/grants.js";
 import { withIdempotency } from "../lib/idempotency.js";
-import { equippedMap, grantItems } from "../lib/inventory.js";
+import { equippedMap, grantItems, isUniqueViolation } from "../lib/inventory.js";
 import { secureRoll } from "../lib/progression.js";
 import { loadRules } from "../lib/rules.js";
 
@@ -37,49 +37,66 @@ export default async function craftingRoutes(app: FastifyInstance): Promise<void
     if (!bp) throw notFound("Blueprint");
     const userId = req.user.id;
     const rules = await loadRules(db);
+    const priorJob = (client: Pick<typeof db, "craftJob">) =>
+      client.craftJob.findUnique({ where: { userId_idempotencyKey: { userId, idempotencyKey: body.idempotencyKey } } });
     return withIdempotency(app.redis, "craft", userId, body.idempotencyKey, async () => {
-      const job = await withSerializableTx(db, async (tx) => {
-        // Read inside the serializable tx so a concurrent equip conflicts instead of racing the consume.
-        const equipped = await equippedMap(tx, userId);
-        const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { level: true } });
-        if (user.level < bp.requiredLevel) throw forbidden(`Requires level ${bp.requiredLevel}`, "LEVEL_TOO_LOW");
-        const running = await tx.craftJob.count({ where: { userId, status: "IN_PROGRESS" } });
-        if (running >= rules.craftingMaxConcurrent) throw badRequest("CRAFT_QUEUE_FULL", `At most ${rules.craftingMaxConcurrent} concurrent crafts`);
-        const cost = craftCost(bp);
-        const now = new Date();
-        const created = await tx.craftJob.create({ data: { userId, blueprintId: bp.id, completesAt: craftCompletesAt(bp, now) } });
-        if (cost.credits > 0n) {
-          await post(tx, {
-            from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
-            amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: created.id, idempotencyKey: `craft:${created.id}:credits`, userId,
-            metadata: { kind: "CRAFT", blueprintId: bp.id },
+      let job;
+      try {
+        job = await withSerializableTx(db, async (tx) => {
+          // Durable idempotency: a retry (even after the Redis cache was lost) returns the stored job
+          // instead of consuming the inputs again.
+          const prior = await priorJob(tx);
+          if (prior) return prior;
+          // Read inside the serializable tx so a concurrent equip conflicts instead of racing the consume.
+          const equipped = await equippedMap(tx, userId);
+          const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { level: true } });
+          if (user.level < bp.requiredLevel) throw forbidden(`Requires level ${bp.requiredLevel}`, "LEVEL_TOO_LOW");
+          const running = await tx.craftJob.count({ where: { userId, status: "IN_PROGRESS" } });
+          if (running >= rules.craftingMaxConcurrent) throw badRequest("CRAFT_QUEUE_FULL", `At most ${rules.craftingMaxConcurrent} concurrent crafts`);
+          const cost = craftCost(bp);
+          const now = new Date();
+          // Claimed before any posting: a concurrent duplicate blocks here and then fails on the unique key.
+          const created = await tx.craftJob.create({
+            data: { userId, blueprintId: bp.id, completesAt: craftCompletesAt(bp, now), idempotencyKey: body.idempotencyKey },
           });
-        }
-        await consumeResources(tx, userId, cost.resources);
-        // Consume input items (unlocked, unequipped stacks only).
-        for (const need of cost.items) {
-          let remaining = need.quantity;
-          const stacks = await tx.inventoryItem.findMany({ where: { userId, itemId: need.itemId, lockedBy: null }, orderBy: { quantity: "asc" } });
-          for (const s of stacks) {
-            if (remaining <= 0) break;
-            if (equipped.has(s.id)) continue;
-            const take = Math.min(remaining, s.quantity);
-            if (take === s.quantity) {
-              const del = await tx.inventoryItem.deleteMany({ where: { id: s.id, version: s.version, lockedBy: null } });
-              if (del.count !== 1) throw conflict("CONCURRENT_UPDATE", "Inventory changed concurrently, retry");
-            } else {
-              const upd = await tx.inventoryItem.updateMany({
-                where: { id: s.id, version: s.version, lockedBy: null },
-                data: { quantity: { decrement: take }, version: { increment: 1 } },
-              });
-              if (upd.count !== 1) throw conflict("CONCURRENT_UPDATE", "Inventory changed concurrently, retry");
-            }
-            remaining -= take;
+          if (cost.credits > 0n) {
+            await post(tx, {
+              from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.GAME_SINK, Currency.CREDITS),
+              amount: cost.credits, type: LedgerTxType.GAME_SINK, reference: created.id, idempotencyKey: `craft:${created.id}:credits`, userId,
+              metadata: { kind: "CRAFT", blueprintId: bp.id },
+            });
           }
-          if (remaining > 0) throw badRequest("MISSING_ITEMS", `Not enough ${need.itemId}`);
-        }
-        return created;
-      });
+          await consumeResources(tx, userId, cost.resources);
+          // Consume input items (unlocked, unequipped stacks only).
+          for (const need of cost.items) {
+            let remaining = need.quantity;
+            const stacks = await tx.inventoryItem.findMany({ where: { userId, itemId: need.itemId, lockedBy: null }, orderBy: { quantity: "asc" } });
+            for (const s of stacks) {
+              if (remaining <= 0) break;
+              if (equipped.has(s.id)) continue;
+              const take = Math.min(remaining, s.quantity);
+              if (take === s.quantity) {
+                const del = await tx.inventoryItem.deleteMany({ where: { id: s.id, version: s.version, lockedBy: null } });
+                if (del.count !== 1) throw conflict("CONCURRENT_UPDATE", "Inventory changed concurrently, retry");
+              } else {
+                const upd = await tx.inventoryItem.updateMany({
+                  where: { id: s.id, version: s.version, lockedBy: null },
+                  data: { quantity: { decrement: take }, version: { increment: 1 } },
+                });
+                if (upd.count !== 1) throw conflict("CONCURRENT_UPDATE", "Inventory changed concurrently, retry");
+              }
+              remaining -= take;
+            }
+            if (remaining > 0) throw badRequest("MISSING_ITEMS", `Not enough ${need.itemId}`);
+          }
+          return created;
+        });
+      } catch (err) {
+        // A concurrent request with the same key won the unique CraftJob row.
+        const prior = isUniqueViolation(err) ? await priorJob(db) : null;
+        if (!prior) throw err;
+        job = prior;
+      }
       return { id: job.id, blueprintId: job.blueprintId, status: job.status, completesAt: job.completesAt.toISOString() };
     });
   });
