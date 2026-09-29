@@ -16,6 +16,7 @@ import { captureTerritories } from "../lib/territory.js";
 import { releaseEscrowed } from "../lib/escrow.js";
 import { PushType, dispatchPendingPush, notify, notifyMany } from "../lib/notify.js";
 import { syncFactionTerritory } from "../lib/factionWar.js";
+import { processRewardOutbox } from "../lib/rewardOutbox.js";
 
 export async function expireListings(db: Db): Promise<number> {
   const due = await db.marketplaceListing.findMany({ where: { status: "ACTIVE", expiresAt: { lte: new Date() } }, take: 200, select: { id: true, inventoryItemId: true } });
@@ -238,6 +239,7 @@ export function startJobs(app: FastifyInstance): () => void {
   every("faction-territory", 60_000, () => syncFactionTerritory(app.db));
   every("nonce-cleanup", 3_600_000, () => cleanupNonces(app.db));
   every("clan-missions", 60_000, () => refreshClanMissions(app.db));
+  every("reward-outbox", 30_000, () => processRewardOutbox(app.db, 50, { log: app.log }));
   every("quest-complete", 30_000, () => announceCompletedQuests(app.db, app.redis));
   every("event-announce", 60_000, () => announceEvents(app.db, app.redis));
   every("withdrawal-announce", 30_000, () => announceWithdrawals(app.db, app.redis));

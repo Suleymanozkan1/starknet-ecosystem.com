@@ -263,7 +263,9 @@ describe("combat, rewards & loot persistence", () => {
     client.send("fire", { firing: false, group: "PRIMARY" });
     await I(room).flushAll(false);
     const u = await db.user.findUniqueOrThrow({ where: { id: user.id } });
-    expect(Number(u.xp)).toBe(def.xp);
+    // Live events can multiply XP (not credits) on this map; the expectation follows the room's multiplier.
+    const xpMult = (room as unknown as { state: { xpMultiplier: number } }).state.xpMultiplier;
+    expect(Number(u.xp)).toBe(Math.round(def.xp * xpMult));
     const st = await db.playerStat.findUniqueOrThrow({ where: { userId: user.id } });
     expect(st.npcKills).toBe(1);
     const lb = await db.leaderboardEntry.findUniqueOrThrow({ where: { leaderboardId_userId: { leaderboardId: "npc_kills", userId: user.id } } });
