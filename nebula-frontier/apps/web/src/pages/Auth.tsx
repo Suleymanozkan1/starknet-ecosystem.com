@@ -13,6 +13,7 @@ import { getDeviceId } from "../native/secureStorage.js";
 import { haptic } from "../native/haptics.js";
 import { useWalletAuth } from "../wallet/useWalletAuth.js";
 import { shortAddr } from "../lib/gameMeta.js";
+import { DEMO_MODE } from "../lib/demoMode.js";
 
 const STEPS = [
   { key: "connecting", label: "Connect wallet" },
@@ -115,8 +116,39 @@ function EmailForm({ mode, onAuthed }: { mode: "login" | "register"; onAuthed: (
   );
 }
 
+/** Demo build: one click creates a local pilot (the mock backend accepts any credentials). */
+function DemoQuickStart({ onAuthed }: { onAuthed: (u: MeResponse) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const start = async (): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const n = new Uint16Array(1);
+      crypto.getRandomValues(n);
+      const username = `Pilot_${String((n[0] ?? 0) % 10000).padStart(4, "0")}`;
+      const res = await api.auth.register({ email: `${username.toLowerCase()}@demo.local`, password: "demo-pilot-local-1", username });
+      haptic("success");
+      onAuthed(res.user);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="grid gap-2 rounded-md border border-warn/40 bg-warn/10 p-3">
+      <p className="m-0 text-[13px] leading-relaxed text-dim">
+        This is an offline demo: accounts, progress and balances live only in this browser. Wallet sign-in and on-chain features are disabled.
+      </p>
+      <NeonButton variant="primary" size="lg" block loading={busy} onClick={() => void start()} data-testid="demo-start">Start as demo pilot</NeonButton>
+      {error && <div role="alert" className="text-[13px] text-bad">{error}</div>}
+    </div>
+  );
+}
+
 export default function AuthPage({ mode }: { mode: "login" | "register" }) {
-  const [method, setMethod] = useState<"wallet" | "email">("wallet");
+  const [method, setMethod] = useState<"wallet" | "email">(DEMO_MODE ? "email" : "wallet");
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [params] = useSearchParams();
@@ -144,6 +176,7 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
         </div>
         <HoloPanel cut corners glow className="w-full" title={mode === "register" ? "Create account" : "Sign in"}>
           <div className="grid gap-5">
+            {DEMO_MODE && <DemoQuickStart onAuthed={onAuthed} />}
             <Tabs
               variant="pill"
               value={method}

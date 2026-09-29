@@ -448,6 +448,9 @@ importers:
       '@nebula/game-client':
         specifier: workspace:*
         version: link:../game-client
+      '@nebula/game-core':
+        specifier: workspace:*
+        version: link:../../packages/game-core
       '@nebula/game-renderer':
         specifier: workspace:*
         version: link:../../packages/game-renderer

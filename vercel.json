@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "cd nebula-frontier && npx --yes pnpm@10.33.0 install --frozen-lockfile",
-  "buildCommand": "cd nebula-frontier && npx --yes pnpm@10.33.0 --filter @nebula/web build",
+  "buildCommand": "cd nebula-frontier && VITE_DEMO_MODE=true npx --yes pnpm@10.33.0 --filter @nebula/web build",
   "outputDirectory": "nebula-frontier/apps/web/dist",
   "rewrites": [
     {

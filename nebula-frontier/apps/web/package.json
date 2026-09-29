@@ -23,6 +23,7 @@
     "@capacitor/share": "^8.0.0",
     "@nebula/config": "workspace:*",
     "@nebula/game-client": "workspace:*",
+    "@nebula/game-core": "workspace:*",
     "@nebula/game-renderer": "workspace:*",
     "@nebula/game-ui": "workspace:*",
     "@nebula/shared": "workspace:*",

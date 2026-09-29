@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_DEEP_LINK_HOSTS?: string;
   /** Public web origin used for share links. */
   readonly VITE_PUBLIC_WEB_URL?: string;
+  /** "true" => static demo build: REST is served by an in-browser mock and the game runs a local simulation. */
+  readonly VITE_DEMO_MODE?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

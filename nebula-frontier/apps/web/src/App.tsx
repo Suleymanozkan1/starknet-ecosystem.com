@@ -6,6 +6,7 @@ import { onUnauthorized } from "./lib/http.js";
 import { initNative } from "./native/index.js";
 import { SpaceBackdrop } from "./components/SpaceBackdrop.js";
 import { Toasts } from "./components/Toasts.js";
+import { DemoBadge } from "./components/DemoBadge.js";
 import { LoadingScreen } from "./components/LoadingScreen.js";
 import { AppShell } from "./components/AppShell.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
@@ -120,6 +121,7 @@ export function App() {
           </Suspense>
         </ErrorBoundary>
         <Toasts />
+        <DemoBadge />
       </BrowserRouter>
     </QueryClientProvider>
   );

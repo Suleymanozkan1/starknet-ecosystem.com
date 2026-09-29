@@ -6,6 +6,7 @@
  *  - on 401 we call POST /api/auth/refresh exactly once (deduplicated across concurrent requests) and retry.
  */
 import type { ApiError as ApiErrorBody } from "@nebula/shared";
+import { DEMO_MODE } from "./demoMode.js";
 
 export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 const CSRF_COOKIE = "nf_csrf";
@@ -65,6 +66,7 @@ export function onUnauthorized(fn: UnauthorizedListener): () => void {
 
 let refreshInFlight: Promise<boolean> | null = null;
 export function refreshSession(): Promise<boolean> {
+  if (DEMO_MODE) return request<unknown>("POST", "/api/auth/refresh", { noRefresh: true }).then(() => true, () => false);
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
       try {
@@ -129,6 +131,12 @@ async function parseError(res: Response): Promise<ApiRequestError> {
 }
 
 export async function request<T>(method: string, path: string, opts: RequestOptions = {}): Promise<T> {
+  if (DEMO_MODE) {
+    const { demoRequest } = await import("../demo/mockApi.js");
+    const data = await demoRequest(method, path, opts.query, opts.body);
+    if (opts.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    return data as T;
+  }
   const doFetch = (): Promise<Response> => {
     const headers: Record<string, string> = { accept: "application/json" };
     const init: RequestInit = { method, credentials: "include", headers, ...(opts.signal ? { signal: opts.signal } : {}) };

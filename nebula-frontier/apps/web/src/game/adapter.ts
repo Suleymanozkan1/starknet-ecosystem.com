@@ -4,6 +4,7 @@
  * connection; this module lazy-loads it (code-split) and maps HudState / GameUiEvent onto the HUD view model.
  */
 import { api } from "../lib/api.js";
+import { DEMO_MODE } from "../lib/demoMode.js";
 import type { GameTicketResponse } from "../lib/dto.js";
 import type { GraphicsSetting } from "../store/settings.js";
 import type { GameChatChannel } from "../store/gameLink.js";
@@ -46,6 +47,8 @@ export async function startGame(container: HTMLElement, o: StartOptions): Promis
   const { createGame } = await import("@nebula/game-client");
   o.onProgress(0.35, "Connecting to sector");
   const facts = newSessionFacts();
+  // Demo mode: the offline simulation's rewards/pickups/location are mirrored into the local demo account.
+  const demo = DEMO_MODE ? await import("../demo/mockApi.js") : null;
   let firstTicket: GameTicketResponse | null = o.ticket;
   const handle = await createGame({
     container,
@@ -62,6 +65,12 @@ export async function startGame(container: HTMLElement, o: StartOptions): Promis
     volume: { master: o.audio.master, music: o.audio.music, sfx: o.audio.sfx },
     onHud: (s) => o.onHud(mapHud(s, facts)),
     onEvent: (e) => {
+      if (demo) {
+        if (e.type === "reward") demo.demoApplyReward(e.data);
+        else if (e.type === "loot_pickup") demo.demoApplyPickup(e.data);
+        else if (e.type === "level_up") demo.demoLevelUp(e.level);
+        else if (e.type === "map_transition" && e.phase === "end") demo.demoSetLocation(e.mapId);
+      }
       const m = mapEvent(e, facts);
       if (m) o.onEvent(m);
     },
