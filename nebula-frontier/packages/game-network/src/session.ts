@@ -2,7 +2,8 @@ import type { EntitySnapshot, MapDef, RoomName, SelfJoinInfo } from "@nebula/sha
 import { EntityFlag, RoomName as Rooms } from "@nebula/shared";
 import { MAPS_BY_ID } from "@nebula/config";
 import type { MoveInput } from "@nebula/game-core";
-import { GameConnection, type ConnectionEvents, type ConnectionStatus } from "./connection.js";
+import { GameConnection, type Connection, type ConnectionEvents, type ConnectionStatus } from "./connection.js";
+import { LocalConnection, isLocalServerUrl } from "./local/connection.js";
 import { Emitter } from "./emitter.js";
 import { InterpolationBuffer, type MotionSample } from "./interpolation.js";
 import { ShipPredictor } from "./prediction.js";
@@ -72,7 +73,7 @@ export interface Pose {
  * predicts), then read poses (`localPose`, `remotePose`).
  */
 export class GameSession {
-  readonly connection: GameConnection;
+  readonly connection: Connection;
   readonly events = new Emitter<SessionEvents>();
   readonly interp: InterpolationBuffer;
   readonly ping = new PingTracker();
@@ -97,7 +98,7 @@ export class GameSession {
   constructor(opts: GameSessionOptions) {
     this.opts = opts;
     this.tickRate = opts.defaultTickRate ?? 20;
-    this.connection = new GameConnection(opts.serverUrl);
+    this.connection = isLocalServerUrl(opts.serverUrl) ? new LocalConnection() : new GameConnection(opts.serverUrl);
     this.interp = new InterpolationBuffer(opts.interpolationDelayMs ?? 100);
     const c = this.connection;
     this.unsubs.push(

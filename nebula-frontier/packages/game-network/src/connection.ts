@@ -46,6 +46,26 @@ export interface ConnectionEvents {
   error: { code: number; message?: string };
 }
 
+/**
+ * Public surface of a game connection. `GameConnection` talks to Colyseus; `LocalConnection`
+ * (demo mode) runs an in-browser simulation behind the same contract.
+ */
+export interface Connection {
+  readonly events: Emitter<ConnectionEvents>;
+  readonly status: ConnectionStatus;
+  readonly sessionId: string;
+  readonly roomName: string;
+  readonly connected: boolean;
+  readonly state: WorldStateView | null;
+  readonly entities: ReadonlyMap<string, EntitySnapshot>;
+  join(roomName: RoomName, options: JoinOptions): Promise<void>;
+  consumeReservation(reservation: unknown, roomName: string): Promise<void>;
+  send<K extends keyof ClientMessages>(type: K, payload: ClientMessages[K]): void;
+  on<K extends keyof ServerEvents>(type: K, cb: (payload: ServerEvents[K]) => void): () => void;
+  leave(): Promise<void>;
+  dispose(): void;
+}
+
 type AnyRoom = Room<unknown, WorldStateLike>;
 interface WorldStateLike extends WorldStateView {
   entities: { forEach(cb: (e: EntitySnapshot, id: string) => void): void; get(id: string): EntitySnapshot | undefined };
@@ -56,7 +76,7 @@ interface WorldStateLike extends WorldStateView {
  * re-emitted through stable emitters so subscribers survive room switches
  * (portal jumps) and reconnections.
  */
-export class GameConnection {
+export class GameConnection implements Connection {
   readonly client: InstanceType<typeof Client>;
   readonly events = new Emitter<ConnectionEvents>();
   private readonly serverEvents = new Emitter<ServerEvents>();
