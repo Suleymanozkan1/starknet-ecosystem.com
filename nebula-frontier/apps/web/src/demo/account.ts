@@ -4,13 +4,13 @@
  * lib/ships.ts, lib/me.ts, lib/balances.ts) so the shapes and rules match the real backend.
  */
 import {
-  BATTLE_PASSES, DRONES_BY_ID, ECONOMY, FACTIONS_BY_ID, ITEMS_BY_ID, MODULES_BY_ID, PROGRESSION, QUESTS_BY_ID, SEASONS, SHIPS_BY_ID, WEAPONS_BY_ID,
+  BATTLE_PASSES, DRONES_BY_ID, ECONOMY, FACTIONS_BY_ID, ITEMS, ITEMS_BY_ID, MODULES_BY_ID, PROGRESSION, QUESTS_BY_ID, SEASONS, SHIPS, SHIPS_BY_ID, WEAPONS_BY_ID,
 } from "@nebula/config";
 import {
-  RARITY_ORDER, type BalancesDto, type Currency, type DroneDef, type InventoryItemDto, type ItemCategory, type ItemDef, type LoadoutDto, type MeResponse,
+  RARITY_ORDER, RESOURCE_IDS, type BalancesDto, type Currency, type DroneDef, type InventoryItemDto, type ItemCategory, type ItemDef, type LoadoutDto, type MeResponse,
   type ModuleDef, type Rarity, type ResourceId, type RewardBundle, type SeasonDef, type ShipDef, type ShipInstanceDto, type StatKey, type WeaponDef,
 } from "@nebula/shared";
-import { applyQuestEvent, computeStats, levelForXp, levelProgress, rankFor, type Equipped, type GameplayEvent, type LoadoutInput } from "./core.js";
+import { applyQuestEvent, computeStats, levelForXp, levelProgress, rankFor, xpForLevel, type Equipped, type GameplayEvent, type LoadoutInput } from "./core.js";
 import { badRequest, insufficientBalance } from "./errors.js";
 import { newId, nowIso, state, type DemoAccount, type DemoItem, type DemoLoadout, type DemoShip, type LoadoutConfig } from "./state.js";
 
@@ -490,7 +490,49 @@ export function premiumActive(acc: DemoAccount): boolean {
 
 export function inventoryCapacity(acc: DemoAccount): number {
   const tier = (premiumActive(acc) ? acc.premiumTier : "FREE") as keyof typeof ECONOMY.premium;
-  return ECONOMY.premium[tier]?.inventorySlots ?? ECONOMY.premium.FREE.inventorySlots;
+  const base = ECONOMY.premium[tier]?.inventorySlots ?? ECONOMY.premium.FREE.inventorySlots;
+  return acc.testerKit ? base + TESTER_KIT.extraInventorySlots : base;
+}
+
+/**
+ * Demo-only tester kit: so every system can be tried without grinding, a demo pilot receives every ship,
+ * every item, large balances, all resources, max level and premium. Never exists outside the demo build.
+ */
+export const TESTER_KIT = {
+  credits: 100_000_000n,
+  gems: 1_000_000n,
+  resourceEach: 50_000,
+  /** Copies of each non-stackable item per category (weapons: enough for the widest laser/missile racks). */
+  copies: { WEAPON: 4, MODULE: 2, GENERATOR: 3, DRONE: 4 } as Partial<Record<ItemCategory, number>>,
+  stackQuantity: 500,
+  extraInventorySlots: 600,
+  premiumDays: 365,
+} as const;
+
+export function grantTesterKit(acc: DemoAccount): void {
+  if (acc.testerKit) return;
+  acc.testerKit = true;
+  credit(acc, "CREDITS", TESTER_KIT.credits, "GAME_REWARD", "demo:tester-kit", { reason: "Demo tester kit" });
+  credit(acc, "GEMS", TESTER_KIT.gems, "GAME_REWARD", "demo:tester-kit", { reason: "Demo tester kit" });
+  addResources(acc, Object.fromEntries(RESOURCE_IDS.map((r) => [r, TESTER_KIT.resourceEach])));
+  const owned = new Set(acc.ships.map((s) => s.defId));
+  for (const ship of SHIPS) if (!owned.has(ship.id)) grantShip(acc, ship.id);
+  for (const def of ITEMS) {
+    // Ship tokens and raw resources are covered above (hangar ships / resource balances).
+    if (def.category === "SHIP" || def.category === "RESOURCE") continue;
+    const quantity = def.stackable ? Math.min(TESTER_KIT.stackQuantity, Math.max(1, def.maxStack) * 2) : (TESTER_KIT.copies[def.category] ?? 1);
+    grantItems(acc, [{ itemId: def.id, quantity }], { skipUnknown: true });
+  }
+  acc.xp = Math.max(acc.xp, xpForLevel(PROGRESSION.maxLevel, PROGRESSION));
+  syncLevel(acc);
+  acc.premiumTier = "ELITE";
+  acc.premiumUntil = new Date(Date.now() + TESTER_KIT.premiumDays * 86_400_000).toISOString();
+  // Unlock every battle-pass tier on both tracks (rewards still have to be claimed on the pass page).
+  addPassXp(acc, 100_000_000);
+  const season = activeSeason();
+  const bp = season ? battlePassRow(acc, season.id) : null;
+  if (bp) bp.premium = true;
+  notify(acc, "SYSTEM", "Tester kit unlocked", "Every ship, item and resource has been added to your demo account so you can try everything.");
 }
 
 /** apps/api lib/me.ts buildMe. */

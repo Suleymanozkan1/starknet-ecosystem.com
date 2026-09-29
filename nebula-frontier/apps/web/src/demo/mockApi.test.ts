@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { FACTIONS, SHOP } from "@nebula/config";
+import { FACTIONS, ITEMS, PROGRESSION, SHIPS, SHOP } from "@nebula/config";
 import type { AuthResponse, InventoryResponse, MeResponse, PurchaseResponse } from "@nebula/shared";
 import { ApiRequestError } from "../lib/http.js";
 import type { GameTicketResponse, ShipsResponse } from "../lib/dto.js";
@@ -46,9 +46,11 @@ describe("demo mock backend", () => {
     expect(me.activeShipInstanceId).toBeTruthy();
     await expect(post("/api/me/faction", { factionId: faction.id })).rejects.toMatchObject({ status: 409, code: "FACTION_ALREADY_CHOSEN" });
 
+    // The demo tester kit adds every ship; the faction starter ship stays the active one.
     const ships = await get<ShipsResponse>("/api/ships");
-    expect(ships.owned).toHaveLength(1);
-    const owned = ships.owned[0];
+    expect(ships.owned).toHaveLength(SHIPS.length);
+    expect(ships.catalog.every((c) => c.owned)).toBe(true);
+    const owned = ships.owned.find((o) => o.active);
     expect(owned?.defId).toBe(faction.starterShip);
     expect(owned?.active).toBe(true);
     expect(owned?.id).toBe(me.activeShipInstanceId);
@@ -60,12 +62,22 @@ describe("demo mock backend", () => {
     const inv = await get<InventoryResponse>("/api/inventory", { sort: "rarity" });
     const starterCount = faction.starterLoadout.weapons.length + faction.starterLoadout.modules.length + faction.starterLoadout.drones.length;
     expect(inv.items.filter((i) => i.equippedOn === owned?.id)).toHaveLength(starterCount);
+    // Tester kit: every non-ship, non-resource item, all resources, max level, premium and big balances.
+    const invIds = new Set(inv.items.map((i) => i.itemId));
+    expect(ITEMS.filter((d) => d.category !== "SHIP" && d.category !== "RESOURCE").every((d) => invIds.has(d.id))).toBe(true);
+    expect(me.level).toBe(PROGRESSION.maxLevel);
+    expect(me.premiumTier).toBe("ELITE");
+    expect(BigInt(me.balances.credits)).toBeGreaterThanOrEqual(100_000_000n);
+    expect(Object.values(me.balances.resources).every((n) => (n ?? 0) >= 50_000)).toBe(true);
 
     // Game ticket decodes to the pilot's faction + active ship; map = faction home until a location is set.
     const t = await post<GameTicketResponse>("/api/game/ticket");
     expect(t.gameServerUrl).toBe("local://demo");
     expect(t.mapId).toBe(faction.homeMap);
-    expect(decodeTicket(t.ticket)).toMatchObject({ userId: me.id, name: "Ace_Pilot", factionId: faction.id, shipId: faction.starterShip, xp: 0 });
+    const ticket = decodeTicket(t.ticket) as { loadout?: { weapons: { id: string }[] } };
+    expect(ticket).toMatchObject({ userId: me.id, name: "Ace_Pilot", factionId: faction.id, shipId: faction.starterShip, xp: me.xp });
+    // The equipped hangar loadout travels with the ticket so the simulation flies the same gear.
+    expect(ticket.loadout?.weapons.map((w) => w.id).sort()).toEqual([...faction.starterLoadout.weapons].sort());
 
     // Buying a CREDITS product debits credits by exactly the configured price.
     const product = SHOP.find((p) => p.active && p.currency === "CREDITS" && p.requiredLevel <= 1 && p.grants.items?.length);
@@ -91,7 +103,7 @@ describe("demo mock backend", () => {
     const post1 = await get<MeResponse>("/api/me");
     expect(post1.xp).toBe(pre.xp + 5_000);
     expect(post1.honor).toBe(pre.honor + 10);
-    expect(post1.level).toBeGreaterThan(pre.level);
+    expect(post1.level).toBeGreaterThanOrEqual(pre.level);
     expect(BigInt(post1.balances.credits)).toBe(BigInt(pre.balances.credits) + 300n);
 
     // Location is remembered for the next ticket.

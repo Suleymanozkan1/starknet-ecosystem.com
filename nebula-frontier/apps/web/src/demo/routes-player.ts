@@ -15,14 +15,14 @@ import {
 import type { CraftJobDto, FactionDto, GameTicketResponse, ShipCatalogEntry, ShipsResponse, ShopProductView, UpgradeCostResponse } from "../lib/dto.js";
 import {
   MAX_LOADOUTS_PER_SHIP, MAX_UPGRADE_LEVEL, DEMO_RULES, applyGameplayEvent, assertCanAfford, balancesDto, consumeResources, createAccount, debit, emptyLoadout,
-  equippedMap, gearScoreOf, grantBundle, grantItems, grantShip, inventoryCapacity, inventoryDto, loadoutDto, loadoutItemIds, meDto, notify, rankId,
+  equippedMap, gearScoreOf, grantBundle, grantItems, grantShip, grantTesterKit, itemDef, inventoryCapacity, inventoryDto, loadoutDto, loadoutItemIds, meDto, notify, rankId,
   shipDtos, slotCount, slotFamilyFor, SLOT_TYPES,
 } from "./account.js";
 import { NPC_PILOTS, NPC_PILOTS_BY_ID } from "./catalog.js";
 import { craftCompletesAt, craftCost, questPeriodKey, rollCraft, starterAmmoFor, upgradeCost } from "./core.js";
 import { badRequest, conflict, demoDisabled, forbidden, notFound, parse } from "./errors.js";
 import { q, requireAccount, route } from "./router.js";
-import { newId, nowIso, state, type DemoAccount, type DemoShip, type UpgradeCostWire } from "./state.js";
+import { newId, nowIso, save, state, type DemoAccount, type DemoShip, type UpgradeCostWire } from "./state.js";
 
 type Ok = { ok: boolean };
 
@@ -201,7 +201,15 @@ for (const p of ["/api/auth/nonce", "/api/auth/verify", "/api/auth/link-wallet"]
 
 // ------------------------------------------------------------------ me / profile / factions
 
-route("GET", "/api/me", (): MeResponse => meDto(requireAccount()));
+route("GET", "/api/me", (): MeResponse => {
+  const acc = requireAccount();
+  // Pilots created before the tester kit existed receive it on their next visit.
+  if (acc.faction && !acc.testerKit) {
+    grantTesterKit(acc);
+    save(); // GETs are not persisted automatically
+  }
+  return meDto(acc);
+});
 
 route("PATCH", "/api/me", (c): MeResponse => {
   const acc = requireAccount();
@@ -248,6 +256,7 @@ route("POST", "/api/me/faction", (c): MeResponse => {
   }
   acc.activeShipId = ship.id;
   acc.lastMapId = faction.homeMap;
+  grantTesterKit(acc);
   notify(acc, "SYSTEM", `Welcome to ${faction.name}`, `Your ${shipDef.name} is fueled and waiting in the hangar.`, { factionId: faction.id });
   return meDto(acc);
 });
@@ -337,7 +346,17 @@ route("POST", "/api/game/ticket", (): GameTicketResponse => {
   const home = FACTIONS_BY_ID.get(acc.faction)?.homeMap;
   const mapId = acc.lastMapId && MAPS_BY_ID.has(acc.lastMapId) ? acc.lastMapId : home;
   if (!mapId) throw badRequest("NO_MAP", "No valid map for this pilot");
-  const json = JSON.stringify({ userId: acc.id, name: acc.username, factionId: acc.faction, shipId: ship.defId, xp: acc.xp });
+  // The equipped hangar loadout travels with the ticket so the offline simulation flies the same ship.
+  const lo = ship.loadouts.find((l) => l.id === ship.activeLoadoutId) ?? ship.loadouts[0];
+  const gear = (ids: readonly (string | null)[]) => ids.flatMap((invId) => {
+    const row = invId ? acc.inventory.find((i) => i.id === invId) : undefined;
+    const ref = row ? itemDef(row.itemId)?.ref : undefined;
+    return row && ref ? [{ id: ref, up: row.upgradeLevel }] : [];
+  });
+  const loadout = lo
+    ? { shipUpgrade: ship.upgradeLevel, weapons: gear([...lo.config.weapons, ...lo.config.missiles]), modules: gear([...lo.config.generators, ...lo.config.modules]), drones: gear(lo.config.drones) }
+    : undefined;
+  const json = JSON.stringify({ userId: acc.id, name: acc.username, factionId: acc.faction, shipId: ship.defId, xp: acc.xp, loadout });
   const ticket = `demo.${btoa(String.fromCharCode(...new TextEncoder().encode(json)))}`;
   return { ticket, mapId, gameServerUrl: "local://demo", expiresAt: new Date(Date.now() + 60_000).toISOString() };
 });
