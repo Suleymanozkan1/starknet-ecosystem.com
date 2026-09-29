@@ -4,8 +4,9 @@
  * Clients use it for the galaxy map / server browser. Authenticated with the
  * same game ticket (any map).
  */
-import { Room, ServerError, matchMaker, type Client } from "@colyseus/core";
+import { CloseCode, Room, ServerError, matchMaker, type Client } from "@colyseus/core";
 import { MAPS } from "@nebula/config";
+import { PacketRateLimiter } from "@nebula/game-core";
 import { ServerEvent } from "@nebula/shared";
 import { JoinOptionsSchema } from "../protocol/messages.js";
 import { GalaxyState, MapPresence } from "../schema/state.js";
@@ -13,9 +14,34 @@ import { getServices, type GameServices } from "../services/context.js";
 import { EventEngine } from "../services/events.js";
 import { TicketError } from "../services/tickets.js";
 
+/** Galaxy `ping` budget per client: steady rate, burst, drop window/threshold and spam strikes before disconnect. */
+export interface PingLimits { ratePerSec: number; burst: number; windowMs: number; maxDropsPerWindow: number; maxStrikes: number }
+export const GALAXY_PING_LIMITS: Readonly<PingLimits> = { ratePerSec: 2, burst: 5, windowMs: 5000, maxDropsPerWindow: 10, maxStrikes: 3 };
+
+/**
+ * Per-client `ping` limiter: excess pings are dropped; each time the drop threshold is crossed
+ * a strike is recorded, and the client should be disconnected once `maxStrikes` is reached.
+ */
+export class PingGuard {
+  private readonly limiter: PacketRateLimiter;
+  private readonly maxStrikes: number;
+  private strikes = 0;
+  constructor(now: number, limits: Readonly<PingLimits> = GALAXY_PING_LIMITS) {
+    this.limiter = new PacketRateLimiter(limits.ratePerSec, limits.burst, now, limits.windowMs, limits.maxDropsPerWindow);
+    this.maxStrikes = limits.maxStrikes;
+  }
+  check(now: number): "allow" | "drop" | "disconnect" {
+    const r = this.limiter.check(now);
+    if (r.allowed) return "allow";
+    if (r.spam && ++this.strikes >= this.maxStrikes) return "disconnect";
+    return "drop";
+  }
+}
+
 export class GalaxyRoom extends Room<{ state: GalaxyState }> {
   override state = new GalaxyState();
   private svc!: GameServices;
+  private readonly pingGuards = new Map<string, PingGuard>();
 
   override onCreate(): void {
     this.svc = getServices();
@@ -35,6 +61,19 @@ export class GalaxyRoom extends Room<{ state: GalaxyState }> {
       this.svc.events.off("finished", finished);
     };
     this.onMessage("ping", (client: Client, m: unknown) => {
+      const now = Date.now();
+      let guard = this.pingGuards.get(client.sessionId);
+      if (!guard) {
+        guard = new PingGuard(now);
+        this.pingGuards.set(client.sessionId, guard);
+      }
+      const verdict = guard.check(now);
+      if (verdict === "disconnect") {
+        this.pingGuards.delete(client.sessionId);
+        client.leave(CloseCode.WITH_ERROR, "PACKET_SPAM");
+        return;
+      }
+      if (verdict === "drop") return;
       const t = typeof (m as { t?: unknown })?.t === "number" ? (m as { t: number }).t : 0;
       client.send(ServerEvent.PONG, { t, server: Date.now() });
     });
@@ -56,6 +95,10 @@ export class GalaxyRoom extends Room<{ state: GalaxyState }> {
 
   override onJoin(client: Client): void {
     for (const a of this.svc.events.allActive()) client.send(ServerEvent.EVENT_STARTED, EventEngine.notice(a));
+  }
+
+  override onLeave(client: Client): void {
+    this.pingGuards.delete(client.sessionId);
   }
 
   private async refresh(): Promise<void> {

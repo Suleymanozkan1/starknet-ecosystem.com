@@ -122,6 +122,9 @@ export const SimTuningOverrideSchema = z.object({
   // Checked against the merged result: a partial override (e.g. only maxHitChance) must not invert the default range.
   (t) => (t.minHitChance ?? DEFAULT_TUNING.minHitChance) <= (t.maxHitChance ?? DEFAULT_TUNING.maxHitChance),
   "minHitChance must be <= maxHitChance (after applying defaults)",
+).refine(
+  (t) => (t.minResist ?? DEFAULT_TUNING.minResist) < (t.maxResist ?? DEFAULT_TUNING.maxResist),
+  "minResist must be < maxResist (after applying defaults)",
 );
 export type SimTuningOverride = z.infer<typeof SimTuningOverrideSchema>;
 

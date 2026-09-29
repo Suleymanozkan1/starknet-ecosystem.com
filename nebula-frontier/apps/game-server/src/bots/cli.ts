@@ -114,6 +114,7 @@ async function runBot(url: string, secret: KeyRing, bot: { id: string; username:
   let lastDecision = 0;
   let firing = false;
   let target = "";
+  let mining: string | null = null;
   let lastRespawn = 0;
   await new Promise<void>((resolve) => {
     let iv: NodeJS.Timeout | null = null;
@@ -127,7 +128,8 @@ async function runBot(url: string, secret: KeyRing, bot: { id: string; username:
       if (stopAt > 0 && now > stopAt) {
         if (iv) clearInterval(iv);
         iv = null;
-        void room.leave().then(() => resolve());
+        // Resolve whether the leave succeeds or fails so the bot run never hangs.
+        void room.leave().then(() => resolve(), () => resolve());
         return;
       }
       const snap = snapshot(room);
@@ -152,7 +154,10 @@ async function runBot(url: string, secret: KeyRing, bot: { id: string; username:
           firing = action.firing;
           room.send("fire", { firing, group: "PRIMARY" });
         }
-        if (action.mine !== undefined) room.send("mine", { asteroidId: action.mine });
+        if (action.mine !== undefined && action.mine !== mining) {
+          mining = action.mine;
+          room.send("mine", { asteroidId: mining });
+        }
         if (action.pickup) room.send("pickup", { lootId: action.pickup });
         if (typeof action.module === "number") room.send("module", { slot: action.module });
         if (typeof action.skill === "number") room.send("skill", { slot: action.skill });

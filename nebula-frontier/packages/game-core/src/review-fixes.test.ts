@@ -1,7 +1,8 @@
 /** Regression tests for CodeRabbit PR #2 round 1 findings (game-core). */
 import { describe, expect, it } from "vitest";
-import { DRONES_BY_ID, MAPS_BY_ID, MODULES_BY_ID, PROGRESSION, SHIPS_BY_ID, WEAPONS_BY_ID } from "@nebula/config";
+import { DRONES_BY_ID, EVENTS_BY_ID, MAPS_BY_ID, MODULES_BY_ID, PROGRESSION, SHIPS_BY_ID, WEAPONS_BY_ID } from "@nebula/config";
 import { mulberry32, type LootTableDef, type MapDef } from "@nebula/shared";
+import { nextEventWindow } from "./events.js";
 import { rollLoot } from "./loot.js";
 import { tryFire, type HeatState, type WeaponRuntime } from "./combat.js";
 import { formMatches, type QueueTicket } from "./matchmaking.js";
@@ -109,5 +110,33 @@ describe("#12 raid loot follows the raid reward scale", () => {
     expect(sum / 2000).toBeGreaterThan(1.9);
     expect(sum / 2000).toBeLessThan(2.1);
     for (let i = 0; i < 50; i++) expect(total(0.625, i + 1)).toBeLessThanOrEqual(3); // 4 × 0.625 = 2.5 → 2 or 3 rolls
+  });
+});
+
+describe("nextEventWindow rejects non-positive recurrence (same guard as activeEventWindow)", () => {
+  const ev = EVENTS_BY_ID.get("evt_void_rift")!;
+  const start = Date.parse(ev.startAt);
+  it.each([
+    ["zero period", { everyHours: 0, durationMinutes: 30 }],
+    ["negative period", { everyHours: -1, durationMinutes: 30 }],
+    ["zero duration", { everyHours: 2, durationMinutes: 0 }],
+    ["negative duration", { everyHours: 2, durationMinutes: -5 }],
+  ])("%s → null (before start and between windows)", (_label, recurrence) => {
+    const def = { ...ev, recurrence };
+    expect(nextEventWindow(def, start - 60_000)).toBeNull();
+    expect(nextEventWindow(def, start + 2 * 3_600_000 + 1)).toBeNull();
+  });
+  it("valid recurrence still yields the next window", () => {
+    expect(nextEventWindow(ev, start - 60_000)?.start).toBe(start);
+  });
+});
+
+describe("tuning: merged minResist must be < maxResist", () => {
+  it("rejects overrides that collapse or invert the resist range (after defaults)", () => {
+    expect(parseTuningOverride({ minResist: 0, maxResist: 0 }).ok).toBe(false);
+    expect(mergeTuning({ minResist: 0, maxResist: 0 })).toEqual(DEFAULT_TUNING);
+    expect(parseTuningOverride({ minResist: -0.5 }).ok).toBe(true);
+    expect(parseTuningOverride({ maxResist: 0 }).ok).toBe(true); // default minResist < 0
+    expect(parseTuningOverride({ minResist: -0.2, maxResist: 0.3 }).ok).toBe(true);
   });
 });

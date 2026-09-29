@@ -18,17 +18,33 @@ export const REDACT_PATHS: string[] = [
   "INTERNAL_SERVICE_TOKEN", "*.INTERNAL_SERVICE_TOKEN",
 ];
 
-/** Patterns scrubbed from free-form strings (messages / errors). */
-const SECRET_PATTERNS: RegExp[] = [
-  /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, // JWT
-  /\b(nf_access|nf_refresh)=[^;\s]+/g, // auth cookies
-  /\[(?:\s*\d{1,3}\s*,){31,}\s*\d{1,3}\s*\]/g, // byte-array secret keys (solana-keygen format)
-  /(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi,
+/** Base64 token that decodes to `user:pass` (so prose like "Basic setup" is not redacted). */
+function isBasicCredential(token: string): boolean {
+  return Buffer.from(token, "base64").toString("utf8").includes(":");
+}
+
+/**
+ * Patterns scrubbed from free-form strings (messages / errors). With `keepPrefix` the first capture
+ * group (e.g. the `Bearer ` / `Basic ` prefix or a URL scheme) is kept in front of `[REDACTED]`;
+ * `suffix` is appended after it (the `@` before a URL host); `when` (given the secret part) can veto a match.
+ */
+const SECRET_PATTERNS: { re: RegExp; keepPrefix?: boolean; suffix?: string; when?: (secret: string) => boolean }[] = [
+  { re: /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g }, // JWT
+  { re: /\b(nf_access|nf_refresh)=[^;\s]+/g }, // auth cookies
+  { re: /\[(?:\s*\d{1,3}\s*,){31,}\s*\d{1,3}\s*\]/g }, // byte-array secret keys (solana-keygen format)
+  { re: /(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, keepPrefix: true },
+  { re: /(Basic\s+)([A-Za-z0-9+/]+=*)/gi, keepPrefix: true, when: isBasicCredential }, // HTTP Basic credentials
+  { re: /\b([a-z][a-z0-9+.-]*:\/\/)([^\s/?#@]+)@/gi, keepPrefix: true, suffix: "@" }, // URL userinfo (scheme://user:pass@host)
 ];
 
 export function scrubSecrets(s: string): string {
   let out = s;
-  for (const p of SECRET_PATTERNS) out = out.replace(p, (m, g1: unknown) => (typeof g1 === "string" && /Bearer/i.test(g1) ? `${g1}[REDACTED]` : "[REDACTED]"));
+  for (const p of SECRET_PATTERNS) {
+    out = out.replace(p.re, (m: string, g1: unknown, g2: unknown) => {
+      if (p.when && typeof g2 === "string" && !p.when(g2)) return m;
+      return `${p.keepPrefix && typeof g1 === "string" ? g1 : ""}[REDACTED]${p.suffix ?? ""}`;
+    });
+  }
   return out;
 }
 
@@ -59,7 +75,9 @@ export function createLogger(opts: CreateLoggerOptions): Logger {
     },
     serializers: {
       err: (e: unknown) => {
-        const s = pino.stdSerializers.err(e as Error);
+        // Non-Error values: strings are scrubbed, anything else passes through unchanged.
+        if (!(e instanceof Error)) return typeof e === "string" ? scrubSecrets(e) : e;
+        const s = pino.stdSerializers.err(e);
         return { ...s, message: scrubSecrets(String(s.message ?? "")), stack: s.stack ? scrubSecrets(s.stack) : undefined };
       },
     },

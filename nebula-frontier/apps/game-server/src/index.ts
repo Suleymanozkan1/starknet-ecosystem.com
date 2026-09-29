@@ -26,7 +26,7 @@ async function main(): Promise<void> {
     if (svc.redis) await svc.redis.quit().catch(() => undefined);
   });
   await server.listen(config.port);
-  svc.events.start(matchMaker.presence);
+  svc.events.start(matchMaker.presence, undefined, (err) => svc.log.error({ err }, "event trigger subscription failed"));
   svc.clanMissions.start(config.flushIntervalMs);
   svc.log.info({ port: config.port, region: config.region, tickRate: config.tickRate, redis: !!config.redisUrl }, "game server listening");
 }

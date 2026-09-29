@@ -44,9 +44,20 @@ export class EventEngine extends EventEmitter {
     this.setMaxListeners(0);
   }
 
-  start(presence: PresenceLike | null, intervalMs = 5000): void {
+  /**
+   * Begin evaluating event windows. A failed trigger-topic subscription is never an unhandled
+   * rejection: it is emitted as `subscribeError` and passed to `onError` (the caller logs it).
+   */
+  start(presence: PresenceLike | null, intervalMs = 5000, onError?: (err: unknown) => void): void {
     this.presence = presence;
-    if (presence) void presence.subscribe(EVENT_TRIGGER_TOPIC, this.onTrigger);
+    if (presence) {
+      Promise.resolve()
+        .then(() => presence.subscribe(EVENT_TRIGGER_TOPIC, this.onTrigger))
+        .catch((err: unknown) => {
+          this.emit("subscribeError", err);
+          onError?.(err);
+        });
+    }
     this.evaluate(Date.now());
     this.timer = setInterval(() => this.evaluate(Date.now()), intervalMs);
     this.timer.unref();

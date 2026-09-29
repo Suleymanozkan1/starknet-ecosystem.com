@@ -28,6 +28,8 @@ export function nextEventWindow(def: EventDef, now: number): EventWindow | null 
   const start = Date.parse(def.startAt);
   const end = Date.parse(def.endAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || now >= end) return null;
+  // Same guard as activeEventWindow: a non-positive period or duration never yields a window.
+  if (def.recurrence && (def.recurrence.everyHours * 3_600_000 <= 0 || def.recurrence.durationMinutes * 60_000 <= 0)) return null;
   if (now < start) {
     const dur = def.recurrence ? def.recurrence.durationMinutes * 60_000 : end - start;
     return { start, end: Math.min(start + dur, end) };

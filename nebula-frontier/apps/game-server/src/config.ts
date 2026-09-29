@@ -26,7 +26,12 @@ export interface GameServerConfig {
   publicUrl: string;
   flushIntervalMs: number;
   nodeEnv: string;
+  /** Bearer token for GET /metrics (`METRICS_TOKEN`); required (>= MIN_METRICS_TOKEN_LENGTH chars) in production. */
+  metricsToken: string | null;
 }
+
+/** Minimum length of METRICS_TOKEN in production (GET /metrics must never be public there); mirrors apps/api. */
+export const MIN_METRICS_TOKEN_LENGTH = 32;
 
 const LOOPBACK_HOSTS = new Set(["localhost", "[::1]", "::1"]);
 function isLoopbackHost(hostname: string): boolean {
@@ -60,6 +65,10 @@ export function loadConfig(): GameServerConfig {
   // Ticket single-use (jti) must be shared by every game-server process; the in-memory fallback
   // is per-process and would allow cross-process ticket replay. Redis is mandatory in production.
   if (nodeEnv === "production" && !process.env.REDIS_URL) throw new Error("REDIS_URL is required in production (ticket replay protection, presence, matchmaking)");
+  const metricsToken = process.env.METRICS_TOKEN || null;
+  if (nodeEnv === "production" && (!metricsToken || metricsToken.trim().length < MIN_METRICS_TOKEN_LENGTH)) {
+    throw new Error(`METRICS_TOKEN must be at least ${MIN_METRICS_TOKEN_LENGTH} characters in production (GET /metrics would be public)`);
+  }
   const region = (process.env.REGION ?? "EU").toUpperCase();
   const internalServiceToken = process.env.INTERNAL_SERVICE_TOKEN || null;
   const apiInternalUrl = resolveApiInternalUrl(process.env.API_INTERNAL_URL, internalServiceToken);
@@ -77,5 +86,6 @@ export function loadConfig(): GameServerConfig {
     publicUrl: process.env.PUBLIC_GAME_SERVER_URL ?? `ws://localhost:${num("GAME_PORT", 2567)}`,
     flushIntervalMs: Math.max(1000, num("GAME_FLUSH_INTERVAL_MS", 5000)),
     nodeEnv,
+    metricsToken,
   };
 }

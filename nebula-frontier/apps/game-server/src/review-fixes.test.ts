@@ -1,8 +1,12 @@
 /** Unit regression tests for CodeRabbit PR #2 round 1 findings (game-server, no DB). */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./bots/behaviors.js";
 import { deadlinePassed, parseArgs } from "./bots/cli.js";
-import { loadConfig, resolveApiInternalUrl } from "./config.js";
+import { loadConfig, MIN_METRICS_TOKEN_LENGTH, resolveApiInternalUrl, type GameServerConfig } from "./config.js";
+import { createRoutes, metricsAccess } from "./http.js";
+import { PingGuard, GALAXY_PING_LIMITS } from "./rooms/GalaxyRoom.js";
+import type { GameServices } from "./services/context.js";
+import { EventEngine, type PresenceLike } from "./services/events.js";
 import { sanitizeChat } from "./protocol/messages.js";
 import { applyOverrides, DEFAULT_RULES } from "./services/rules.js";
 
@@ -91,5 +95,99 @@ describe("#15 game.rules / game.tuning overrides are validated", () => {
     expect(bad.rules).toEqual(DEFAULT_RULES);
     expect(bad.tuning.armorK).toBe(250);
     expect(bad.warnings).toHaveLength(2);
+  });
+});
+
+describe("/metrics requires METRICS_TOKEN (public game port)", () => {
+  const token = "m".repeat(MIN_METRICS_TOKEN_LENGTH);
+  it("decides access: bearer token when configured, disabled in production without one", () => {
+    expect(metricsAccess(`Bearer ${token}`, token, "production")).toBe("allow");
+    expect(metricsAccess(`Bearer ${token}`, token, "development")).toBe("allow");
+    expect(metricsAccess(null, token, "development")).toBe("unauthorized");
+    expect(metricsAccess("Bearer wrong", token, "production")).toBe("unauthorized");
+    expect(metricsAccess(token, token, "production")).toBe("unauthorized"); // missing Bearer scheme
+    expect(metricsAccess(null, null, "production")).toBe("disabled");
+    expect(metricsAccess(`Bearer ${token}`, null, "production")).toBe("disabled");
+    expect(metricsAccess(null, null, "development")).toBe("allow");
+  });
+
+  it("endpoint returns 401 / 404 / 200 accordingly", async () => {
+    const svcFor = (cfg: Partial<GameServerConfig>) => () => ({ config: cfg as GameServerConfig }) as GameServices;
+    const call = async (cfg: Partial<GameServerConfig>, auth?: string) => {
+      const { metrics } = createRoutes(svcFor(cfg)).endpoints;
+      const res: unknown = await metrics({ headers: auth ? { authorization: auth } : {}, asResponse: true });
+      return (res as Response).status;
+    };
+    expect(await call({ metricsToken: token, nodeEnv: "production" })).toBe(401);
+    expect(await call({ metricsToken: token, nodeEnv: "production" }, "Bearer nope")).toBe(401);
+    expect(await call({ metricsToken: token, nodeEnv: "production" }, `Bearer ${token}`)).toBe(200);
+    expect(await call({ metricsToken: null, nodeEnv: "production" }, `Bearer ${token}`)).toBe(404);
+  });
+
+  describe("config validation", () => {
+    const keys = ["NODE_ENV", "REDIS_URL", "METRICS_TOKEN", "GAME_TICKET_SECRET"] as const;
+    const saved = new Map(keys.map((k) => [k, process.env[k]] as const));
+    afterEach(() => {
+      for (const [k, v] of saved) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    });
+    it("production requires a METRICS_TOKEN of at least 32 characters; optional in development", () => {
+      process.env.GAME_TICKET_SECRET ||= "x".repeat(40);
+      process.env.REDIS_URL = "redis://localhost:6379";
+      process.env.NODE_ENV = "production";
+      delete process.env.METRICS_TOKEN;
+      expect(() => loadConfig()).toThrow(/METRICS_TOKEN/);
+      process.env.METRICS_TOKEN = "short";
+      expect(() => loadConfig()).toThrow(/METRICS_TOKEN/);
+      process.env.METRICS_TOKEN = ` ${" ".repeat(MIN_METRICS_TOKEN_LENGTH)} `;
+      expect(() => loadConfig()).toThrow(/METRICS_TOKEN/);
+      process.env.METRICS_TOKEN = token;
+      expect(loadConfig().metricsToken).toBe(token);
+      process.env.NODE_ENV = "development";
+      delete process.env.METRICS_TOKEN;
+      expect(loadConfig().metricsToken).toBeNull();
+    });
+  });
+});
+
+describe("galaxy ping rate limit", () => {
+  it("allows the burst, drops excess, and disconnects after repeated spam", () => {
+    const g = new PingGuard(0);
+    for (let i = 0; i < GALAXY_PING_LIMITS.burst; i++) expect(g.check(0)).toBe("allow");
+    expect(g.check(0)).toBe("drop");
+    const verdicts: string[] = [];
+    // One drop already happened above; the (maxDrops × maxStrikes)-th drop triggers the disconnect.
+    for (let i = 1; i < GALAXY_PING_LIMITS.maxDropsPerWindow * GALAXY_PING_LIMITS.maxStrikes; i++) verdicts.push(g.check(0));
+    expect(verdicts.at(-1)).toBe("disconnect");
+    expect(verdicts.slice(0, -1).every((v) => v === "drop")).toBe(true);
+  });
+  it("refills over time for well-behaved clients", () => {
+    const g = new PingGuard(0);
+    for (let i = 0; i < 100; i++) expect(g.check(i * 1000)).toBe("allow");
+  });
+});
+
+describe("event engine surfaces trigger-subscription failures", () => {
+  it("emits subscribeError and calls onError instead of an unhandled rejection", async () => {
+    const failure = new Error("presence down");
+    const presence: PresenceLike = { subscribe: () => Promise.reject(failure), unsubscribe: () => undefined, publish: () => undefined };
+    const engine = new EventEngine();
+    const onError = vi.fn();
+    const emitted = vi.fn();
+    engine.on("subscribeError", emitted);
+    engine.start(presence, 60_000, onError);
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
+    expect(emitted).toHaveBeenCalledWith(failure);
+    engine.stop();
+  });
+  it("also catches a synchronous subscribe throw", async () => {
+    const presence: PresenceLike = { subscribe: () => { throw new Error("sync"); }, unsubscribe: () => undefined, publish: () => undefined };
+    const engine = new EventEngine();
+    const onError = vi.fn();
+    engine.start(presence, 60_000, onError);
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    engine.stop();
   });
 });
