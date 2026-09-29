@@ -4,6 +4,7 @@
  */
 import type { FastifyInstance } from "fastify";
 import { ADMIN_PERMISSIONS } from "@nebula/authentication";
+import { ADMIN_LIMITS } from "@nebula/config";
 import { AdminRole } from "@nebula/shared";
 import {
   adminAnalyticsQuerySchema, adminAuditQuerySchema, adminBanSchema, adminCatalogSchema, adminEventSchema, adminFeatureFlagSchema, adminMuteSchema,
@@ -22,16 +23,18 @@ import { revokeAllSessions } from "../lib/sessions.js";
 
 const { SUPER_ADMIN } = AdminRole;
 const P = ADMIN_PERMISSIONS;
+const MAIL_LIMITS = ADMIN_LIMITS.mail;
 const catalogKinds = z.enum(["ship", "weapon", "module", "drone", "item"]);
 const mailSchema = z.object({
   toUserId: idSchema,
   subject: z.string().trim().min(1).max(120),
   body: z.string().trim().max(4000),
+  // Caps are data (@nebula/config data/admin.json), not code.
   attachments: z.object({
-    credits: z.number().int().min(0).max(10_000_000).optional(),
-    gems: z.number().int().min(0).max(100_000).optional(),
-    resources: z.record(z.string(), z.number().int().min(0).max(1_000_000)).optional(),
-    items: z.array(z.object({ itemId: defIdSchema, quantity: z.number().int().min(1).max(10_000) })).max(20).optional(),
+    credits: z.number().int().min(0).max(MAIL_LIMITS.maxCredits).optional(),
+    gems: z.number().int().min(0).max(MAIL_LIMITS.maxGems).optional(),
+    resources: z.record(z.string(), z.number().int().min(0).max(MAIL_LIMITS.maxResourceQuantity)).optional(),
+    items: z.array(z.object({ itemId: defIdSchema, quantity: z.number().int().min(1).max(MAIL_LIMITS.maxItemQuantity) })).max(MAIL_LIMITS.maxItemStacks).optional(),
   }).nullable().default(null),
   reason: z.string().trim().min(3).max(500),
 });

@@ -47,6 +47,17 @@ const listQuery = z.object({
 
 const jsonBig = (v: unknown): unknown => JSON.parse(JSON.stringify(v, (_k, x: unknown) => (typeof x === "bigint" ? x.toString() : x)));
 
+/**
+ * Loggable view of an RPC failure: error name/code plus the message with every URL (which may carry
+ * API keys in the path/query or basic-auth credentials) replaced by a placeholder.
+ */
+export function sanitizeRpcError(err: unknown): { name: string; code?: string; message: string } {
+  const e = err instanceof Error ? err : new Error(String(err));
+  const code = (e as { code?: unknown }).code;
+  const message = e.message.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s"'<>]+/gi, "<redacted-url>").slice(0, 300);
+  return { name: e.name, ...(typeof code === "string" || typeof code === "number" ? { code: String(code) } : {}), message };
+}
+
 const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) => {
   const db = app.db;
   let rpc = opts.rpc;
@@ -202,7 +213,7 @@ const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) 
   });
 
   // ---------------------------------------------------------------- treasury reconciliation
-  app.get("/api/admin/treasury", { preHandler: guard, config: { rateLimit: app.rateLimits.admin } }, async () => {
+  app.get("/api/admin/treasury", { preHandler: guard, config: { rateLimit: app.rateLimits.admin } }, async (req) => {
     const cfg = await loadEconomyConfig(db);
     const [treasury, budget, integrity] = await Promise.all([getTreasuryState(db, cfg), getRewardBudgetState(db, cfg), verifyLedgerIntegrity(db)]);
     // Same split as bootstrapTreasury: in native mode one lamport wallet backs both ledger assets; in
@@ -215,7 +226,9 @@ const plugin: FastifyPluginAsync<AdminEconomyRoutesOptions> = async (app, opts) 
       const tokens = rewardMint ? await getTokenBalance(getRpc(), address, rewardMint, "confirmed") : null;
       onChain = { address, lamports: bal.value.toString(), rewardTokenBalance: tokens?.toString() ?? null, explorerUrl: explorerUrl(address, getSolanaNetwork(), "address") };
     } catch (err) {
-      onChain.error = (err as Error).message;
+      // RPC errors can echo the endpoint URL (API keys, basic-auth credentials): never return them.
+      onChain.error = "RPC_UNAVAILABLE";
+      req.log.warn({ err: sanitizeRpcError(err) }, "treasury on-chain balance unavailable");
     }
     const accounts = await db.balanceAccount.findMany({ where: { userId: null, asset: { in: [Currency.NEBX, Currency.SOL] } } });
     const ext = (asset: string) => accounts.find((a) => a.type === LedgerAccountType.EXTERNAL_CHAIN && a.asset === asset)?.balance ?? 0n;

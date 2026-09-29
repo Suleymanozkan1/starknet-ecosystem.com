@@ -13,6 +13,7 @@ import {
   COOKIE_ACCESS, COOKIE_CSRF, CSRF_HEADER, hasAnyRole, safeEqual, verifyAccessToken, type AccessClaims,
 } from "@nebula/authentication";
 import { AdminRole, RiskLevel } from "@nebula/shared";
+import { adminFeatureFlagSchema, type FeatureFlagRules } from "@nebula/validation";
 import type { Db } from "@nebula/database";
 import type { Env } from "../env.js";
 import { ApiHttpError, forbidden, unauthorized, zodDetails } from "../errors.js";
@@ -48,15 +49,15 @@ export function clientKey(req: FastifyRequest): string {
   return req.authClaims ? `u:${req.authClaims.sub}` : `ip:${req.ip}`;
 }
 
-interface FlagRules {
-  allowCountries?: string[];
-  denyCountries?: string[];
-  allowRegions?: string[];
-  denyRegions?: string[];
-  minAge?: number;
-  requireKyc?: "NONE" | "BASIC" | "FULL";
-  denyRestrictions?: string[];
-  maxRiskLevel?: string;
+type FlagRules = FeatureFlagRules;
+
+/**
+ * Validate stored feature-flag rules with the same schema the admin endpoint writes them with.
+ * Returns null for malformed rules (e.g. edited directly in the DB) so the caller fails closed.
+ */
+export function parseFlagRules(raw: unknown): FlagRules | null {
+  const r = adminFeatureFlagSchema.shape.rules.safeParse(raw ?? {});
+  return r.success ? r.data : null;
 }
 const KYC_ORDER: Record<string, number> = { NONE: 0, BASIC: 1, FULL: 2 };
 
@@ -242,7 +243,10 @@ export async function registerCore(app: FastifyInstance, opts: CoreOptions): Pro
     const hit = flagCache.get(key);
     if (hit && Date.now() - hit.at < 10_000) return hit;
     const row = await db.featureFlag.findUnique({ where: { key } });
-    const v = { at: Date.now(), enabled: row?.enabled ?? false, rules: (row?.rules ?? {}) as FlagRules };
+    const rules = parseFlagRules(row?.rules);
+    // Malformed rules must never widen access: the flag is treated as disabled until fixed.
+    if (row && !rules) app.log.warn({ flag: key }, "feature flag has malformed rules; treating it as disabled");
+    const v = { at: Date.now(), enabled: (row?.enabled ?? false) && rules !== null, rules: rules ?? {} };
     flagCache.set(key, v);
     return v;
   }

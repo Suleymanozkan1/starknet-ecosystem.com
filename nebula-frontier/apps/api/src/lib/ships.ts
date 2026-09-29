@@ -16,16 +16,18 @@ export interface ComputedShipStats {
 export async function computeShipStats(db: DbOrTx, shipInstanceId: string, catalog: Catalog, loadoutId?: string | null): Promise<ComputedShipStats> {
   const inst = await db.shipInstance.findUnique({
     where: { id: shipInstanceId },
-    select: { shipId: true, upgradeLevel: true, activeLoadoutId: true, user: { select: { playerFaction: { select: { factionId: true } } } } },
+    select: { userId: true, shipId: true, upgradeLevel: true, activeLoadoutId: true, user: { select: { playerFaction: { select: { factionId: true } } } } },
   });
   const ship = inst ? catalog.ships.get(inst.shipId) : undefined;
   if (!inst || !ship) return { stats: {}, gearScore: 0 };
   const lid = loadoutId ?? inst.activeLoadoutId;
-  const loadout = lid ? await db.shipLoadout.findUnique({ where: { id: lid }, select: { config: true } }) : null;
+  const loadout = lid ? await db.shipLoadout.findFirst({ where: { id: lid, shipInstanceId }, select: { config: true } }) : null;
   const cfg = parseLoadout(loadout?.config);
   const ids = [...cfg.weapons, ...cfg.missiles, ...cfg.generators, ...cfg.modules, ...cfg.drones].filter((x): x is string => Boolean(x));
+  // Only items still owned by the ship's owner and not locked (listed / escrowed) contribute stats:
+  // a stale loadout reference to a sold or escrowed item must not keep boosting the ship.
   const items = ids.length
-    ? await db.inventoryItem.findMany({ where: { id: { in: ids } }, select: { id: true, itemId: true, upgradeLevel: true, affixes: true } })
+    ? await db.inventoryItem.findMany({ where: { id: { in: ids }, userId: inst.userId, lockedBy: null }, select: { id: true, itemId: true, upgradeLevel: true, affixes: true } })
     : [];
   const byId = new Map(items.map((i) => [i.id, i]));
 

@@ -184,7 +184,8 @@ export function http2PostOnce(
     req.on("data", (c: string) => {
       data += c;
     });
-    req.on("end", () => finish(null, { status, body: data }));
+    // A cancelled/reset stream can still emit 'end' without any response headers: that is a failure.
+    req.on("end", () => finish(status ? null : new Error(`HTTP/2 stream ended without a response (code ${req.rstCode ?? "unknown"})`), { status, body: data }));
     req.on("error", (err: Error) => finish(err));
     // Stream closed without 'end' (e.g. NGHTTP2_CANCEL / RST_STREAM): fail instead of hanging.
     req.on("close", () => finish(new Error(`HTTP/2 stream closed (code ${req.rstCode ?? "unknown"})`)));

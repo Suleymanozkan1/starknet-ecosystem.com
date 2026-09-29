@@ -38,8 +38,9 @@ export default async function craftingRoutes(app: FastifyInstance): Promise<void
     const userId = req.user.id;
     const rules = await loadRules(db);
     return withIdempotency(app.redis, "craft", userId, body.idempotencyKey, async () => {
-      const equipped = await equippedMap(db, userId);
       const job = await withSerializableTx(db, async (tx) => {
+        // Read inside the serializable tx so a concurrent equip conflicts instead of racing the consume.
+        const equipped = await equippedMap(tx, userId);
         const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { level: true } });
         if (user.level < bp.requiredLevel) throw forbidden(`Requires level ${bp.requiredLevel}`, "LEVEL_TOO_LOW");
         const running = await tx.craftJob.count({ where: { userId, status: "IN_PROGRESS" } });

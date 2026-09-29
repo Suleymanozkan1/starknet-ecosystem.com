@@ -6,7 +6,8 @@ import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID } from "@nebula/config";
 import { newlyUnlockedAchievements } from "@nebula/game-core";
 import { defIdSchema } from "@nebula/validation";
 import { conflict, forbidden, notFound } from "../errors.js";
-import { grantBundle, settleCrypto } from "../lib/grants.js";
+import { grantBundle } from "../lib/grants.js";
+import { enqueueRewardSettlement, settleRewardSettlement } from "../lib/rewardOutbox.js";
 
 export default async function progressRoutes(app: FastifyInstance): Promise<void> {
   const { db } = app;
@@ -68,9 +69,14 @@ export default async function progressRoutes(app: FastifyInstance): Promise<void
         if (!row) throw forbidden("Achievement not unlocked", "NOT_UNLOCKED");
         throw conflict("ALREADY_CLAIMED", "Achievement reward already claimed");
       }
-      return grantBundle(tx, userId, def.rewards, `ach:${userId}:${achievementId}`, `achievement:${achievementId}`);
+      const g = await grantBundle(tx, userId, def.rewards, `ach:${userId}:${achievementId}`, `achievement:${achievementId}`);
+      // Outbox row in the claim tx: the crypto reward survives a crash / engine failure after commit.
+      const settlementId = await enqueueRewardSettlement(tx, userId, g, `ach:${achievementId}`, `Achievement ${def.name}`);
+      return { ...g, settlementId };
     });
-    await settleCrypto(db, userId, grant, `ach:${achievementId}`, `Achievement ${def.name}`);
+    if (grant.settlementId) {
+      await settleRewardSettlement(db, grant.settlementId, { log: req.log }).catch((err: unknown) => req.log.warn({ err }, "reward settlement deferred to outbox job"));
+    }
     app.analytics.track("REWARD_CLAIM", userId, { source: "ACHIEVEMENT", achievementId });
     return { ok: true, items: grant.items };
   });

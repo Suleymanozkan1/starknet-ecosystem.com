@@ -8,7 +8,8 @@ import { questPeriodKey } from "@nebula/game-core";
 import type { QuestDef, QuestDto } from "@nebula/shared";
 import { questAcceptSchema, questClaimSchema } from "@nebula/validation";
 import { badRequest, conflict, forbidden, notFound } from "../errors.js";
-import { grantBundle, settleCrypto } from "../lib/grants.js";
+import { grantBundle } from "../lib/grants.js";
+import { enqueueRewardSettlement, settleRewardSettlement } from "../lib/rewardOutbox.js";
 import { loadRules } from "../lib/rules.js";
 
 const REPEATING = new Set(["DAILY", "WEEKLY", "MONTHLY"]);
@@ -31,12 +32,14 @@ export default async function questRoutes(app: FastifyInstance): Promise<void> {
   const auth = { preHandler: app.authenticate };
 
   async function context(userId: string) {
-    const [user, rows, activeDefs] = await Promise.all([
+    const [user, rows, inactiveDefs] = await Promise.all([
       db.user.findUniqueOrThrow({ where: { id: userId }, select: { level: true, playerFaction: { select: { factionId: true } } } }),
       db.userQuest.findMany({ where: { userId } }),
-      db.quest.findMany({ where: { active: true }, select: { id: true } }),
+      // Exclude quests explicitly disabled in the DB (config quests without a DB row stay enabled).
+      // Keyed on inactive rows so that disabling every quest really disables them all.
+      db.quest.findMany({ where: { active: false }, select: { id: true } }),
     ]);
-    return { user, rows, activeIds: new Set(activeDefs.map((d) => d.id)) };
+    return { user, rows, inactiveIds: new Set(inactiveDefs.map((d) => d.id)) };
   }
 
   function toDto(q: QuestDef, row: { id: string; status: string; progress: number[] } | null, level: number): QuestDto {
@@ -55,12 +58,12 @@ export default async function questRoutes(app: FastifyInstance): Promise<void> {
   }
 
   app.get("/api/quests", auth, async (req) => {
-    const { user, rows, activeIds } = await context(req.user.id);
+    const { user, rows, inactiveIds } = await context(req.user.id);
     const claimedOnce = new Set(rows.filter((r) => r.status === "CLAIMED").map((r) => r.questId));
     const active: QuestDto[] = [];
     const available: QuestDto[] = [];
     for (const q of QUESTS) {
-      if (activeIds.size && !activeIds.has(q.id)) continue;
+      if (inactiveIds.has(q.id)) continue;
       const period = periodFor(q);
       const row = rows.find((r) => r.questId === q.id && r.periodKey === period) ?? null;
       if (row) {
@@ -80,8 +83,8 @@ export default async function questRoutes(app: FastifyInstance): Promise<void> {
     const { questId } = app.parse(questAcceptSchema, req.body);
     const q = QUESTS_BY_ID.get(questId);
     if (!q) throw notFound("Quest");
-    const { user, rows, activeIds } = await context(req.user.id);
-    if (activeIds.size && !activeIds.has(q.id)) throw badRequest("QUEST_DISABLED", "Quest is not available");
+    const { user, rows, inactiveIds } = await context(req.user.id);
+    if (inactiveIds.has(q.id)) throw badRequest("QUEST_DISABLED", "Quest is not available");
     if (q.requiredLevel > user.level) throw forbidden(`Requires level ${q.requiredLevel}`, "LEVEL_TOO_LOW");
     if (q.faction && q.faction !== user.playerFaction?.factionId) throw forbidden("Quest belongs to another faction", "WRONG_FACTION");
     const claimed = new Set(rows.filter((r) => r.status === "CLAIMED").map((r) => r.questId));
@@ -118,9 +121,13 @@ export default async function questRoutes(app: FastifyInstance): Promise<void> {
       });
       if (upd.count !== 1) throw conflict("ALREADY_CLAIMED", "Quest rewards already claimed");
       const grant = await grantBundle(tx, userId, q.rewards, `quest:${row.id}`, `quest:${q.id}`);
-      return { grant, questId: q.id, rowId: row.id };
+      // Outbox row in the claim tx: the crypto reward survives a crash / engine failure after commit.
+      const settlementId = await enqueueRewardSettlement(tx, userId, grant, `quest:${row.id}`, `Quest ${q.id}`);
+      return { grant, questId: q.id, rowId: row.id, settlementId };
     });
-    await settleCrypto(db, userId, out.grant, `quest:${out.rowId}`, `Quest ${out.questId}`);
+    if (out.settlementId) {
+      await settleRewardSettlement(db, out.settlementId, { log: req.log }).catch((err: unknown) => req.log.warn({ err }, "reward settlement deferred to outbox job"));
+    }
     app.analytics.track("REWARD_CLAIM", userId, { source: "QUEST", questId: out.questId, userQuestId: out.rowId });
     return { ok: true, questId: out.questId, levelBefore: out.grant.levelBefore, levelAfter: out.grant.levelAfter, items: out.grant.items };
   });

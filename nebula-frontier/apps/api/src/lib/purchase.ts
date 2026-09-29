@@ -150,7 +150,12 @@ export async function purchaseProduct(db: Db, userId: string, input: PurchaseInp
     // Concurrent duplicate with the same idempotency key: the other transaction won.
     if ((err as { code?: string }).code === "P2002") {
       const again = await existingPurchase(db, userId, input.idempotencyKey);
-      if (again && again.productId === input.productId) return { purchaseId: again.id, balances: await balancesDto(db, userId), duplicate: true };
+      if (again) {
+        if (again.productId !== input.productId || again.quantity !== input.quantity) {
+          throw conflict("IDEMPOTENCY_KEY_REUSED", "Idempotency key was already used for a different purchase");
+        }
+        return { purchaseId: again.id, balances: await balancesDto(db, userId), duplicate: true };
+      }
     }
     throw err;
   }

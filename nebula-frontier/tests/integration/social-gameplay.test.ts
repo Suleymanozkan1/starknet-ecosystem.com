@@ -22,17 +22,25 @@ describe("reputation in profile", () => {
 });
 
 describe("pets", () => {
-  it("choosing a faction grants the starter pet; owned pet items unlock companions; activation is exclusive", async () => {
+  it("choosing a faction grants the starter pet; owned pet items unlock companions explicitly; activation is exclusive", async () => {
     const s = await registerUser(ctx.app);
     expect((await s.req("POST", "/api/me/faction", { factionId: "aurora" })).statusCode).toBe(200);
     const first = (await s.req("GET", "/api/pets")).json() as { pets: { id: string; petId: string; active: boolean; level: number }[] };
     expect(first.pets).toHaveLength(1);
     expect(first.pets[0]).toMatchObject({ petId: "pet_glimmer", active: true, level: 1 });
-    await giveItem(ctx.db, s.userId, "item_pet_ferrox");
-    const second = (await s.req("GET", "/api/pets")).json() as { pets: { id: string; petId: string; active: boolean }[] };
+    const petItem = await giveItem(ctx.db, s.userId, "item_pet_ferrox");
+    // GET is read-only: owning the item does not unlock anything by itself.
+    expect(((await s.req("GET", "/api/pets")).json() as { pets: unknown[] }).pets).toHaveLength(1);
+    const unlock = await s.req("POST", "/api/pets/unlock");
+    expect(unlock.statusCode).toBe(200);
+    const second = unlock.json() as { unlocked: string[]; pets: { id: string; petId: string; active: boolean }[] };
+    expect(second.unlocked).toEqual(["pet_ferrox"]);
     expect(second.pets.map((p) => p.petId).sort()).toEqual(["pet_ferrox", "pet_glimmer"]);
     expect(second.pets.find((p) => p.petId === "pet_ferrox")!.active).toBe(false);
-    // Idempotent sync.
+    // The unlocking item is bound to the account (cannot be traded to unlock on another account).
+    expect((await ctx.db.inventoryItem.findUniqueOrThrow({ where: { id: petItem } })).boundAt).not.toBeNull();
+    // Idempotent unlock.
+    expect(((await s.req("POST", "/api/pets/unlock")).json() as { unlocked: string[] }).unlocked).toEqual([]);
     expect(((await s.req("GET", "/api/pets")).json() as { pets: unknown[] }).pets).toHaveLength(2);
     const ferrox = second.pets.find((p) => p.petId === "pet_ferrox")!;
     const act = (await s.req("POST", `/api/pets/${ferrox.id}/activate`)).json() as { pets: { petId: string; active: boolean }[] };
