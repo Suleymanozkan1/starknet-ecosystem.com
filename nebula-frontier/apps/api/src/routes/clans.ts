@@ -194,22 +194,31 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  async function treasuryMove(tx: Tx, clanId: string, userId: string, amount: bigint, dir: "in" | "out", key: string) {
+  /**
+   * Moves credits between a member wallet and the clan treasury. The ledger posting runs first and
+   * the `bankCredits` cache changes only for a non-duplicate posting, so a concurrent retry with the
+   * same idempotency key can never move the treasury twice. Returns true for a duplicate.
+   */
+  async function treasuryMove(tx: Tx, clanId: string, userId: string, amount: bigint, dir: "in" | "out", key: string): Promise<boolean> {
     if (dir === "in") {
-      await post(tx, {
+      const r = await post(tx, {
         from: userWallet(userId, Currency.CREDITS), to: system(LedgerAccountType.ESCROW, Currency.CREDITS), amount, type: LedgerTxType.ESCROW,
         reference: clanId, idempotencyKey: key, userId, metadata: { kind: "CLAN_TREASURY_DEPOSIT", clanId },
       });
+      if (r.duplicate) return true;
       await tx.clan.update({ where: { id: clanId }, data: { bankCredits: { increment: amount } } });
       await tx.clanMember.update({ where: { userId }, data: { contribution: { increment: amount } } });
-    } else {
-      const dec = await tx.clan.updateMany({ where: { id: clanId, bankCredits: { gte: amount } }, data: { bankCredits: { decrement: amount } } });
-      if (dec.count !== 1) throw badRequest("INSUFFICIENT_TREASURY", "Not enough credits in the clan treasury");
-      await post(tx, {
-        from: system(LedgerAccountType.ESCROW, Currency.CREDITS), to: userWallet(userId, Currency.CREDITS), amount, type: LedgerTxType.ESCROW,
-        reference: clanId, idempotencyKey: key, userId, metadata: { kind: "CLAN_TREASURY_WITHDRAW", clanId },
-      });
+      return false;
     }
+    const r = await post(tx, {
+      from: system(LedgerAccountType.ESCROW, Currency.CREDITS), to: userWallet(userId, Currency.CREDITS), amount, type: LedgerTxType.ESCROW,
+      reference: clanId, idempotencyKey: key, userId, metadata: { kind: "CLAN_TREASURY_WITHDRAW", clanId },
+    });
+    if (r.duplicate) return true;
+    // Throwing here rolls back the posting above (same transaction).
+    const dec = await tx.clan.updateMany({ where: { id: clanId, bankCredits: { gte: amount } }, data: { bankCredits: { decrement: amount } } });
+    if (dec.count !== 1) throw badRequest("INSUFFICIENT_TREASURY", "Not enough credits in the clan treasury");
+    return false;
   }
 
   app.post<{ Params: { id: string } }>("/api/clans/:id/treasury/deposit", auth, async (req) => {
@@ -218,8 +227,8 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
     await myMembership(req.user.id, clanId);
     const key = `clan:${clanId}:dep:${req.user.id}:${body.idempotencyKey}`;
     if (await db.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } })) return { ok: true, duplicate: true };
-    await withSerializableTx(db, (tx) => treasuryMove(tx, clanId, req.user.id, body.amount, "in", key));
-    return { ok: true, duplicate: false };
+    const duplicate = await withSerializableTx(db, (tx) => treasuryMove(tx, clanId, req.user.id, body.amount, "in", key));
+    return { ok: true, duplicate };
   });
 
   app.post<{ Params: { id: string } }>(
@@ -230,16 +239,16 @@ export default async function clanRoutes(app: FastifyInstance): Promise<void> {
       const body = app.parse(clanTreasurySchema, req.body);
       const key = `clan:${clanId}:wd:${req.user.id}:${body.idempotencyKey}`;
       if (await db.balanceLedger.findUnique({ where: { idempotencyKey: key }, select: { id: true } })) return { ok: true, duplicate: true };
-      await withSerializableTx(db, async (tx) => {
+      const duplicate = await withSerializableTx(db, async (tx) => {
         // Membership and rank are checked inside the transaction that moves the funds, so a member
         // demoted or kicked concurrently cannot still withdraw.
         const me = await tx.clanMember.findUnique({ where: { userId: req.user.id } });
         if (!me || me.clanId !== clanId) throw forbidden("You are not a member of this clan", "NOT_CLAN_MEMBER");
         requireRank(me.role, ClanRole.OFFICER);
-        await treasuryMove(tx, clanId, req.user.id, body.amount, "out", key);
+        return treasuryMove(tx, clanId, req.user.id, body.amount, "out", key);
       });
-      await app.audit(req, { action: "CLAN_TREASURY_WITHDRAW", targetType: "Clan", targetId: clanId, newValue: { amount: body.amount.toString() } });
-      return { ok: true, duplicate: false };
+      if (!duplicate) await app.audit(req, { action: "CLAN_TREASURY_WITHDRAW", targetType: "Clan", targetId: clanId, newValue: { amount: body.amount.toString() } });
+      return { ok: true, duplicate };
     },
   );
 

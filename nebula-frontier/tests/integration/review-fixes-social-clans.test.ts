@@ -39,6 +39,22 @@ async function makeClan(): Promise<{ leader: Session; officer: Session; recruit:
 }
 
 describe("clans", () => {
+  it("treasury deposit/withdraw with one idempotency key moves the treasury once under concurrency", async () => {
+    const { leader, clanId } = await makeClan();
+    const bank = async () => (await ctx.db.clan.findUniqueOrThrow({ where: { id: clanId }, select: { bankCredits: true } })).bankCredits;
+    const before = await credits(ctx.db, leader.userId);
+    const dk = key();
+    const deps = await Promise.all([0, 1, 2].map(() => leader.req("POST", `/api/clans/${clanId}/treasury/deposit`, { amount: "700", idempotencyKey: dk })));
+    for (const r of deps) expect([200, 409]).toContain(r.statusCode);
+    expect(await bank()).toBe(700n);
+    expect(before - (await credits(ctx.db, leader.userId))).toBe(700n);
+    const wk = key();
+    const wds = await Promise.all([0, 1, 2].map(() => leader.req("POST", `/api/clans/${clanId}/treasury/withdraw`, { amount: "300", idempotencyKey: wk })));
+    for (const r of wds) expect([200, 409, 429]).toContain(r.statusCode);
+    expect(await bank()).toBe(400n);
+    expect(before - (await credits(ctx.db, leader.userId))).toBe(400n);
+  });
+
   it("treasury withdrawal re-checks membership and rank inside the transaction", async () => {
     const { leader, officer, recruit, clanId } = await makeClan();
     expect((await leader.req("POST", `/api/clans/${clanId}/treasury/deposit`, { amount: "5000", idempotencyKey: key() })).statusCode).toBe(200);

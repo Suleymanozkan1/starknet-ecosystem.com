@@ -205,6 +205,7 @@ model Faction {
   bossKills   Int             @default(0)
   pvpScore    BigInt          @default(0)
   members     PlayerFaction[]
+  seasonScores FactionSeasonScore[]
   updatedAt   DateTime        @updatedAt
 }
 
@@ -218,6 +219,8 @@ model FactionSeasonScore {
   resources BigInt   @default(0)
   bossKills Int      @default(0)
   updatedAt DateTime @updatedAt
+  faction   Faction  @relation(fields: [factionId], references: [id], onDelete: Restrict)
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
 
   @@id([factionId, seasonId])
   @@index([seasonId, score])
@@ -354,6 +357,7 @@ model WeaponInstance {
   heat            Int      @default(0)
   createdAt       DateTime @default(now())
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -374,6 +378,7 @@ model ModuleInstance {
   inventoryItemId String   @unique
   createdAt       DateTime @default(now())
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -397,6 +402,7 @@ model DroneInstance {
   skin            String?
   createdAt       DateTime @default(now())
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -453,6 +459,9 @@ model InventoryItem {
   acquiredAt   DateTime  @default(now())
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   item         Item      @relation(fields: [itemId], references: [id])
+  weaponInstance WeaponInstance?
+  moduleInstance ModuleInstance?
+  droneInstance  DroneInstance?
 
   @@index([userId, itemId])
   @@index([lockedBy])
@@ -689,6 +698,7 @@ model Season {
   rewardBudget BigInt      @default(0)
   data      Json
   rewards   SeasonReward[]
+  factionScores FactionSeasonScore[]
 }
 
 model SeasonReward {
@@ -1062,7 +1072,7 @@ model Purchase {
   idempotencyKey String
   refundedAt     DateTime?
   createdAt      DateTime    @default(now())
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   product        ShopProduct @relation(fields: [productId], references: [id])
 
   @@unique([userId, idempotencyKey])
@@ -1084,7 +1094,7 @@ model BalanceAccount {
   version   Int             @default(0)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
-  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Restrict)
   debits    BalanceLedger[] @relation("debit")
   credits   BalanceLedger[] @relation("credit")
 
@@ -1110,7 +1120,7 @@ model BalanceLedger {
   createdAt       DateTime       @default(now())
   debitAccount    BalanceAccount @relation("debit", fields: [debitAccountId], references: [id])
   creditAccount   BalanceAccount @relation("credit", fields: [creditAccountId], references: [id])
-  user            User?          @relation(fields: [userId], references: [id])
+  user            User?          @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId, createdAt])
   @@index([type, createdAt])
@@ -1132,7 +1142,7 @@ model Reward {
   expiresAt   DateTime?
   reviewedBy  String?
   createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   claims      RewardClaim[]
 
   @@unique([userId, source, sourceRef])
@@ -1159,7 +1169,7 @@ model RewardSettlement {
   processedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([userId, source, sourceRef])
   @@index([status, nextAttemptAt])
@@ -1173,7 +1183,7 @@ model RewardClaim {
   ledgerTxId String?
   createdAt DateTime @default(now())
   reward    Reward   @relation(fields: [rewardId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([rewardId])
   @@index([userId, createdAt])
@@ -1190,7 +1200,7 @@ model RewardLiability {
   expiresAt DateTime?
   createdAt DateTime @default(now())
   settledAt DateTime?
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([status, asset])
   @@index([seasonId])
@@ -1218,7 +1228,7 @@ model Deposit {
   createdAt      DateTime  @default(now())
   confirmedAt    DateTime?
   creditedAt     DateTime?
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([userId, idempotencyKey])
   @@index([status])
@@ -1249,7 +1259,7 @@ model Withdrawal {
   updatedAt      DateTime  @updatedAt
   submittedAt    DateTime?
   completedAt    DateTime?
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([userId, idempotencyKey])
   @@index([status, nextAttemptAt])

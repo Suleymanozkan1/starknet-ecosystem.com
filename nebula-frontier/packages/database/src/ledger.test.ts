@@ -165,3 +165,19 @@ describe("double-entry ledger", () => {
     expect(credits?.ok).toBe(false);
   });
 });
+
+describe("database-level ledger invariants", () => {
+  it("rejects UPDATE and DELETE on journal rows, non-positive amounts, self-transfers and overdrafts", async () => {
+    const key = `inv:${run}`;
+    const r = await issue(userA, 10n, key);
+    await expect(db.balanceLedger.update({ where: { id: r.id }, data: { reference: "tampered" } })).rejects.toThrow(/immutable/);
+    await expect(db.balanceLedger.delete({ where: { id: r.id } })).rejects.toThrow(/immutable/);
+    const row = await db.balanceLedger.findUniqueOrThrow({ where: { id: r.id } });
+    expect(row.reference).toBe(key);
+    const base = { type: "GAME_ISSUANCE", asset: "CREDITS", reference: key, metadata: {} };
+    await expect(db.balanceLedger.create({ data: { ...base, debitAccountId: row.debitAccountId, creditAccountId: row.creditAccountId, amount: 0n, idempotencyKey: `${key}:zero` } })).rejects.toThrow();
+    await expect(db.balanceLedger.create({ data: { ...base, debitAccountId: row.creditAccountId, creditAccountId: row.creditAccountId, amount: 1n, idempotencyKey: `${key}:self` } })).rejects.toThrow();
+    // A user wallet (allowNegative = false) can never be driven below zero, even by a raw write.
+    await expect(db.balanceAccount.update({ where: { id: row.creditAccountId }, data: { balance: -1n } })).rejects.toThrow();
+  });
+});
