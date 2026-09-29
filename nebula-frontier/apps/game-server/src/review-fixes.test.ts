@@ -101,14 +101,12 @@ describe("#15 game.rules / game.tuning overrides are validated", () => {
 describe("/metrics requires METRICS_TOKEN (public game port)", () => {
   const token = "m".repeat(MIN_METRICS_TOKEN_LENGTH);
   it("decides access: bearer token when configured, disabled in production without one", () => {
-    expect(metricsAccess(`Bearer ${token}`, token, "production")).toBe("allow");
-    expect(metricsAccess(`Bearer ${token}`, token, "development")).toBe("allow");
-    expect(metricsAccess(null, token, "development")).toBe("unauthorized");
-    expect(metricsAccess("Bearer wrong", token, "production")).toBe("unauthorized");
-    expect(metricsAccess(token, token, "production")).toBe("unauthorized"); // missing Bearer scheme
-    expect(metricsAccess(null, null, "production")).toBe("disabled");
-    expect(metricsAccess(`Bearer ${token}`, null, "production")).toBe("disabled");
-    expect(metricsAccess(null, null, "development")).toBe("allow");
+    expect(metricsAccess(`Bearer ${token}`, token)).toBe("allow");
+    expect(metricsAccess(null, token)).toBe("unauthorized");
+    expect(metricsAccess("Bearer wrong", token)).toBe("unauthorized");
+    expect(metricsAccess(token, token)).toBe("unauthorized"); // missing Bearer scheme
+    expect(metricsAccess(null, null)).toBe("disabled"); // fails closed in every environment
+    expect(metricsAccess(`Bearer ${token}`, null)).toBe("disabled");
   });
 
   it("endpoint returns 401 / 404 / 200 accordingly", async () => {
@@ -122,6 +120,7 @@ describe("/metrics requires METRICS_TOKEN (public game port)", () => {
     expect(await call({ metricsToken: token, nodeEnv: "production" }, "Bearer nope")).toBe(401);
     expect(await call({ metricsToken: token, nodeEnv: "production" }, `Bearer ${token}`)).toBe(200);
     expect(await call({ metricsToken: null, nodeEnv: "production" }, `Bearer ${token}`)).toBe(404);
+    expect(await call({ metricsToken: null, nodeEnv: "development" })).toBe(404);
   });
 
   describe("config validation", () => {

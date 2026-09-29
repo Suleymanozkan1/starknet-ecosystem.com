@@ -13,8 +13,9 @@ export type MetricsAccess = "allow" | "unauthorized" | "disabled";
  * endpoint is disabled in production (config validation also refuses to boot that way) and open only
  * in non-production, matching apps/api.
  */
-export function metricsAccess(authorization: string | null, token: string | null, nodeEnv: string): MetricsAccess {
-  if (!token) return nodeEnv === "production" ? "disabled" : "allow";
+/** Fails closed: without a configured METRICS_TOKEN the route is disabled in every environment. */
+export function metricsAccess(authorization: string | null, token: string | null): MetricsAccess {
+  if (!token) return "disabled";
   const h = authorization ?? "";
   return h.startsWith("Bearer ") && safeEqual(h.slice(7), token) ? "allow" : "unauthorized";
 }
@@ -43,7 +44,7 @@ export function createRoutes(svc: () => GameServices) {
   });
   const metrics = createEndpoint("/metrics", { method: "GET" }, async (ctx) => {
     const { config } = svc();
-    const access = metricsAccess(ctx.getHeader("authorization"), config.metricsToken, config.nodeEnv);
+    const access = metricsAccess(ctx.getHeader("authorization"), config.metricsToken);
     if (access === "disabled") return new Response("Not Found", { status: 404 });
     if (access === "unauthorized") return new Response("Unauthorized", { status: 401, headers: { "www-authenticate": "Bearer" } });
     return new Response(await metricsText(), { headers: { "content-type": metricsContentType } });
