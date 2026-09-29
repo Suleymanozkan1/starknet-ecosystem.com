@@ -1,0 +1,929 @@
+[
+  {
+    "fleeHullPercent": 0.3,
+    "honor": 0,
+    "resistances": {
+      "EM": 0.1
+    },
+    "id": "npc_mining_drone",
+    "name": "Choir Mining Drone",
+    "faction": "npcf_null_choir",
+    "kind": "NPC",
+    "level": 1,
+    "hull": 400,
+    "shield": 200,
+    "armor": 0,
+    "speed": 12,
+    "turnRate": 1.5,
+    "damage": 12,
+    "fireRate": 1,
+    "range": 25,
+    "aggroRange": 0,
+    "element": "EM",
+    "behavior": "PASSIVE",
+    "respawnMs": 15000,
+    "xp": 40,
+    "credits": 80,
+    "lootTable": "loot_mining_drone",
+    "visual": {
+      "hull": "beetle",
+      "scale": 0.6,
+      "color": "#8d99ae",
+      "accent": "#ffd166"
+    }
+  },
+  {
+    "fleeHullPercent": 0.35,
+    "honor": 1,
+    "resistances": {
+      "PLASMA": 0.2,
+      "THERMAL": -0.15
+    },
+    "id": "npc_xyrr_scout",
+    "name": "Xyrr Scout",
+    "faction": "npcf_xyrr_hive",
+    "kind": "NPC",
+    "level": 3,
+    "hull": 1000,
+    "shield": 600,
+    "armor": 5,
+    "speed": 34,
+    "turnRate": 3,
+    "damage": 30,
+    "fireRate": 1.5,
+    "range": 35,
+    "aggroRange": 40,
+    "element": "PLASMA",
+    "behavior": "COWARD",
+    "respawnMs": 20000,
+    "xp": 120,
+    "credits": 200,
+    "lootTable": "loot_t1",
+    "visual": {
+      "hull": "needle",
+      "scale": 0.8,
+      "color": "#70e000",
+      "accent": "#ccff33"
+    }
+  },
+  {
+    "fleeHullPercent": 0.15,
+    "honor": 2,
+    "resistances": {
+      "KINETIC": 0.2,
+      "EM": -0.15
+    },
+    "id": "npc_pirate_raider",
+    "name": "Corsair Raider",
+    "faction": "npcf_crimson_wake",
+    "kind": "NPC",
+    "level": 4,
+    "hull": 1400,
+    "shield": 800,
+    "armor": 10,
+    "speed": 28,
+    "turnRate": 2.4,
+    "damage": 40,
+    "fireRate": 1.5,
+    "range": 35,
+    "aggroRange": 45,
+    "element": "KINETIC",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 20000,
+    "xp": 180,
+    "credits": 300,
+    "lootTable": "loot_t1",
+    "visual": {
+      "hull": "wedge",
+      "scale": 1,
+      "color": "#370617",
+      "accent": "#d00000"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 4,
+    "resistances": {
+      "PLASMA": 0.2,
+      "THERMAL": -0.15
+    },
+    "id": "npc_xyrr_fighter",
+    "name": "Xyrr Fighter",
+    "faction": "npcf_xyrr_hive",
+    "kind": "NPC",
+    "level": 8,
+    "hull": 3000,
+    "shield": 2000,
+    "armor": 20,
+    "speed": 30,
+    "turnRate": 2.6,
+    "damage": 70,
+    "fireRate": 1.6,
+    "range": 38,
+    "aggroRange": 50,
+    "element": "PLASMA",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 25000,
+    "xp": 420,
+    "credits": 700,
+    "lootTable": "loot_t2",
+    "visual": {
+      "hull": "arrowhead",
+      "scale": 1.1,
+      "color": "#38b000",
+      "accent": "#ccff33"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 2,
+    "resistances": {
+      "THERMAL": 0.25,
+      "VOID": -0.2
+    },
+    "id": "npc_leviathan_spawnling",
+    "name": "Leviathan Spawnling",
+    "faction": "npcf_leviathan_brood",
+    "kind": "NPC",
+    "level": 10,
+    "hull": 1800,
+    "shield": 0,
+    "armor": 30,
+    "speed": 32,
+    "turnRate": 3,
+    "damage": 45,
+    "fireRate": 2,
+    "range": 20,
+    "aggroRange": 45,
+    "element": "KINETIC",
+    "behavior": "SWARM",
+    "respawnMs": 15000,
+    "xp": 300,
+    "credits": 400,
+    "lootTable": "loot_t2",
+    "visual": {
+      "hull": "manta",
+      "scale": 0.7,
+      "color": "#0077b6",
+      "accent": "#90e0ef"
+    }
+  },
+  {
+    "fleeHullPercent": 0.1,
+    "honor": 8,
+    "resistances": {
+      "KINETIC": 0.2,
+      "EM": -0.15
+    },
+    "id": "npc_pirate_marauder",
+    "name": "Corsair Marauder",
+    "faction": "npcf_crimson_wake",
+    "kind": "NPC",
+    "level": 12,
+    "hull": 6000,
+    "shield": 4000,
+    "armor": 40,
+    "speed": 26,
+    "turnRate": 2,
+    "damage": 110,
+    "fireRate": 1.5,
+    "range": 40,
+    "aggroRange": 50,
+    "element": "THERMAL",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 30000,
+    "xp": 900,
+    "credits": 1500,
+    "lootTable": "loot_t2",
+    "visual": {
+      "hull": "hammer",
+      "scale": 1.4,
+      "color": "#6a040f",
+      "accent": "#e85d04"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 10,
+    "resistances": {
+      "EM": 0.25,
+      "KINETIC": -0.2
+    },
+    "id": "npc_null_sentinel",
+    "name": "Null Sentinel",
+    "faction": "npcf_null_choir",
+    "kind": "NPC",
+    "level": 15,
+    "hull": 9000,
+    "shield": 9000,
+    "armor": 60,
+    "speed": 20,
+    "turnRate": 1.8,
+    "damage": 140,
+    "fireRate": 1.2,
+    "range": 45,
+    "aggroRange": 40,
+    "element": "EM",
+    "behavior": "DEFENSIVE",
+    "respawnMs": 35000,
+    "xp": 1500,
+    "credits": 2200,
+    "lootTable": "loot_t3",
+    "visual": {
+      "hull": "monolith",
+      "scale": 1.5,
+      "color": "#8d99ae",
+      "accent": "#4cc9f0"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 18,
+    "resistances": {
+      "PLASMA": 0.25,
+      "THERMAL": -0.15
+    },
+    "id": "npc_xyrr_elite",
+    "name": "Xyrr Elite",
+    "faction": "npcf_xyrr_hive",
+    "kind": "NPC",
+    "level": 18,
+    "hull": 16000,
+    "shield": 12000,
+    "armor": 80,
+    "speed": 28,
+    "turnRate": 2.2,
+    "damage": 200,
+    "fireRate": 1.6,
+    "range": 45,
+    "aggroRange": 55,
+    "element": "PLASMA",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 45000,
+    "xp": 2600,
+    "credits": 3500,
+    "lootTable": "loot_t3",
+    "visual": {
+      "hull": "trident",
+      "scale": 1.6,
+      "color": "#008000",
+      "accent": "#ffea00"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 40,
+    "resistances": {
+      "KINETIC": 0.25,
+      "EM": -0.15
+    },
+    "id": "npc_pirate_warlord",
+    "name": "Corsair Warlord",
+    "faction": "npcf_crimson_wake",
+    "kind": "NPC",
+    "level": 22,
+    "hull": 30000,
+    "shield": 20000,
+    "armor": 120,
+    "speed": 24,
+    "turnRate": 1.6,
+    "damage": 280,
+    "fireRate": 1.4,
+    "range": 50,
+    "aggroRange": 60,
+    "element": "KINETIC",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 90000,
+    "xp": 5200,
+    "credits": 7000,
+    "lootTable": "loot_t4",
+    "visual": {
+      "hull": "hammer",
+      "scale": 2.2,
+      "color": "#370617",
+      "accent": "#ffba08"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 60,
+    "resistances": {
+      "EM": 0.3,
+      "KINETIC": -0.2
+    },
+    "id": "npc_null_destroyer",
+    "name": "Null Destroyer",
+    "faction": "npcf_null_choir",
+    "kind": "NPC",
+    "level": 25,
+    "hull": 45000,
+    "shield": 35000,
+    "armor": 160,
+    "speed": 20,
+    "turnRate": 1.2,
+    "damage": 350,
+    "fireRate": 1.2,
+    "range": 55,
+    "aggroRange": 60,
+    "element": "EM",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 120000,
+    "xp": 8000,
+    "credits": 10000,
+    "lootTable": "loot_t4",
+    "visual": {
+      "hull": "spine",
+      "scale": 2.6,
+      "color": "#495057",
+      "accent": "#4cc9f0"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 100,
+    "resistances": {
+      "PLASMA": 0.3,
+      "THERMAL": -0.15
+    },
+    "id": "npc_xyrr_praetorian",
+    "name": "Xyrr Praetorian",
+    "faction": "npcf_xyrr_hive",
+    "kind": "NPC",
+    "level": 30,
+    "hull": 90000,
+    "shield": 60000,
+    "armor": 200,
+    "speed": 22,
+    "turnRate": 1.4,
+    "damage": 480,
+    "fireRate": 1.3,
+    "range": 55,
+    "aggroRange": 65,
+    "element": "PLASMA",
+    "behavior": "AGGRESSIVE",
+    "respawnMs": 180000,
+    "xp": 14000,
+    "credits": 18000,
+    "lootTable": "loot_t5",
+    "visual": {
+      "hull": "crescent",
+      "scale": 3,
+      "color": "#004b23",
+      "accent": "#ccff33"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 120,
+    "resistances": {
+      "THERMAL": 0.3,
+      "VOID": -0.25
+    },
+    "id": "npc_leviathan",
+    "name": "Leviathan",
+    "faction": "npcf_leviathan_brood",
+    "kind": "NPC",
+    "level": 32,
+    "hull": 120000,
+    "shield": 40000,
+    "armor": 260,
+    "speed": 16,
+    "turnRate": 0.8,
+    "damage": 600,
+    "fireRate": 0.8,
+    "range": 40,
+    "aggroRange": 50,
+    "element": "KINETIC",
+    "behavior": "DEFENSIVE",
+    "respawnMs": 300000,
+    "xp": 20000,
+    "credits": 25000,
+    "lootTable": "loot_t5",
+    "visual": {
+      "hull": "manta",
+      "scale": 5,
+      "color": "#023e8a",
+      "accent": "#90e0ef"
+    }
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 3000,
+    "resistances": {
+      "EM": 0.35,
+      "VOID": 0.2,
+      "KINETIC": -0.1
+    },
+    "id": "boss_vanta_colossus",
+    "name": "Vanta Colossus",
+    "faction": "npcf_null_choir",
+    "kind": "BOSS",
+    "level": 40,
+    "hull": 6000000,
+    "shield": 3000000,
+    "armor": 400,
+    "speed": 8,
+    "turnRate": 0.4,
+    "damage": 1400,
+    "fireRate": 1,
+    "range": 70,
+    "aggroRange": 90,
+    "element": "VOID",
+    "behavior": "BOSS",
+    "respawnMs": 14400000,
+    "xp": 250000,
+    "credits": 500000,
+    "lootTable": "loot_boss_world",
+    "visual": {
+      "hull": "monolith",
+      "scale": 14,
+      "color": "#0b090a",
+      "accent": "#9d4edd"
+    },
+    "phases": [
+      {
+        "id": "colossus_p1_shield",
+        "name": "Singing Aegis",
+        "hullThreshold": 1,
+        "layer": "SHIELD",
+        "damageMultiplier": 1,
+        "fireRateMultiplier": 1,
+        "weakPointMultiplier": 1.5,
+        "specialAttack": {
+          "name": "Choir Pulse",
+          "everyMs": 12000,
+          "radius": 30,
+          "damage": 2500,
+          "element": "EM"
+        },
+        "adds": {
+          "npcId": "npc_mining_drone",
+          "count": 6,
+          "everyMs": 30000
+        }
+      },
+      {
+        "id": "colossus_p2_armor",
+        "name": "Iron Hymn",
+        "hullThreshold": 0.75,
+        "layer": "ARMOR",
+        "damageMultiplier": 1.15,
+        "fireRateMultiplier": 1.1,
+        "weakPointMultiplier": 2,
+        "specialAttack": {
+          "name": "Gravitic Slam",
+          "everyMs": 15000,
+          "radius": 24,
+          "damage": 4200,
+          "element": "KINETIC"
+        },
+        "adds": {
+          "npcId": "npc_null_sentinel",
+          "count": 4,
+          "everyMs": 40000
+        }
+      },
+      {
+        "id": "colossus_p3_reactor",
+        "name": "Exposed Heart",
+        "hullThreshold": 0.5,
+        "layer": "REACTOR",
+        "damageMultiplier": 1.3,
+        "fireRateMultiplier": 1.2,
+        "weakPointMultiplier": 3,
+        "specialAttack": {
+          "name": "Reactor Flare",
+          "everyMs": 10000,
+          "radius": 36,
+          "damage": 5500,
+          "element": "VOID"
+        },
+        "adds": {
+          "npcId": "npc_null_destroyer",
+          "count": 2,
+          "everyMs": 60000
+        }
+      },
+      {
+        "id": "colossus_p4_enrage",
+        "name": "Final Crescendo",
+        "hullThreshold": 0.2,
+        "layer": "ENRAGE",
+        "damageMultiplier": 1.8,
+        "fireRateMultiplier": 1.5,
+        "weakPointMultiplier": 2.5,
+        "specialAttack": {
+          "name": "Null Requiem",
+          "everyMs": 8000,
+          "radius": 45,
+          "damage": 8000,
+          "element": "VOID"
+        },
+        "adds": {
+          "npcId": "npc_null_sentinel",
+          "count": 6,
+          "everyMs": 30000
+        }
+      }
+    ]
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 800,
+    "resistances": {
+      "PLASMA": 0.3,
+      "THERMAL": -0.1
+    },
+    "id": "boss_breach_sovereign",
+    "name": "Breach Sovereign",
+    "faction": "npcf_xyrr_hive",
+    "kind": "BOSS",
+    "level": 35,
+    "hull": 800000,
+    "shield": 400000,
+    "armor": 300,
+    "speed": 14,
+    "turnRate": 0.8,
+    "damage": 900,
+    "fireRate": 1.2,
+    "range": 60,
+    "aggroRange": 80,
+    "element": "PLASMA",
+    "behavior": "BOSS",
+    "respawnMs": 0,
+    "xp": 60000,
+    "credits": 120000,
+    "lootTable": "loot_boss_gate",
+    "visual": {
+      "hull": "crescent",
+      "scale": 8,
+      "color": "#004b23",
+      "accent": "#ffea00"
+    },
+    "phases": [
+      {
+        "id": "sovereign_p1",
+        "name": "Carapace Wall",
+        "hullThreshold": 1,
+        "layer": "SHIELD",
+        "damageMultiplier": 1,
+        "fireRateMultiplier": 1,
+        "weakPointMultiplier": 1.5,
+        "specialAttack": {
+          "name": "Acid Spray",
+          "everyMs": 12000,
+          "radius": 20,
+          "damage": 1800,
+          "element": "PLASMA"
+        },
+        "adds": {
+          "npcId": "npc_xyrr_fighter",
+          "count": 4,
+          "everyMs": 30000
+        }
+      },
+      {
+        "id": "sovereign_p2",
+        "name": "Cracked Shell",
+        "hullThreshold": 0.6,
+        "layer": "ARMOR",
+        "damageMultiplier": 1.2,
+        "fireRateMultiplier": 1.1,
+        "weakPointMultiplier": 2,
+        "specialAttack": {
+          "name": "Brood Burst",
+          "everyMs": 14000,
+          "radius": 26,
+          "damage": 2600,
+          "element": "PLASMA"
+        },
+        "adds": {
+          "npcId": "npc_xyrr_elite",
+          "count": 2,
+          "everyMs": 45000
+        }
+      },
+      {
+        "id": "sovereign_p3",
+        "name": "Hive Fury",
+        "hullThreshold": 0.25,
+        "layer": "ENRAGE",
+        "damageMultiplier": 1.6,
+        "fireRateMultiplier": 1.4,
+        "weakPointMultiplier": 2.5,
+        "specialAttack": {
+          "name": "Queen's Scream",
+          "everyMs": 9000,
+          "radius": 34,
+          "damage": 3500,
+          "element": "EM"
+        }
+      }
+    ]
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 1200,
+    "resistances": {
+      "EM": 0.4,
+      "KINETIC": -0.15
+    },
+    "id": "boss_omega_mindshard",
+    "name": "Omega Mindshard",
+    "faction": "npcf_null_choir",
+    "kind": "BOSS",
+    "level": 42,
+    "hull": 1200000,
+    "shield": 800000,
+    "armor": 380,
+    "speed": 10,
+    "turnRate": 0.6,
+    "damage": 1200,
+    "fireRate": 1,
+    "range": 65,
+    "aggroRange": 80,
+    "element": "EM",
+    "behavior": "BOSS",
+    "respawnMs": 0,
+    "xp": 90000,
+    "credits": 180000,
+    "lootTable": "loot_boss_gate",
+    "visual": {
+      "hull": "halo",
+      "scale": 9,
+      "color": "#adb5bd",
+      "accent": "#4cc9f0"
+    },
+    "phases": [
+      {
+        "id": "mindshard_p1",
+        "name": "Prism Lattice",
+        "hullThreshold": 1,
+        "layer": "SHIELD",
+        "damageMultiplier": 1,
+        "fireRateMultiplier": 1,
+        "weakPointMultiplier": 1.5,
+        "specialAttack": {
+          "name": "Refraction Storm",
+          "everyMs": 11000,
+          "radius": 28,
+          "damage": 2400,
+          "element": "EM"
+        },
+        "adds": {
+          "npcId": "npc_null_sentinel",
+          "count": 3,
+          "everyMs": 35000
+        }
+      },
+      {
+        "id": "mindshard_p2",
+        "name": "Fractured Core",
+        "hullThreshold": 0.5,
+        "layer": "REACTOR",
+        "damageMultiplier": 1.3,
+        "fireRateMultiplier": 1.2,
+        "weakPointMultiplier": 3,
+        "specialAttack": {
+          "name": "Shard Rain",
+          "everyMs": 9000,
+          "radius": 32,
+          "damage": 3200,
+          "element": "KINETIC"
+        }
+      },
+      {
+        "id": "mindshard_p3",
+        "name": "Overclock",
+        "hullThreshold": 0.2,
+        "layer": "ENRAGE",
+        "damageMultiplier": 1.7,
+        "fireRateMultiplier": 1.5,
+        "weakPointMultiplier": 2.5,
+        "specialAttack": {
+          "name": "Null Cascade",
+          "everyMs": 7000,
+          "radius": 40,
+          "damage": 4200,
+          "element": "VOID"
+        },
+        "adds": {
+          "npcId": "npc_null_destroyer",
+          "count": 1,
+          "everyMs": 45000
+        }
+      }
+    ]
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 5000,
+    "resistances": {
+      "THERMAL": 0.35,
+      "KINETIC": 0.15,
+      "VOID": -0.2
+    },
+    "id": "boss_titan_warden",
+    "name": "Titan Warden",
+    "faction": "npcf_leviathan_brood",
+    "kind": "BOSS",
+    "level": 48,
+    "hull": 9000000,
+    "shield": 4000000,
+    "armor": 480,
+    "speed": 6,
+    "turnRate": 0.3,
+    "damage": 1800,
+    "fireRate": 1,
+    "range": 75,
+    "aggroRange": 100,
+    "element": "KINETIC",
+    "behavior": "BOSS",
+    "respawnMs": 0,
+    "xp": 400000,
+    "credits": 800000,
+    "lootTable": "loot_boss_raid",
+    "visual": {
+      "hull": "beetle",
+      "scale": 16,
+      "color": "#03045e",
+      "accent": "#48cae4"
+    },
+    "phases": [
+      {
+        "id": "warden_p1",
+        "name": "Ancient Hide",
+        "hullThreshold": 1,
+        "layer": "SHIELD",
+        "damageMultiplier": 1,
+        "fireRateMultiplier": 1,
+        "weakPointMultiplier": 1.5,
+        "specialAttack": {
+          "name": "Tidal Crush",
+          "everyMs": 14000,
+          "radius": 35,
+          "damage": 3500,
+          "element": "KINETIC"
+        },
+        "adds": {
+          "npcId": "npc_leviathan_spawnling",
+          "count": 10,
+          "everyMs": 30000
+        }
+      },
+      {
+        "id": "warden_p2",
+        "name": "Bone Plating",
+        "hullThreshold": 0.75,
+        "layer": "ARMOR",
+        "damageMultiplier": 1.2,
+        "fireRateMultiplier": 1.1,
+        "weakPointMultiplier": 2,
+        "specialAttack": {
+          "name": "Marrow Spikes",
+          "everyMs": 12000,
+          "radius": 30,
+          "damage": 4800,
+          "element": "KINETIC"
+        },
+        "adds": {
+          "npcId": "npc_leviathan",
+          "count": 1,
+          "everyMs": 90000
+        }
+      },
+      {
+        "id": "warden_p3",
+        "name": "Heart of the Brood",
+        "hullThreshold": 0.45,
+        "layer": "REACTOR",
+        "damageMultiplier": 1.35,
+        "fireRateMultiplier": 1.2,
+        "weakPointMultiplier": 3,
+        "specialAttack": {
+          "name": "Stellar Exhale",
+          "everyMs": 10000,
+          "radius": 45,
+          "damage": 6200,
+          "element": "THERMAL"
+        },
+        "adds": {
+          "npcId": "npc_leviathan_spawnling",
+          "count": 14,
+          "everyMs": 30000
+        }
+      },
+      {
+        "id": "warden_p4",
+        "name": "Death Throes",
+        "hullThreshold": 0.15,
+        "layer": "ENRAGE",
+        "damageMultiplier": 2,
+        "fireRateMultiplier": 1.6,
+        "weakPointMultiplier": 2.5,
+        "specialAttack": {
+          "name": "Vault Collapse",
+          "everyMs": 7000,
+          "radius": 55,
+          "damage": 9000,
+          "element": "VOID"
+        }
+      }
+    ]
+  },
+  {
+    "fleeHullPercent": 0,
+    "honor": 2000,
+    "resistances": {
+      "VOID": 0.4,
+      "EM": 0.2,
+      "KINETIC": -0.1
+    },
+    "id": "boss_void_herald",
+    "name": "Void Herald",
+    "faction": "npcf_null_choir",
+    "kind": "BOSS",
+    "level": 38,
+    "hull": 3000000,
+    "shield": 1500000,
+    "armor": 320,
+    "speed": 12,
+    "turnRate": 0.6,
+    "damage": 1100,
+    "fireRate": 1.1,
+    "range": 65,
+    "aggroRange": 90,
+    "element": "VOID",
+    "behavior": "BOSS",
+    "respawnMs": 0,
+    "xp": 150000,
+    "credits": 300000,
+    "lootTable": "loot_boss_rift",
+    "visual": {
+      "hull": "needle",
+      "scale": 11,
+      "color": "#10002b",
+      "accent": "#e0aaff"
+    },
+    "phases": [
+      {
+        "id": "herald_p1",
+        "name": "Rift Veil",
+        "hullThreshold": 1,
+        "layer": "SHIELD",
+        "damageMultiplier": 1,
+        "fireRateMultiplier": 1,
+        "weakPointMultiplier": 1.5,
+        "specialAttack": {
+          "name": "Void Lash",
+          "everyMs": 10000,
+          "radius": 26,
+          "damage": 2200,
+          "element": "VOID"
+        },
+        "adds": {
+          "npcId": "npc_xyrr_fighter",
+          "count": 6,
+          "everyMs": 30000
+        }
+      },
+      {
+        "id": "herald_p2",
+        "name": "Unmasked",
+        "hullThreshold": 0.5,
+        "layer": "REACTOR",
+        "damageMultiplier": 1.3,
+        "fireRateMultiplier": 1.2,
+        "weakPointMultiplier": 3,
+        "specialAttack": {
+          "name": "Event Horizon",
+          "everyMs": 12000,
+          "radius": 40,
+          "damage": 3800,
+          "element": "VOID"
+        },
+        "adds": {
+          "npcId": "npc_pirate_marauder",
+          "count": 3,
+          "everyMs": 40000
+        }
+      },
+      {
+        "id": "herald_p3",
+        "name": "Collapse",
+        "hullThreshold": 0.2,
+        "layer": "ENRAGE",
+        "damageMultiplier": 1.7,
+        "fireRateMultiplier": 1.5,
+        "weakPointMultiplier": 2.5,
+        "specialAttack": {
+          "name": "Singularity Bloom",
+          "everyMs": 8000,
+          "radius": 50,
+          "damage": 6000,
+          "element": "VOID"
+        }
+      }
+    ]
+  }
+]

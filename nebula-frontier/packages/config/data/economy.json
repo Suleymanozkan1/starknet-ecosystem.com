@@ -1,0 +1,162 @@
+{
+  "currencies": {
+    "CREDITS": {
+      "decimals": 0,
+      "symbol": "CR",
+      "onChain": false
+    },
+    "GEMS": {
+      "decimals": 0,
+      "symbol": "GEM",
+      "onChain": false
+    },
+    "NEBX": {
+      "decimals": 9,
+      "symbol": "NEBX",
+      "onChain": true
+    },
+    "SOL": {
+      "decimals": 9,
+      "symbol": "SOL",
+      "onChain": true
+    }
+  },
+  "rewardBudgetRatio": 0.2,
+  "treasuryReserveRatio": 0.4,
+  "operatingReserveRatio": 0.3,
+  "emergencyReserveRatio": 0.1,
+  "minTreasuryReserve": "10000000000",
+  "rewardAllocation": {
+    "LEADERBOARD": 0.3,
+    "TOURNAMENT": 0.25,
+    "WORLD_EVENTS": 0.15,
+    "FACTION_WARS": 0.1,
+    "RAIDS": 0.1,
+    "ACHIEVEMENTS": 0.05,
+    "SPECIAL_CAMPAIGNS": 0.05
+  },
+  "emission": {
+    "baseRate": 0.01,
+    "maxRewardRate": 0.03,
+    "activityMultiplierMax": 1.5,
+    "seasonMultiplier": 1,
+    "rewardUnitLamports": "100000"
+  },
+  "treasuryHealth": {
+    "healthy": 2,
+    "watch": 1.5,
+    "warning": 1,
+    "multipliers": {
+      "HEALTHY": 1,
+      "WATCH": 0.8,
+      "WARNING": 0.5,
+      "CRITICAL": 0.1
+    }
+  },
+  "caps": {
+    "daily": "50000000",
+    "weekly": "250000000",
+    "season": "2000000000"
+  },
+  "eligibility": {
+    "minAccountAgeHours": 72,
+    "minGameplayMinutes": 120,
+    "minCompletedMatches": 10,
+    "claimCooldownMinutes": 60,
+    "maxRiskLevel": "MEDIUM",
+    "eligibleModes": [
+      "RANKED",
+      "ARENA",
+      "RAID",
+      "LARGE_SCALE",
+      "CLAN_WAR",
+      "GATE"
+    ]
+  },
+  "fees": {
+    "marketplace": 0.075,
+    "auctionListing": 0.01,
+    "auctionSale": 0.05,
+    "auctionCancellation": 0.02,
+    "withdrawalServicePercent": 0.02,
+    "withdrawalFlat": "1000000",
+    "estimatedNetworkFee": "5000",
+    "tradeTax": 0.02
+  },
+  "withdrawal": {
+    "min": "10000000",
+    "max": "1000000000",
+    "dailyLimit": "2000000000",
+    "cooldownMinutes": 60,
+    "minAccountAgeHours": 72,
+    "walletChangeLockHours": 48,
+    "reviewThreshold": "500000000"
+  },
+  "inflation": {
+    "dailyThreshold": 0.02,
+    "weeklyThreshold": 0.08,
+    "responses": {
+      "rewardMultiplier": 0.8,
+      "dropMultiplier": 0.85,
+      "sinkMultiplier": 1.2
+    }
+  },
+  "circuitBreaker": {
+    "reserveCoverageMin": 1,
+    "liabilityRatioMax": 0.8,
+    "withdrawalSpikeMultiplier": 3,
+    "depositSpikeMultiplier": 5,
+    "depositSpikeFloorLamports": "10000000000",
+    "botRiskShareMax": 0.15,
+    "inflationSpike": 0.05,
+    "abnormalOutflowMultiplier": 4
+  },
+  "rewardExpiryDays": 30,
+  "tokenomics": {
+    "symbol": "NEBX",
+    "maxSupply": "1000000000",
+    "allocation": {
+      "TREASURY": 0.2,
+      "REWARDS": 0.35,
+      "LIQUIDITY": 0.1,
+      "OPERATIONS": 0.1,
+      "MARKETING": 0.05,
+      "TEAM": 0.1,
+      "ECOSYSTEM": 0.1
+    },
+    "mintAuthorityDisabledAfterGenesis": true
+  },
+  "sinks": {
+    "ammoCreditsPerShot": "2",
+    "travelCreditsPerJump": "100",
+    "npcServiceFee": "250"
+  },
+  "premium": {
+    "FREE": {
+      "xpBoost": 0,
+      "inventorySlots": 60,
+      "extraDailyQuests": 0
+    },
+    "VIP": {
+      "xpBoost": 0.1,
+      "inventorySlots": 90,
+      "extraDailyQuests": 1
+    },
+    "ELITE": {
+      "xpBoost": 0.2,
+      "inventorySlots": 120,
+      "extraDailyQuests": 2
+    }
+  },
+  "risk": {
+    "mediumScore": 25,
+    "highScore": 50,
+    "criticalScore": 80,
+    "windowDays": 30,
+    "repeatedRewardsPerDay": 60,
+    "regularIntervalCvMax": 0.08,
+    "clusterSizeWarn": 3,
+    "duplicateClaimSignalsMax": 5,
+    "autoReviewWithdrawalRisk": "MEDIUM"
+  }
+}

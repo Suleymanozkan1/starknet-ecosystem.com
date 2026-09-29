@@ -1,0 +1,9 @@
+{
+  "mail": {
+    "maxCredits": 10000000,
+    "maxGems": 100000,
+    "maxResourceQuantity": 1000000,
+    "maxItemQuantity": 10000,
+    "maxItemStacks": 20
+  }
+}

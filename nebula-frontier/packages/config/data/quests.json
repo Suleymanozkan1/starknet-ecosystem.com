@@ -1,0 +1,877 @@
+[
+  {
+    "id": "q_main_1_1",
+    "name": "First Light",
+    "type": "MAIN_STORY",
+    "chapter": 1,
+    "description": "Your flight instructor wants proof you can hold a firing line. Disable rogue Choir mining drones near your home station.",
+    "requiredLevel": 1,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_mining_drone",
+        "count": 5
+      }
+    ],
+    "rewards": {
+      "xp": 500,
+      "credits": 2000,
+      "items": [
+        {
+          "itemId": "item_repair_kit",
+          "quantity": 3
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_1_2",
+    "name": "Red Wake on the Scopes",
+    "type": "MAIN_STORY",
+    "chapter": 1,
+    "description": "Corsair raiders are shadowing supply haulers. Drive them off.",
+    "requiredLevel": 2,
+    "prerequisites": [
+      "q_main_1_1"
+    ],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_pirate_raider",
+        "count": 6
+      }
+    ],
+    "rewards": {
+      "xp": 1200,
+      "credits": 4000,
+      "items": [
+        {
+          "itemId": "item_ammo_hornet",
+          "quantity": 100
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_1_3",
+    "name": "Beyond the Jump Gate",
+    "type": "MAIN_STORY",
+    "chapter": 1,
+    "description": "Command has cleared you for the Helios Frontier. Jump through and report to Helios Waypoint.",
+    "requiredLevel": 5,
+    "prerequisites": [
+      "q_main_1_2"
+    ],
+    "objectives": [
+      {
+        "type": "TRAVEL",
+        "target": "map_helios_frontier",
+        "count": 1,
+        "map": "map_helios_frontier"
+      }
+    ],
+    "rewards": {
+      "xp": 2000,
+      "credits": 6000,
+      "gems": 5
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_2_1",
+    "name": "Chitin in the Dark",
+    "type": "MAIN_STORY",
+    "chapter": 2,
+    "description": "Xyrr fighters are probing the Helios lanes. Thin their numbers.",
+    "requiredLevel": 8,
+    "prerequisites": [
+      "q_main_1_3"
+    ],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_xyrr_fighter",
+        "count": 12,
+        "map": "map_helios_frontier"
+      }
+    ],
+    "rewards": {
+      "xp": 5000,
+      "credits": 12000,
+      "honor": 20
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_2_2",
+    "name": "Fuel for the Guns",
+    "type": "MAIN_STORY",
+    "chapter": 2,
+    "description": "The front needs plasma ore. Mine it in the Orion Belt.",
+    "requiredLevel": 10,
+    "prerequisites": [
+      "q_main_2_1"
+    ],
+    "objectives": [
+      {
+        "type": "MINE_RESOURCES",
+        "target": "PLASMA_ORE",
+        "count": 60,
+        "map": "map_orion_belt"
+      }
+    ],
+    "rewards": {
+      "xp": 6000,
+      "credits": 15000,
+      "resources": {
+        "CRYONITE": 20
+      }
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_2_3",
+    "name": "Spawning Grounds",
+    "type": "MAIN_STORY",
+    "chapter": 2,
+    "description": "Leviathan spawnlings are swarming the Helios survey buoys. Clear them out.",
+    "requiredLevel": 11,
+    "prerequisites": [
+      "q_main_2_2"
+    ],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_leviathan_spawnling",
+        "count": 15,
+        "map": "map_helios_frontier"
+      }
+    ],
+    "rewards": {
+      "xp": 7000,
+      "credits": 16000,
+      "items": [
+        {
+          "itemId": "item_shield_cell",
+          "quantity": 5
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_3_1",
+    "name": "Song of the Choir",
+    "type": "MAIN_STORY",
+    "chapter": 3,
+    "description": "Null Sentinels guard the richest veins of the Orion Belt. Silence them.",
+    "requiredLevel": 15,
+    "prerequisites": [
+      "q_main_2_3"
+    ],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_null_sentinel",
+        "count": 8,
+        "map": "map_orion_belt"
+      }
+    ],
+    "rewards": {
+      "xp": 12000,
+      "credits": 25000,
+      "honor": 50
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_3_2",
+    "name": "Into the Rift",
+    "type": "MAIN_STORY",
+    "chapter": 3,
+    "description": "Follow the Choir's signal into the Vanta Rift and break the Corsair blockade.",
+    "requiredLevel": 18,
+    "prerequisites": [
+      "q_main_3_1"
+    ],
+    "objectives": [
+      {
+        "type": "TRAVEL",
+        "target": "map_vanta_rift",
+        "count": 1,
+        "map": "map_vanta_rift"
+      },
+      {
+        "type": "KILL",
+        "target": "npc_pirate_marauder",
+        "count": 10,
+        "map": "map_vanta_rift"
+      }
+    ],
+    "rewards": {
+      "xp": 18000,
+      "credits": 35000,
+      "gems": 10
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_3_3",
+    "name": "The Alpha Breach",
+    "type": "MAIN_STORY",
+    "chapter": 3,
+    "description": "A Xyrr breach gate pulses at the edge of the Rift. Go through and close it.",
+    "requiredLevel": 20,
+    "prerequisites": [
+      "q_main_3_2"
+    ],
+    "objectives": [
+      {
+        "type": "COMPLETE_GATE",
+        "target": "gate_alpha_breach",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 30000,
+      "credits": 50000,
+      "items": [
+        {
+          "itemId": "item_bp_gen_shield_s3",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_4_1",
+    "name": "Graveyard Shift",
+    "type": "MAIN_STORY",
+    "chapter": 4,
+    "description": "Scout the Astra Graveyard and destroy the Null Destroyers guarding it.",
+    "requiredLevel": 28,
+    "prerequisites": [
+      "q_main_3_3"
+    ],
+    "objectives": [
+      {
+        "type": "TRAVEL",
+        "target": "map_astra_graveyard",
+        "count": 1,
+        "map": "map_astra_graveyard"
+      },
+      {
+        "type": "KILL",
+        "target": "npc_null_destroyer",
+        "count": 5,
+        "map": "map_astra_graveyard"
+      }
+    ],
+    "rewards": {
+      "xp": 45000,
+      "credits": 80000,
+      "honor": 150
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_4_2",
+    "name": "Brood Hunters",
+    "type": "MAIN_STORY",
+    "chapter": 4,
+    "description": "An adult Leviathan is feeding on the wrecks. Bring it down.",
+    "requiredLevel": 32,
+    "prerequisites": [
+      "q_main_4_1"
+    ],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_leviathan",
+        "count": 1,
+        "map": "map_astra_graveyard"
+      }
+    ],
+    "rewards": {
+      "xp": 60000,
+      "credits": 100000,
+      "resources": {
+        "DARK_MATTER": 10
+      }
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_5_1",
+    "name": "Wake the Colossus",
+    "type": "MAIN_STORY",
+    "chapter": 5,
+    "description": "The Vanta Colossus is rising in the Graveyard. Join the assault and deal meaningful damage.",
+    "requiredLevel": 36,
+    "prerequisites": [
+      "q_main_4_2"
+    ],
+    "objectives": [
+      {
+        "type": "DAMAGE_BOSS",
+        "target": "boss_vanta_colossus",
+        "count": 150000,
+        "map": "map_astra_graveyard"
+      }
+    ],
+    "rewards": {
+      "xp": 90000,
+      "credits": 150000,
+      "gems": 30
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_5_2",
+    "name": "Vault of Titans",
+    "type": "MAIN_STORY",
+    "chapter": 5,
+    "description": "The Colossus' death-song opened the Titan Vault. Lead a raid against its Warden.",
+    "requiredLevel": 40,
+    "prerequisites": [
+      "q_main_5_1"
+    ],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "boss_titan_warden",
+        "count": 1,
+        "map": "map_raid_titan_vault"
+      }
+    ],
+    "rewards": {
+      "xp": 150000,
+      "credits": 250000,
+      "items": [
+        {
+          "itemId": "cos_title_void_walker",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_main_5_3",
+    "name": "Legend of the Frontier",
+    "type": "MAIN_STORY",
+    "chapter": 5,
+    "description": "Reach the pinnacle of piloting.",
+    "requiredLevel": 40,
+    "prerequisites": [
+      "q_main_5_2"
+    ],
+    "objectives": [
+      {
+        "type": "LEVEL",
+        "count": 45
+      }
+    ],
+    "rewards": {
+      "xp": 0,
+      "credits": 500000,
+      "gems": 100
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_fac_aurora_survey",
+    "name": "Survey Escort",
+    "type": "FACTION",
+    "description": "Escort an Aurora survey sloop across Aurora Prime.",
+    "requiredLevel": 3,
+    "faction": "aurora",
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "ESCORT",
+        "count": 1,
+        "map": "map_aurora_prime"
+      }
+    ],
+    "rewards": {
+      "xp": 1500,
+      "credits": 5000,
+      "honor": 10
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_fac_vortex_contract",
+    "name": "Hostile Acquisition",
+    "type": "FACTION",
+    "description": "Deliver titanium to the Consortium Grand Exchange.",
+    "requiredLevel": 3,
+    "faction": "vortex",
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "DELIVER",
+        "target": "TITANIUM",
+        "count": 150,
+        "map": "map_vortex_haven"
+      }
+    ],
+    "rewards": {
+      "xp": 1500,
+      "credits": 7000,
+      "honor": 10
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_fac_nova_trial",
+    "name": "Trial of Embers",
+    "type": "FACTION",
+    "description": "Prove your lineage by hunting Xyrr scouts over Nova Crown.",
+    "requiredLevel": 3,
+    "faction": "nova",
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_xyrr_scout",
+        "count": 15,
+        "map": "map_nova_crown"
+      }
+    ],
+    "rewards": {
+      "xp": 1500,
+      "credits": 5000,
+      "honor": 15
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_fac_war_banner",
+    "name": "Banner of the Frontier",
+    "type": "FACTION",
+    "description": "Win battles in the Eclipse Arena for your faction.",
+    "requiredLevel": 15,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "WIN_PVP",
+        "count": 5,
+        "map": "map_eclipse_arena"
+      }
+    ],
+    "rewards": {
+      "xp": 15000,
+      "honor": 200,
+      "credits": 30000,
+      "cryptoEligible": {
+        "source": "FACTION_WAR",
+        "weight": 1
+      }
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_daily_bounty",
+    "name": "Daily Bounty: Corsairs",
+    "type": "DAILY",
+    "description": "Destroy Corsair raiders anywhere.",
+    "requiredLevel": 4,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_pirate_raider",
+        "count": 20
+      }
+    ],
+    "rewards": {
+      "xp": 3000,
+      "credits": 8000,
+      "seasonPoints": 20,
+      "passXp": 150
+    },
+    "repeatable": true
+  },
+  {
+    "id": "q_daily_mining",
+    "name": "Daily Haul",
+    "type": "DAILY",
+    "description": "Mine titanium for the refineries.",
+    "requiredLevel": 5,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "MINE_RESOURCES",
+        "target": "TITANIUM",
+        "count": 120
+      }
+    ],
+    "rewards": {
+      "xp": 2500,
+      "credits": 7000,
+      "seasonPoints": 20,
+      "passXp": 150
+    },
+    "repeatable": true
+  },
+  {
+    "id": "q_daily_arena",
+    "name": "Daily Duel",
+    "type": "DAILY",
+    "description": "Win arena matches.",
+    "requiredLevel": 10,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "WIN_PVP",
+        "count": 2,
+        "map": "map_eclipse_arena"
+      }
+    ],
+    "rewards": {
+      "xp": 4000,
+      "honor": 40,
+      "seasonPoints": 25,
+      "passXp": 200
+    },
+    "repeatable": true
+  },
+  {
+    "id": "q_weekly_gatebreaker",
+    "name": "Weekly: Gatebreaker",
+    "type": "WEEKLY",
+    "description": "Complete any gate three times.",
+    "requiredLevel": 15,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "COMPLETE_GATE",
+        "target": "gate_alpha_breach",
+        "count": 3
+      }
+    ],
+    "rewards": {
+      "xp": 40000,
+      "credits": 80000,
+      "gems": 20,
+      "seasonPoints": 120,
+      "passXp": 1000
+    },
+    "repeatable": true
+  },
+  {
+    "id": "q_weekly_colossus",
+    "name": "Weekly: Colossus Siege",
+    "type": "WEEKLY",
+    "description": "Deal damage to the Vanta Colossus.",
+    "requiredLevel": 30,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "DAMAGE_BOSS",
+        "target": "boss_vanta_colossus",
+        "count": 500000,
+        "map": "map_astra_graveyard"
+      }
+    ],
+    "rewards": {
+      "xp": 80000,
+      "credits": 120000,
+      "gems": 30,
+      "seasonPoints": 150,
+      "passXp": 1200,
+      "cryptoEligible": {
+        "source": "WORLD_BOSS",
+        "weight": 1
+      }
+    },
+    "repeatable": true
+  },
+  {
+    "id": "q_pvp_first_blood",
+    "name": "First Blood",
+    "type": "PVP",
+    "description": "Defeat another pilot in combat.",
+    "requiredLevel": 10,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL_PLAYER",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 3000,
+      "honor": 50
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_pvp_arena_champion",
+    "name": "Arena Champion",
+    "type": "PVP",
+    "description": "Win ten arena matches.",
+    "requiredLevel": 20,
+    "prerequisites": [
+      "q_pvp_first_blood"
+    ],
+    "objectives": [
+      {
+        "type": "WIN_PVP",
+        "count": 10,
+        "map": "map_eclipse_arena"
+      }
+    ],
+    "rewards": {
+      "xp": 25000,
+      "honor": 400,
+      "items": [
+        {
+          "itemId": "cos_nameplate_frontier",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_pve_xyrr_purge",
+    "name": "Xyrr Purge",
+    "type": "PVE",
+    "description": "Destroy Xyrr elites in the Vanta Rift.",
+    "requiredLevel": 18,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_xyrr_elite",
+        "count": 20,
+        "map": "map_vanta_rift"
+      }
+    ],
+    "rewards": {
+      "xp": 30000,
+      "credits": 60000,
+      "honor": 100
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_pve_warlord",
+    "name": "Warlord's Bounty",
+    "type": "PVE",
+    "description": "Hunt down Corsair Warlords.",
+    "requiredLevel": 22,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_pirate_warlord",
+        "count": 3,
+        "map": "map_vanta_rift"
+      }
+    ],
+    "rewards": {
+      "xp": 35000,
+      "credits": 70000,
+      "items": [
+        {
+          "itemId": "item_ammo_seeker",
+          "quantity": 50
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_mine_deep_core",
+    "name": "Deep Core Survey",
+    "type": "MINING",
+    "description": "Extract quantum shards from the Orion Belt.",
+    "requiredLevel": 12,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "MINE_RESOURCES",
+        "target": "QUANTUM_SHARD",
+        "count": 40,
+        "map": "map_orion_belt"
+      }
+    ],
+    "rewards": {
+      "xp": 10000,
+      "credits": 20000,
+      "items": [
+        {
+          "itemId": "item_mining_booster_1h",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_mine_void_harvest",
+    "name": "Void Harvest",
+    "type": "MINING",
+    "description": "Harvest Void Essence from Rift asteroids.",
+    "requiredLevel": 25,
+    "prerequisites": [
+      "q_mine_deep_core"
+    ],
+    "objectives": [
+      {
+        "type": "MINE_RESOURCES",
+        "target": "VOID_ESSENCE",
+        "count": 6,
+        "map": "map_vanta_rift"
+      }
+    ],
+    "rewards": {
+      "xp": 30000,
+      "credits": 60000
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_craft_first",
+    "name": "Workshop Basics",
+    "type": "CRAFTING",
+    "description": "Craft your first batch of Hornet missiles.",
+    "requiredLevel": 2,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "CRAFT",
+        "target": "bp_ammo_hornet",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 1500,
+      "credits": 3000,
+      "resources": {
+        "TITANIUM": 40
+      }
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_craft_engineer",
+    "name": "Reactor Engineer",
+    "type": "CRAFTING",
+    "description": "Craft stabilised reactor cores.",
+    "requiredLevel": 12,
+    "prerequisites": [
+      "q_craft_first"
+    ],
+    "objectives": [
+      {
+        "type": "CRAFT",
+        "target": "bp_part_reactor_core",
+        "count": 3
+      }
+    ],
+    "rewards": {
+      "xp": 15000,
+      "credits": 30000,
+      "items": [
+        {
+          "itemId": "item_bp_laser_solaris",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_explore_frontier",
+    "name": "Chart the Frontier",
+    "type": "EXPLORATION",
+    "description": "Visit Helios Frontier, Orion Belt and the Eclipse Arena.",
+    "requiredLevel": 10,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "TRAVEL",
+        "target": "map_helios_frontier",
+        "count": 1
+      },
+      {
+        "type": "TRAVEL",
+        "target": "map_orion_belt",
+        "count": 1
+      },
+      {
+        "type": "TRAVEL",
+        "target": "map_eclipse_arena",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 8000,
+      "credits": 15000,
+      "items": [
+        {
+          "itemId": "cos_badge_pioneer",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_explore_graveyard",
+    "name": "Survivor of the Graveyard",
+    "type": "EXPLORATION",
+    "description": "Survive ten minutes inside the Astra Graveyard.",
+    "requiredLevel": 28,
+    "prerequisites": [
+      "q_explore_frontier"
+    ],
+    "objectives": [
+      {
+        "type": "SURVIVE",
+        "count": 600,
+        "map": "map_astra_graveyard"
+      }
+    ],
+    "rewards": {
+      "xp": 40000,
+      "credits": 60000
+    },
+    "repeatable": false
+  },
+  {
+    "id": "q_clan_founding",
+    "name": "Banners Raised",
+    "type": "CLAN",
+    "description": "Join or found a clan and fight together.",
+    "requiredLevel": 10,
+    "prerequisites": [],
+    "objectives": [
+      {
+        "type": "KILL",
+        "target": "npc_xyrr_fighter",
+        "count": 30
+      }
+    ],
+    "rewards": {
+      "xp": 8000,
+      "credits": 15000,
+      "items": [
+        {
+          "itemId": "cos_emblem_starwing",
+          "quantity": 1
+        }
+      ]
+    },
+    "repeatable": false
+  }
+]
