@@ -120,9 +120,10 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
           const cost = upgradeCostFor(inst.upgradeLevel);
           const success = secureRoll() < cost.successChance;
           const toLevel = success ? cost.toLevel : inst.upgradeLevel;
+          const costJson = toJsonValue(cost);
           // Claimed before any posting: a concurrent duplicate blocks here and then fails on the unique key.
           const attempt = await tx.upgradeAttempt.create({
-            data: { userId, kind: "SHIP", targetId: inst.id, idempotencyKey: body.idempotencyKey, success, fromLevel: inst.upgradeLevel, toLevel, cost: toJsonValue(cost) },
+            data: { userId, kind: "SHIP", targetId: inst.id, idempotencyKey: body.idempotencyKey, success, fromLevel: inst.upgradeLevel, toLevel, cost: costJson },
           });
           const ref = `ship-upgrade:${userId}:${body.idempotencyKey}`;
           if (cost.credits > 0n) {
@@ -145,7 +146,7 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
             if (upd.count !== 1) throw conflict("CONCURRENT_UPGRADE", "Ship was upgraded concurrently");
           }
           await tx.shipUpgrade.create({
-            data: { shipInstanceId: inst.id, fromLevel: inst.upgradeLevel, toLevel, success, cost: attempt.cost ?? {} },
+            data: { shipInstanceId: inst.id, fromLevel: inst.upgradeLevel, toLevel, success, cost: costJson },
           });
           return { success, fromLevel: attempt.fromLevel, toLevel, cost: attempt.cost, shipInstanceId: inst.id };
         });
@@ -187,20 +188,25 @@ export default async function shipRoutes(app: FastifyInstance): Promise<void> {
   app.put<{ Params: { id: string; loadoutId: string } }>("/api/ships/:id/loadouts/:loadoutId", auth, async (req) => {
     const inst = await ownedShip(req.user.id, app.parse(idSchema, req.params.id));
     const body = app.parse(updateLoadoutSchema, req.body);
-    const lo = await db.shipLoadout.findFirst({ where: { id: app.parse(idSchema, req.params.loadoutId), shipInstanceId: inst.id } });
-    if (!lo) throw notFound("Loadout");
-    const cfg = parseLoadout(lo.config);
-    if (body.formation) cfg.formation = body.formation;
-    if (body.ammo !== undefined) {
+    const loadoutId = app.parse(idSchema, req.params.loadoutId);
+    const updated = await withSerializableTx(db, async (tx) => {
+      const lo = await tx.shipLoadout.findFirst({ where: { id: loadoutId, shipInstanceId: inst.id } });
+      if (!lo) throw notFound("Loadout");
       if (body.ammo) {
-        const has = await db.inventoryItem.findFirst({ where: { userId: req.user.id, itemId: body.ammo }, select: { id: true } });
+        const has = await tx.inventoryItem.findFirst({ where: { userId: req.user.id, itemId: body.ammo }, select: { id: true } });
         if (!has) throw badRequest("AMMO_NOT_OWNED", "You do not own this ammunition");
       }
-      cfg.ammo = body.ammo;
-    }
-    const updated = await db.shipLoadout.update({
-      where: { id: lo.id },
-      data: { ...(body.name ? { name: body.name } : {}), ...(body.preset ? { preset: body.preset } : {}), config: cfg as object },
+      // Only formation/ammo are merged into the freshly read config; slot arrays stay untouched, and
+      // the write is conditional on the version we read so a concurrent equip/unequip is never lost.
+      const cfg = parseLoadout(lo.config);
+      if (body.formation) cfg.formation = body.formation;
+      if (body.ammo !== undefined) cfg.ammo = body.ammo;
+      const upd = await tx.shipLoadout.updateMany({
+        where: { id: lo.id, updatedAt: lo.updatedAt },
+        data: { ...(body.name ? { name: body.name } : {}), ...(body.preset ? { preset: body.preset } : {}), config: cfg as object },
+      });
+      if (upd.count !== 1) throw conflict("CONCURRENT_UPDATE", "Loadout changed concurrently, retry");
+      return tx.shipLoadout.findUniqueOrThrow({ where: { id: lo.id } });
     });
     return loadoutDto(updated);
   });

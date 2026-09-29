@@ -134,32 +134,63 @@ export const defaultTransport: PushTransport = {
     return { status: res.status, body: await res.text() };
   },
   http2Post(origin, path, headers, body) {
-    return new Promise((resolve, reject) => {
-      const session = http2.connect(origin);
-      session.on("error", reject);
-      const req = session.request({ ":method": "POST", ":path": path, ...headers });
-      req.setTimeout(10_000, () => req.close(http2.constants.NGHTTP2_CANCEL));
-      let status = 0;
-      let data = "";
-      req.on("response", (h) => {
-        status = Number(h[":status"] ?? 0);
-      });
-      req.setEncoding("utf8");
-      req.on("data", (c: string) => {
-        data += c;
-      });
-      req.on("end", () => {
-        session.close();
-        resolve({ status, body: data });
-      });
-      req.on("error", (err) => {
-        session.close();
-        reject(err);
-      });
-      req.end(body);
-    });
+    return http2PostOnce(origin, path, headers, body);
   },
 };
+
+/** Overall deadline for one APNs request, including connect and TLS handshake. */
+export const HTTP2_TIMEOUT_MS = 10_000;
+
+/**
+ * One HTTP/2 POST on a fresh session. A single overall timer covers connect, TLS, request and
+ * response; every exit path (response end, stream/session error, cancel, timeout, session close)
+ * settles the promise exactly once and destroys the session, so it can never stay pending.
+ */
+export function http2PostOnce(
+  origin: string,
+  path: string,
+  headers: Record<string, string>,
+  body: string,
+  timeoutMs = HTTP2_TIMEOUT_MS,
+  connect: (origin: string) => http2.ClientHttp2Session = (o) => http2.connect(o),
+): Promise<HttpResponse> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let session: http2.ClientHttp2Session | null = null;
+    const finish = (err: Error | null, res?: HttpResponse) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      session?.destroy();
+      if (err) reject(err);
+      else resolve(res as HttpResponse);
+    };
+    const timer = setTimeout(() => finish(new Error(`HTTP/2 request timed out after ${timeoutMs} ms`)), timeoutMs);
+    try {
+      session = connect(origin);
+    } catch (err) {
+      finish(err instanceof Error ? err : new Error(String(err)));
+      return;
+    }
+    session.on("error", (err: Error) => finish(err));
+    session.on("close", () => finish(new Error("HTTP/2 session closed before the response completed")));
+    const req = session.request({ ":method": "POST", ":path": path, ...headers });
+    let status = 0;
+    let data = "";
+    req.on("response", (h) => {
+      status = Number(h[":status"] ?? 0);
+    });
+    req.setEncoding("utf8");
+    req.on("data", (c: string) => {
+      data += c;
+    });
+    req.on("end", () => finish(null, { status, body: data }));
+    req.on("error", (err: Error) => finish(err));
+    // Stream closed without 'end' (e.g. NGHTTP2_CANCEL / RST_STREAM): fail instead of hanging.
+    req.on("close", () => finish(new Error(`HTTP/2 stream closed (code ${req.rstCode ?? "unknown"})`)));
+    req.end(body);
+  });
+}
 
 export class PushSender {
   private cfg: PushConfig;
