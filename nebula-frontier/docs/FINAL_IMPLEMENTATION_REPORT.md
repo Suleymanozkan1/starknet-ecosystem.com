@@ -333,7 +333,7 @@ Final run on the current branch head:
 
 | Suite | Result |
 |---|---|
-| **vitest total** | **81 files, 580 tests, 580 passed, 0 failed, 0 skipped** |
+| **vitest total** | **83 files, 609 tests, 609 passed, 0 failed, 0 skipped** |
 | Unit | game-core (combat, movement, anti-cheat, progression, social, world, review fixes); game-network (prediction, interpolation, clock); game-renderer (ship factory, materials, FX, camera, tiers, pool); game-client (input, radar, audio, relations); web (HTTP/CSRF, i18n, deep links); authentication; config data; telemetry: **PASS** |
 | Game server | `game-server.test.ts` (auth, AOI, combat, PvP, portals, events, bounties, raids, gates, clan wars, reputation, pets, faction war, docking), `reconnection.test.ts`, `review-fixes`, `tickets` (incl. concurrent redemption, memory and Redis), `clan-missions`, `retry-queue`: **PASS** |
 | Database | ledger (idempotency, concurrency, reversal, drift detection), client pool parsing: **PASS** |
@@ -425,7 +425,7 @@ In every run the reward pool is ring-fenced, and circuit breakers engage under t
 
 | Area | Rating | Basis |
 |---|---|---|
-| Code Quality | READY | Strict TS, lint clean, 0 placeholders; 154 of 156 CodeRabbit findings fixed, 1 partly fixed with documented reasons, 1 already correct |
+| Code Quality | READY | Strict TS, lint clean, 0 placeholders; 172 of 174 CodeRabbit findings fixed, 1 partly fixed with documented reasons, 1 already correct |
 | Security | READY | Security audit (§14); all review security findings fixed; dependency advisories are off the runtime paths |
 | Functionality | NEEDS_WORK | 94.8% implemented; devnet payout and iOS not proven |
 | Testing | READY | See §21: unit, integration and e2e green |

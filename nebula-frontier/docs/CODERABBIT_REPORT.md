@@ -18,7 +18,7 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 
 | PR | Slice | Files | Status |
 |---|---|---|---|
-| [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 queued |
+| [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 (refreshed, 75 files): 16 inline findings plus 2 clan-war concerns from the security summary, all fixed in `b0f9418`, `4c99561`, `76d7627` |
 | [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Round 2 (refreshed branch, 86 files): 14 findings, all fixed in `424ae31` |
 | [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API (`apps/api`) | 64 | Full review (after the 93-file attempt failed and the slice was split): 40 findings, all fixed in `ff7c7ca`, with a reply on every thread |
 | [#8](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/8) | shared, validation, authentication, Prisma | 30 | Split from #4 (refreshed to 32 files): 30 findings, 29 fixed and 1 partly fixed (FKs added, catalog and listing FKs declined with reasons) in `baa8a73`, `5aa2550`, `f51c2bc`, with a reply on every thread |
@@ -31,12 +31,12 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 | Metric | Count |
 |---|---|
 | Files reviewed | 256 (PR #2 75 + PR #3 85 + PR #4 64 + PR #8 32) |
-| Findings | 156 (PR #2: 22 + 2 + 16; PR #3: 32 + 14; PR #4: 40; PR #8: 30) |
+| Findings | 174 (PR #2: 22 + 2 + 16 + 18; PR #3: 32 + 14; PR #4: 40; PR #8: 30) |
 | Critical | 1 |
-| High (CodeRabbit "Major") | 65 |
-| Warning (CodeRabbit "Minor") | 62 |
-| Info (CodeRabbit "Trivial"/nitpick) | 28 |
-| Fixed | 154 (plus 1 partly fixed: PR #8 gear/listing FKs) |
+| High (CodeRabbit "Major") | 72 |
+| Warning (CodeRabbit "Minor") | 71 |
+| Info (CodeRabbit "Trivial"/nitpick) | 30 |
+| Fixed | 172 (plus 1 partly fixed: PR #8 gear/listing FKs) |
 | Accepted as already addressed | 1 (PR #3 BC-05/BC-07 audit paths, already correct) |
 | Remaining open | 0 from completed rounds |
 
@@ -280,9 +280,40 @@ Verification after round 2: typecheck and lint clean; vitest 536 tests in 78 fil
 
 Verification: typecheck, lint and build are clean on all workspaces; vitest passes 580 tests in 81 files.
 
+## PR #2 round 4 — game server, game-core, telemetry (75 files)
+
+16 inline findings (5 Major, 9 Minor, 2 Trivial) and 2 High concerns from the security-architecture summary. All are fixed, and every inline thread has a reply. Commits: `b0f9418`, `4c99561` and `76d7627`.
+
+**Persistence and economy integrity**
+- Player flushes are idempotent:
+  - each `PendingDelta` carries a stable `flushId`;
+  - every flush first inserts a `PlayerFlush` guard row (`ON CONFLICT DO NOTHING`), so a retry after a lost COMMIT response never re-applies XP, resources or counters;
+  - failed deltas are carried as separate entries with their own ID;
+  - migration `20260929150000_player_flush_idempotency` only adds new objects.
+- Loot and issuance money is `bigint` via `toMoney`. Fractional resources are floored, and the remainder is carried forward instead of aborting the flush.
+- The retry queue keeps per-user order within a pass.
+- A bounty payout is reported only after its transaction commits, and one failed bounty no longer blocks the rest.
+
+**Rewards and anti-abuse**
+- Raid scale, raid crypto weight and NPC reward factors count only qualifying contributors, so low-damage alts cannot inflate rewards.
+- Clan-war rooms admit only an accepted, active war's two clans. Teams are fixed, and the war's reward is a single conditional claim, so a second match cannot award it again.
+- The `GalaxyRoom` ping handler is rate-limited per client.
+
+**Security and operations**
+- `/metrics` requires a `METRICS_TOKEN` bearer token, compared in constant time. Production requires the token (at least 32 characters, documented in `.env.example`) and returns 404 without it.
+- The logger also scrubs `Basic` credentials and credentials in URLs, and its `err` serializer handles non-`Error` values.
+- A failed event-trigger subscription is caught and logged instead of causing an unhandled rejection.
+- `nextEventWindow` guards a non-positive period, and tuning overrides require `minResist < maxResist`.
+- Bot CLI: a timed stop resolves even when leaving fails, and the `mine` intent is sent only when it changes.
+- The suite restores the environment variables it sets.
+
+**Validation note:** one full-suite run hit an intermittent failure in the vertical-slice loot test. The loot roll can be resources only, and the test counted only items and credits. The test now also counts resources; the pilot starts with none, so the check stays meaningful.
+
+Verification: typecheck, lint and build are clean; vitest passes 609 tests in 83 files.
+
 ## Remaining / follow-up
 
-- PR #2 round 4 and PR #3 round 3: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).
+- PR #3 round 3: re-review of the fix commits (scheduled one hour apart because of the rate limit).
 - PR #5–#7 cover web, client and platform. Their results are added here as they arrive.
 
 ## History note
