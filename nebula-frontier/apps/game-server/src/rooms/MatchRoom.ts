@@ -245,13 +245,15 @@ export class ArenaRoom extends MatchRoom {
 }
 
 /**
- * Clan war battle: exactly two clans (first two clans to join take teams 0/1);
- * pilots without a clan or from a third clan are rejected.
+ * Clan war battle for one accepted ClanWar row. The room's `instanceKey` must be the war id; the war
+ * must be in its battle window (PREPARATION once `startsAt` has passed, or BATTLE), on this map, and
+ * only members of its two clans may join. Team 0 is always `clanAId`, team 1 `clanBId`.
  */
 export class ClanWarRoom extends MatchRoom {
   readonly roomKind = RoomName.CLAN_WAR;
   protected readonly mode = MatchMode.CLAN_WAR;
   private clanTeams: string[] = [];
+  private war: { id: string; clanAId: string; clanBId: string } | null = null;
 
   protected override bossRewardSource(): RewardSource {
     return "FACTION_WAR";
@@ -261,10 +263,17 @@ export class ClanWarRoom extends MatchRoom {
     await super.beforePlayerJoin(p);
     const clanId = p.profile.clanId;
     if (!clanId) throw new ServerError(4403, "CLAN_REQUIRED");
-    if (!this.clanTeams.includes(clanId)) {
-      if (this.clanTeams.length >= 2) throw new ServerError(4403, "CLAN_NOT_IN_WAR");
-      this.clanTeams.push(clanId);
+    if (!this.war) {
+      const warId = this.options.instanceKey;
+      if (!warId) throw new ServerError(4403, "CLAN_WAR_REQUIRED");
+      const w = await this.svc.db.clanWar.findUnique({ where: { id: warId }, select: { id: true, clanAId: true, clanBId: true, phase: true, mapId: true, startsAt: true, endsAt: true } });
+      const now = Date.now();
+      const inWindow = !!w && (w.phase === "BATTLE" || (w.phase === "PREPARATION" && w.startsAt.getTime() <= now)) && w.endsAt.getTime() > now;
+      if (!w || !inWindow || w.mapId !== this.map.id) throw new ServerError(4403, "CLAN_WAR_NOT_ACTIVE");
+      this.war = { id: w.id, clanAId: w.clanAId, clanBId: w.clanBId };
+      this.clanTeams = [w.clanAId, w.clanBId];
     }
+    if (!this.clanTeams.includes(clanId)) throw new ServerError(4403, "CLAN_NOT_IN_WAR");
   }
 
   protected override teamFor(p: PlayerActor): number {
@@ -272,33 +281,25 @@ export class ClanWarRoom extends MatchRoom {
   }
 
   /**
-   * Record the battle on the ClanWar row (scores, winner, SCORING → REWARDED)
-   * and add clan score, in the same transaction as the GameMatch result.
-   * The war is `instanceKey` (ClanWar id) when given, else the open war
-   * between the two clans; an ad-hoc war row is created otherwise.
+   * Record the battle on this room's ClanWar row and add clan score, in the same transaction as the
+   * GameMatch result. The war's reward is a single conditional claim (BATTLE/PREPARATION → SCORING),
+   * so a second match for the same war can never award it again.
    */
   protected override async onMatchFinishedTx(tx: Tx, winnerTeam: number | null): Promise<void> {
-    const [clanA, clanB] = this.clanTeams;
-    if (!clanA || !clanB) return;
+    const war = this.war;
+    if (!war) return;
     const scoreA = this.teamScores[0] ?? 0;
     const scoreB = this.teamScores[1] ?? 0;
-    const winnerId = winnerTeam === null ? null : winnerTeam === 0 ? clanA : clanB;
-    const byKey = this.options.instanceKey ? await tx.clanWar.findUnique({ where: { id: this.options.instanceKey } }) : null;
-    let war = byKey && [byKey.clanAId, byKey.clanBId].includes(clanA) && [byKey.clanAId, byKey.clanBId].includes(clanB) ? byKey : null;
-    war ??= await tx.clanWar.findFirst({
-      where: { phase: { notIn: ["REWARDED"] }, OR: [{ clanAId: clanA, clanBId: clanB }, { clanAId: clanB, clanBId: clanA }] },
-      orderBy: { createdAt: "desc" },
-    });
+    const winnerId = winnerTeam === null ? null : winnerTeam === 0 ? war.clanAId : war.clanBId;
     const now = new Date();
-    if (!war) {
-      war = await tx.clanWar.create({ data: { clanAId: clanA, clanBId: clanB, mapId: this.map.id, phase: "BATTLE", startsAt: new Date(this.phaseEndsAt - this.rules.arenaMatchMs), endsAt: now } });
-    }
-    // Scores are stored relative to the war's own A/B orientation.
-    const aIsTeam0 = war.clanAId === clanA;
-    await tx.clanWar.update({ where: { id: war.id }, data: { phase: "SCORING", scoreA: aIsTeam0 ? scoreA : scoreB, scoreB: aIsTeam0 ? scoreB : scoreA, winnerId, endsAt: now } });
+    const claim = await tx.clanWar.updateMany({
+      where: { id: war.id, phase: { in: ["PREPARATION", "BATTLE"] } },
+      data: { phase: "SCORING", scoreA, scoreB, winnerId, endsAt: now },
+    });
+    if (claim.count !== 1) return; // already scored/rewarded by another match
     const add = (team: number) => BigInt((this.teamScores[team] ?? 0) * this.rules.clanWarKillScore + (winnerTeam === team ? this.rules.clanWarWinScore : 0));
-    await tx.clan.update({ where: { id: clanA }, data: { score: { increment: add(0) } } });
-    await tx.clan.update({ where: { id: clanB }, data: { score: { increment: add(1) } } });
+    await tx.clan.update({ where: { id: war.clanAId }, data: { score: { increment: add(0) } } });
+    await tx.clan.update({ where: { id: war.clanBId }, data: { score: { increment: add(1) } } });
     await tx.clanWar.update({ where: { id: war.id }, data: { phase: "REWARDED" } });
     this.clanWarId = war.id;
   }
