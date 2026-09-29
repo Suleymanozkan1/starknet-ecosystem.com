@@ -128,6 +128,14 @@ describe("pilot progression", () => {
     expect(await ctx.db.craftJob.count({ where: { userId: s.userId } })).toBe(1);
     const ti = await ctx.db.playerResource.findUniqueOrThrow({ where: { userId_resourceId: { userId: s.userId, resourceId: "TITANIUM" } } });
     expect(ti.amount).toBe(140n);
+    // Concurrent duplicates with a fresh key: exactly one job is created and charged.
+    const k2 = key();
+    const dupes = await Promise.all([0, 1, 2].map(() => s.req("POST", "/api/crafting/start", { blueprintId: "bp_laser_mk2", idempotencyKey: k2 })));
+    const okIds = new Set(dupes.filter((r) => r.statusCode === 200).map((r) => (r.json() as { id: string }).id));
+    expect(okIds.size).toBe(1);
+    for (const r of dupes) if (r.statusCode !== 200) expect(code(r)).toBe("IDEMPOTENCY_IN_PROGRESS");
+    expect(await ctx.db.craftJob.count({ where: { userId: s.userId, idempotencyKey: k2 } })).toBe(1);
+    expect(await credits(ctx.db, s.userId)).toBe(26_000n);
   });
 
   it("ships: upgrade consumes costs server-side, loadouts CRUD, unlock via shop", async () => {
