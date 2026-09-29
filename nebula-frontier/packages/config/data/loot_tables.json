@@ -1,0 +1,596 @@
+[
+  {
+    "id": "loot_mining_drone",
+    "rolls": 1,
+    "emptyWeight": 30,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 50,
+        "min": 50,
+        "max": 150
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "TITANIUM",
+        "weight": 40,
+        "min": 3,
+        "max": 8
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "PLASMA_ORE",
+        "weight": 15,
+        "min": 1,
+        "max": 3
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_repair_kit",
+        "weight": 5,
+        "min": 1,
+        "max": 1,
+        "rarity": "COMMON"
+      }
+    ]
+  },
+  {
+    "id": "loot_t1",
+    "rolls": 1,
+    "emptyWeight": 30,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 60,
+        "min": 150,
+        "max": 400
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "TITANIUM",
+        "weight": 30,
+        "min": 4,
+        "max": 10
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_ammo_hornet",
+        "weight": 15,
+        "min": 5,
+        "max": 15,
+        "rarity": "COMMON"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_repair_kit",
+        "weight": 6,
+        "min": 1,
+        "max": 1,
+        "rarity": "COMMON"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_repair_kit",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "COMMON"
+      }
+    ]
+  },
+  {
+    "id": "loot_t2",
+    "rolls": 2,
+    "emptyWeight": 30,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 60,
+        "min": 400,
+        "max": 1000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "PLASMA_ORE",
+        "weight": 30,
+        "min": 4,
+        "max": 10
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "CRYONITE",
+        "weight": 20,
+        "min": 3,
+        "max": 8
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_ammo_rocket",
+        "weight": 12,
+        "min": 10,
+        "max": 20,
+        "rarity": "UNCOMMON"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_shield_cell",
+        "weight": 8,
+        "min": 1,
+        "max": 2,
+        "rarity": "UNCOMMON"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_wpn_laser_mk2",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "UNCOMMON"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_laser_mk2",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "COMMON"
+      }
+    ]
+  },
+  {
+    "id": "loot_t3",
+    "rolls": 2,
+    "emptyWeight": 25,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 60,
+        "min": 1000,
+        "max": 2500
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "QUANTUM_SHARD",
+        "weight": 20,
+        "min": 2,
+        "max": 5
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "CRYONITE",
+        "weight": 25,
+        "min": 5,
+        "max": 12
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_ammo_seeker",
+        "weight": 10,
+        "min": 5,
+        "max": 15,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_wpn_laser_prism",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_gen_shield_s2",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "UNCOMMON"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_plasma_repeater",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 1,
+        "min": 1,
+        "max": 3
+      }
+    ]
+  },
+  {
+    "id": "loot_t4",
+    "rolls": 3,
+    "emptyWeight": 25,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 60,
+        "min": 2500,
+        "max": 6000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "DARK_MATTER",
+        "weight": 15,
+        "min": 1,
+        "max": 4
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "AETHER_CRYSTAL",
+        "weight": 12,
+        "min": 1,
+        "max": 3
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "QUANTUM_SHARD",
+        "weight": 20,
+        "min": 3,
+        "max": 8
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_ammo_torpedo",
+        "weight": 6,
+        "min": 1,
+        "max": 3,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_gen_shield_s3",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_mod_emp_burst",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_gen_speed_s3",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 2,
+        "min": 2,
+        "max": 5
+      }
+    ]
+  },
+  {
+    "id": "loot_t5",
+    "rolls": 3,
+    "emptyWeight": 20,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 60,
+        "min": 6000,
+        "max": 15000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "DARK_MATTER",
+        "weight": 20,
+        "min": 3,
+        "max": 8
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "VOID_ESSENCE",
+        "weight": 5,
+        "min": 1,
+        "max": 2
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_wpn_laser_solaris",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_mod_repair_matrix",
+        "weight": 1,
+        "min": 1,
+        "max": 1,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_laser_solaris",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 3,
+        "min": 3,
+        "max": 8
+      }
+    ]
+  },
+  {
+    "id": "loot_boss_gate",
+    "rolls": 4,
+    "emptyWeight": 0,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 40,
+        "min": 20000,
+        "max": 50000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "QUANTUM_SHARD",
+        "weight": 20,
+        "min": 10,
+        "max": 25
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "DARK_MATTER",
+        "weight": 15,
+        "min": 5,
+        "max": 12
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_wpn_railgun_lance",
+        "weight": 3,
+        "min": 1,
+        "max": 1,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_gen_shield_s4",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_railgun_lance",
+        "weight": 3,
+        "min": 1,
+        "max": 1,
+        "rarity": "PROTOTYPE"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "cos_title_gatekeeper",
+        "weight": 1,
+        "min": 1,
+        "max": 1,
+        "rarity": "RARE"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 10,
+        "min": 10,
+        "max": 30
+      }
+    ]
+  },
+  {
+    "id": "loot_boss_world",
+    "rolls": 5,
+    "emptyWeight": 0,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 40,
+        "min": 50000,
+        "max": 120000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "DARK_MATTER",
+        "weight": 20,
+        "min": 10,
+        "max": 30
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "VOID_ESSENCE",
+        "weight": 10,
+        "min": 2,
+        "max": 6
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_wpn_laser_seraph",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_part_void_lattice",
+        "weight": 3,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "cos_title_colossus_slayer",
+        "weight": 1,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_drone_warden_elite",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 12,
+        "min": 20,
+        "max": 60
+      }
+    ]
+  },
+  {
+    "id": "loot_boss_raid",
+    "rolls": 6,
+    "emptyWeight": 0,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 40,
+        "min": 80000,
+        "max": 200000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "VOID_ESSENCE",
+        "weight": 15,
+        "min": 3,
+        "max": 10
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "AETHER_CRYSTAL",
+        "weight": 20,
+        "min": 10,
+        "max": 30
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_wpn_special_singularity",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_drone_warden_elite",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "skin_riftbreaker_voidborn",
+        "weight": 1,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "BLUEPRINT",
+        "ref": "bp_part_void_lattice",
+        "weight": 4,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 12,
+        "min": 30,
+        "max": 80
+      }
+    ]
+  },
+  {
+    "id": "loot_boss_rift",
+    "rolls": 4,
+    "emptyWeight": 0,
+    "entries": [
+      {
+        "kind": "CREDITS",
+        "ref": "CREDITS",
+        "weight": 40,
+        "min": 30000,
+        "max": 80000
+      },
+      {
+        "kind": "RESOURCE",
+        "ref": "VOID_ESSENCE",
+        "weight": 20,
+        "min": 2,
+        "max": 6
+      },
+      {
+        "kind": "ITEM",
+        "ref": "cos_trail_void_wake",
+        "weight": 1,
+        "min": 1,
+        "max": 1,
+        "rarity": "LEGENDARY"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "cos_title_void_walker",
+        "weight": 2,
+        "min": 1,
+        "max": 1,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "ITEM",
+        "ref": "item_ammo_torpedo",
+        "weight": 10,
+        "min": 3,
+        "max": 8,
+        "rarity": "EPIC"
+      },
+      {
+        "kind": "GEMS",
+        "ref": "GEMS",
+        "weight": 10,
+        "min": 10,
+        "max": 40
+      }
+    ]
+  }
+]
