@@ -21,7 +21,7 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 | [#2](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/2) | game-server, game-core, telemetry | 75 | Round 1: 22 findings, all fixed. Round 2: 2 follow-ups, fixed. Round 3: 16 findings, all fixed in `ebe3881`. Round 4 queued |
 | [#3](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/3) | economy, ledger, blockchain, withdrawal service, Anchor program, audit tooling | 85 | Round 1: 32 findings, all resolved. Round 2 (refreshed branch, 86 files): 14 findings, all fixed in `424ae31` |
 | [#4](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/4) | API (`apps/api`) | 64 | Full review (after the 93-file attempt failed and the slice was split): 40 findings, all fixed in `ff7c7ca`, with a reply on every thread |
-| [#8](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/8) | shared, validation, authentication, Prisma | 30 | Split from #4; review queued at 01:02 UTC |
+| [#8](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/8) | shared, validation, authentication, Prisma | 30 | Split from #4 (refreshed to 32 files): 30 findings, 29 fixed and 1 partly fixed (FKs added, catalog and listing FKs declined with reasons) in `baa8a73`, `5aa2550`, `f51c2bc`, with a reply on every thread |
 | [#5](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/5) | web app | 91 | Queued (rate limit) |
 | [#6](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/6) | game client, renderer, networking | 72 | Queued (rate limit) |
 | [#7](https://github.com/Suleymanozkan1/starknet-ecosystem.com/pull/7) | admin, game-ui, config data, mobile config, Docker, tests | 91 | Queued (rate limit) |
@@ -30,13 +30,13 @@ Review output was treated as **untrusted input**: its shell snippets and suggest
 
 | Metric | Count |
 |---|---|
-| Files reviewed | 224 (PR #2 75 + PR #3 85 + PR #4 64) |
-| Findings | 126 (PR #2: 22 + 2 + 16; PR #3: 32 + 14; PR #4: 40) |
+| Files reviewed | 256 (PR #2 75 + PR #3 85 + PR #4 64 + PR #8 32) |
+| Findings | 156 (PR #2: 22 + 2 + 16; PR #3: 32 + 14; PR #4: 40; PR #8: 30) |
 | Critical | 1 |
-| High (CodeRabbit "Major") | 55 |
-| Warning (CodeRabbit "Minor") | 51 |
-| Info (CodeRabbit "Trivial"/nitpick) | 19 |
-| Fixed | 125 |
+| High (CodeRabbit "Major") | 65 |
+| Warning (CodeRabbit "Minor") | 62 |
+| Info (CodeRabbit "Trivial"/nitpick) | 28 |
+| Fixed | 154 (plus 1 partly fixed: PR #8 gear/listing FKs) |
 | Accepted as already addressed | 1 (PR #3 BC-05/BC-07 audit paths, already correct) |
 | Remaining open | 0 from completed rounds |
 
@@ -235,10 +235,55 @@ Verification: lint clean; typecheck and build pass on all workspaces; the full v
 
 Verification after round 2: typecheck and lint clean; vitest 536 tests in 78 files, all green.
 
+## PR #8 — Core (shared, validation, authentication, Prisma; 32 files)
+
+30 findings: 10 Major, 11 Minor, 9 Trivial. Every thread has a reply. Commits `baa8a73` (database and treasury), `5aa2550` (shared, auth, validation) and `f51c2bc` (money types, seed).
+
+**Database integrity**
+- A new migration, `20260929140000_integrity_constraints`, adds:
+  - CHECK constraints: positive ledger amounts, distinct debit and credit accounts, no negative balance unless `allowNegative`, and withdrawal amounts matching the fee formula;
+  - a trigger that makes `BalanceLedger` rows immutable;
+  - `ON DELETE RESTRICT` from users to ledger, account, deposit, withdrawal, reward and purchase rows (no more cascade or `SET NULL`);
+  - FKs from gear instances to `InventoryItem`, and from `FactionSeasonScore` to `Faction` and `Season`.
+- The migration never deletes data. If orphan rows exist, adding the FKs fails and the migration stops for an operator.
+- Two FK requests were declined, with reasons given on the thread:
+  - catalog FKs, because the catalog's source of truth is `@nebula/config` and the DB tables only mirror it;
+  - listing and auction FKs, because those rows double as sale history, and the escrow `lockedBy` guard already protects items while a listing is active.
+- The future-dated craft migration is renamed to `20260929130000`.
+- The clan treasury posts to the ledger first and updates the `bankCredits` cache only for a non-duplicate posting. A concurrency test covers it.
+
+**Money precision**
+- Money in `economy.json` and `shop.json` is written as decimal integer strings.
+- `@nebula/config` parses these strictly (zod) into exact `bigint`. Stored overrides accept strings or older safe-integer numbers. Emission math is exact.
+- `toBigInt` requires safe integers.
+- `parseUnits` rejects excess fraction digits instead of truncating them.
+- `formatUnits` validates `decimals`; `mulRatio` rejects non-finite ratios and documents its rounding.
+
+**Security**
+- `safeEqual` compares SHA-256 digests, so timing no longer leaks the input length. The refresh-token check uses it.
+- `riskLevel` is removed from the player-facing `/api/me`.
+- Player text rejects C1 control, bidi and zero-width characters.
+- Client message lookup uses only the schema table's own keys.
+- Token TTLs are validated. New tests cover expiry, a foreign issuer and a `kid` mismatch.
+- The seed script:
+  - never logs an operator-supplied admin password;
+  - has no hardcoded DB URL;
+  - writes the admin user, stats, roles and audit row in one transaction, and audits only when something changed;
+  - replaces season rewards and NPC spawns transactionally, and validates prices with the SKU named in errors.
+
+**Correctness**
+- `banned=false` now parses as false.
+- Admin event dates accept ISO strings only.
+- `ClientMsg` no longer lists server-only events, and `FormationMsg` is typed `DroneFormation`.
+- `clamp` and `wrapAngle` reject or neutralise non-finite input.
+- The unused `@solana/kit` dependency is removed.
+
+Verification: typecheck, lint and build are clean on all workspaces; vitest passes 580 tests in 81 files.
+
 ## Remaining / follow-up
 
 - PR #2 round 4 and PR #3 round 3: re-reviews of the fix commits (scheduled one hour apart because of the rate limit).
-- PR #4–#7 cover the API, web, client and platform. Their results are added here as they arrive.
+- PR #5–#7 cover web, client and platform. Their results are added here as they arrive.
 
 ## History note
 
