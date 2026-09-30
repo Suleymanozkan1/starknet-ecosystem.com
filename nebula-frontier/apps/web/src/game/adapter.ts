@@ -4,6 +4,7 @@
  * connection; this module lazy-loads it (code-split) and maps HudState / GameUiEvent onto the HUD view model.
  */
 import { api } from "../lib/api.js";
+import { tNow } from "../lib/i18n.js";
 import { DEMO_MODE } from "../lib/demoMode.js";
 import type { GameTicketResponse } from "../lib/dto.js";
 import type { GraphicsSetting } from "../store/settings.js";
@@ -25,6 +26,12 @@ export interface GameActions {
   /** Dock at the nearby station / undock when docked (same intent on the game client). */
   dock(): void;
   undock(): void;
+  /** Jump through the portal in range. */
+  jump(): void;
+  /** Collect the loot container in range. */
+  pickup(): void;
+  /** Start mining the asteroid in range (or stop mining). */
+  mine(): void;
   respawn(): void;
   sendChat(channel: GameChatChannel, text: string): void;
   setPaused(paused: boolean): void;
@@ -43,9 +50,9 @@ export interface StartOptions {
 }
 
 export async function startGame(container: HTMLElement, o: StartOptions): Promise<GameActions> {
-  o.onProgress(0.1, "Loading engine");
+  o.onProgress(0.1, tNow("play.loadingEngine"));
   const { createGame } = await import("@nebula/game-client");
-  o.onProgress(0.35, "Connecting to sector");
+  o.onProgress(0.35, tNow("play.connecting"));
   const facts = newSessionFacts();
   // Demo mode: the offline simulation's rewards/pickups/location are mirrored into the local demo account.
   const demo = DEMO_MODE ? await import("../demo/mockApi.js") : null;
@@ -75,7 +82,7 @@ export async function startGame(container: HTMLElement, o: StartOptions): Promis
       if (m) o.onEvent(m);
     },
   });
-  o.onProgress(1, "Ready");
+  o.onProgress(1, tNow("play.readyShort"));
 
   let hardLock = false;
   return {
@@ -89,7 +96,7 @@ export async function startGame(container: HTMLElement, o: StartOptions): Promis
     toggleManualLock: () => {
       const t = handle.getHud().target;
       if (!t) {
-        o.onEvent({ type: "notice", level: "info", text: "Tap a ship to select it, then lock." });
+        o.onEvent({ type: "notice", level: "info", text: tNow("play.lockHint") });
         return;
       }
       hardLock = !hardLock;
@@ -100,6 +107,9 @@ export async function startGame(container: HTMLElement, o: StartOptions): Promis
     undock: () => {
       if (handle.getHud().docked) handle.dock();
     },
+    jump: () => handle.jump(),
+    pickup: () => handle.pickup(),
+    mine: () => handle.mine(),
     respawn: () => handle.respawn(),
     sendChat: (channel, text) => handle.send("chat", { channel, text }),
     setPaused: (p) => handle.setPaused(p),

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FACTIONS, MAPS, SHIPS } from "@nebula/config";
@@ -8,6 +9,10 @@ import type { TKey } from "../lib/i18n.js";
 import { useMe } from "../lib/queries.js";
 import { postLoginRoute } from "../routes/guards.js";
 import { useSettings } from "../store/settings.js";
+import { AriaAvatar, ARIA_NAME } from "../tutorial/AriaAvatar.js";
+import { AriaBriefing, BRIEFING_TOPICS } from "../tutorial/AriaBriefing.js";
+import { BRIEFING_KEY } from "../tutorial/briefing.js";
+import { shouldAutoShow, useTutorial, whenTutorialHydrated } from "../tutorial/store.js";
 
 const FEATURES: { icon: IconName; title: TKey; body: TKey }[] = [
   { icon: "sword", title: "landing.f1.title", body: "landing.f1.body" },
@@ -43,6 +48,14 @@ export function LandingPage() {
   const enter = (): void => {
     void navigate(me.data ? postLoginRoute(me.data) : "/register");
   };
+  const [briefing, setBriefing] = useState(false);
+  // First visit: ARIA opens her briefing once (non-modal and dismissable); afterwards only on request.
+  useEffect(() => whenTutorialHydrated(() => {
+    const st = useTutorial.getState();
+    if (!shouldAutoShow(st, BRIEFING_KEY)) return;
+    st.markSeen(BRIEFING_KEY);
+    setBriefing(true);
+  }), []);
 
   return (
     <div className="relative z-10 min-h-screen overflow-x-hidden">
@@ -77,12 +90,30 @@ export function LandingPage() {
               <Icon name="wallet" size={18} /> {t("auth.wallet")}
             </Link>
           )}
+          <NeonButton variant="ghost" size="lg" onClick={() => setBriefing(true)} icon={<AriaAvatar size={26} />} data-testid="aria-open">
+            {t("aria.meet.title")}
+          </NeonButton>
         </div>
         <div className="nf-ui flex flex-wrap gap-x-8 gap-y-2 text-[13px] uppercase tracking-[0.2em] text-mute">
           <span><Rich text={t("landing.factionsN")} parts={{ n: <b className="text-ink">{FACTIONS.length}</b> }} /></span>
           <span><Rich text={t("landing.shipsN")} parts={{ n: <b className="text-ink">{SHIPS.length}</b> }} /></span>
           <span><Rich text={t("landing.mapsN")} parts={{ n: <b className="text-ink">{MAPS.length}</b> }} /></span>
           <span>{t("landing.platforms")}</span>
+        </div>
+      </section>
+
+      <section className="relative z-10 px-[max(16px,6vw)] pb-16" aria-labelledby="aria-h">
+        <div className="nf-panel nf-panel--cut nf-aria-meet grid items-center gap-5 p-5 sm:grid-cols-[auto_1fr] md:p-7">
+          <AriaAvatar size={132} className="justify-self-center" />
+          <div className="grid gap-2.5">
+            <div className="nf-eyebrow">{t("aria.meet.eyebrow")}</div>
+            <h2 id="aria-h" className="nf-h1 m-0">{t("aria.meet.title")}</h2>
+            <p className="m-0 max-w-[680px] text-[14.5px] leading-relaxed text-dim">{t("aria.meet.body")}</p>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <NeonButton variant="primary" onClick={() => setBriefing(true)} icon={<Icon name="play" size={16} />} data-testid="aria-start">{t("aria.meet.cta")}</NeonButton>
+              <span className="nf-chip"><span className="nf-display font-black tracking-[0.2em]" style={{ color: "var(--aria-a)" }}>{ARIA_NAME}</span>{t("aria.meet.chip", { n: BRIEFING_TOPICS })}</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -118,6 +149,8 @@ export function LandingPage() {
           </div>
         ))}
       </section>
+
+      {briefing && <AriaBriefing onClose={() => setBriefing(false)} finalAction={{ label: signedIn ? t("landing.continue") : t("landing.enter"), onClick: () => { setBriefing(false); enter(); } }} />}
 
       <footer className="relative z-10 border-t border-line px-[max(16px,6vw)] py-6 pb-[calc(24px+var(--safe-bottom))] text-[12px] text-mute">
         {t("landing.footer")}

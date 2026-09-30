@@ -52,6 +52,8 @@ export interface HudView {
   docked: { stationId: string; name: string; services: string[] } | null;
   dead: { repairCost: number; respawnAt: number | null; killer: string | null } | null;
   zone: string | null;
+  /** Interactables in range (from the game client's prompts): loot container, minable asteroid, portal. */
+  nearby: { loot: boolean; asteroid: boolean; portal: boolean };
 }
 
 export type HudEvent =
@@ -84,4 +86,5 @@ export const EMPTY_HUD: HudView = {
   docked: null,
   dead: null,
   zone: null,
+  nearby: { loot: false, asteroid: false, portal: false },
 };

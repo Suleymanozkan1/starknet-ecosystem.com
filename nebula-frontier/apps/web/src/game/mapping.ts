@@ -76,6 +76,11 @@ export function mapHud(s: HudState, facts: SessionFacts): HudView {
     docked: s.docked ? (facts.docked ?? { stationId: "", name: tNow("hud.station"), services: [] }) : null,
     dead: s.dead ? { repairCost: facts.death?.repairCost ?? 0, killer: facts.death?.killer ?? null, respawnAt: null } : null,
     zone: s.zone,
+    nearby: {
+      loot: s.prompts.some((p) => p.kind === "LOOT"),
+      asteroid: s.prompts.some((p) => p.kind === "ASTEROID"),
+      portal: s.prompts.some((p) => p.kind === "PORTAL"),
+    },
   };
 }
 

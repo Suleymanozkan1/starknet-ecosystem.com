@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
-import { HoloPanel, Icon } from "@nebula/game-ui";
+import { HoloPanel, Icon, NeonButton } from "@nebula/game-ui";
 import { useT } from "../lib/i18n.js";
 import type { TKey } from "../lib/i18n.js";
 import { useSettings } from "../store/settings.js";
@@ -7,6 +8,10 @@ import type { GraphicsSetting, Language } from "../store/settings.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { isNative, platform } from "../native/platform.js";
 import { haptic } from "../native/haptics.js";
+import { toast } from "../store/ui.js";
+import { useTutorial } from "../tutorial/store.js";
+import { AriaAvatar } from "../tutorial/AriaAvatar.js";
+import { AriaBriefing } from "../tutorial/AriaBriefing.js";
 
 const TIERS: { key: GraphicsSetting; label: TKey; hint: TKey }[] = [
   { key: "AUTO", label: "settings.tier.AUTO", hint: "settings.hint.AUTO" },
@@ -16,14 +21,20 @@ const TIERS: { key: GraphicsSetting; label: TKey; hint: TKey }[] = [
   { key: "LOW", label: "settings.tier.LOW", hint: "settings.hint.LOW" },
 ];
 
+/** Mirrors apps/game-client/src/input/InputManager.ts. */
 const KEYBINDS: readonly (readonly [TKey, string | TKey])[] = [
   ["settings.key.move", "W A S D"],
   ["settings.key.aim", "settings.kbd.mouse"],
   ["settings.key.fire", "settings.kbd.fire"],
+  ["settings.key.missiles", "Q"],
+  ["settings.key.target", "Tab / Esc"],
   ["settings.key.skills", "1 – 9"],
-  ["settings.key.dash", "Shift"],
-  ["settings.key.dock", "F"],
-  ["settings.key.map", "M"],
+  ["settings.key.dash", "settings.kbd.space"],
+  ["settings.key.boost", "Shift"],
+  ["settings.key.dock", "E"],
+  ["settings.key.pickup", "F"],
+  ["settings.key.mine", "M"],
+  ["settings.key.respawn", "R"],
   ["settings.key.chat", "settings.kbd.enter"],
 ];
 
@@ -59,6 +70,31 @@ function Slider({ value, onChange, label, min = 0, max = 1, step = 0.05 }: { val
   );
 }
 
+function TutorialPanel() {
+  const t = useT();
+  const enabled = useTutorial((x) => x.enabled);
+  const seen = useTutorial((x) => x.seen.length);
+  const setEnabled = useTutorial((x) => x.setEnabled);
+  const reset = useTutorial((x) => x.reset);
+  const [briefing, setBriefing] = useState(false);
+  return (
+    <HoloPanel title={t("aria.settings.title")}>
+      <div className="mb-2 flex items-center gap-3">
+        <AriaAvatar size={52} />
+        <p className="m-0 text-[13px] leading-snug text-dim">{t("aria.settings.hint")}</p>
+      </div>
+      <Row label={t("aria.settings.toggle")} hint={t("aria.settings.seen", { n: seen })}>
+        <Toggle label={t("aria.settings.toggle")} on={enabled} onChange={setEnabled} />
+      </Row>
+      <div className="flex flex-wrap gap-2 pt-3">
+        <NeonButton size="sm" icon={<Icon name="refresh" size={14} />} onClick={() => { reset(); toast.success(t("aria.settings.replayDone")); }} data-testid="aria-reset">{t("aria.settings.replay")}</NeonButton>
+        <NeonButton size="sm" variant="ghost" icon={<Icon name="play" size={14} />} onClick={() => setBriefing(true)}>{t("aria.settings.briefing")}</NeonButton>
+      </div>
+      {briefing && <AriaBriefing onClose={() => setBriefing(false)} />}
+    </HoloPanel>
+  );
+}
+
 export default function SettingsPage() {
   const t = useT();
   const s = useSettings();
@@ -85,6 +121,7 @@ export default function SettingsPage() {
             <Row label={t("settings.music")}><Slider label={t("settings.musicVolume")} value={s.musicVolume} onChange={(v) => s.set("musicVolume", v)} /></Row>
             <Row label={t("settings.effects")}><Slider label={t("settings.effectsVolume")} value={s.sfxVolume} onChange={(v) => s.set("sfxVolume", v)} /></Row>
           </HoloPanel>
+          <TutorialPanel />
           <HoloPanel title={t("settings.language")}>
             <div className="flex gap-2">
               {(["en", "tr"] as Language[]).map((l) => (

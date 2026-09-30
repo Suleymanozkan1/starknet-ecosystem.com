@@ -22,7 +22,8 @@ import { haptic } from "../native/haptics.js";
 import { useGameLink } from "../store/gameLink.js";
 import { useSettings } from "../store/settings.js";
 import { toast } from "../store/ui.js";
-import { translateServerText, useT } from "../lib/i18n.js";
+import { fmtNum, tNow, translateServerText, useT } from "../lib/i18n.js";
+import { AriaGameCoach, ariaGameEvent } from "../tutorial/AriaGameCoach.js";
 
 type Phase = { kind: "ticket" } | { kind: "loading"; progress: number; label: string } | { kind: "running" } | { kind: "error"; message: string };
 
@@ -50,6 +51,7 @@ export default function PlayPage() {
   const setSendChat = useGameLink((s) => s.setSendChat);
 
   const onEvent = useCallback((e: HudEvent) => {
+    ariaGameEvent(e);
     switch (e.type) {
       case "hit":
         if (e.incoming) haptic(e.crit ? "heavy" : "medium");
@@ -60,14 +62,14 @@ export default function PlayPage() {
         break;
       case "levelup":
         haptic("success");
-        toast.success(`Level ${e.level}!`, "New gear and sectors unlocked.");
+        toast.success(tNow("play.levelUp", { n: e.level }), tNow("play.levelUpBody"));
         void qc.invalidateQueries({ queryKey: qk.me });
         break;
       case "loot":
-        toast.info(`Loot: ${e.label}`, e.credits ? `+${e.credits.toLocaleString()} credits` : undefined);
+        toast.info(tNow("play.loot", { label: e.label }), e.credits ? tNow("event.credits", { n: fmtNum(e.credits) }) : undefined);
         break;
       case "reward":
-        toast.success("Reward", e.text);
+        toast.success(tNow("play.reward"), e.text);
         break;
       case "notice":
         if (e.level === "error") toast.error(e.text);
@@ -76,7 +78,7 @@ export default function PlayPage() {
         break;
       case "boss_phase":
         haptic("heavy");
-        toast.warn(`Boss phase ${e.phase}`, e.name);
+        toast.warn(tNow("play.bossPhase", { n: e.phase }), e.name);
         break;
       case "jump":
         setWarp(e.phase === "start" ? e.mapId : null);
@@ -103,7 +105,7 @@ export default function PlayPage() {
         const ticket = await api.game.ticket();
         if (cancelled) return;
         setWarp(ticket.mapId);
-        setPhase({ kind: "loading", progress: 0.05, label: "Loading sector" });
+        setPhase({ kind: "loading", progress: 0.05, label: tNow("play.loadingSector") });
         actions = await startGame(el, {
           ticket,
           tier,
@@ -167,7 +169,8 @@ export default function PlayPage() {
               (≤210px wide desktop, ≤130px touch). Shell controls sit to its left; panels flow below it. */}
           {/* Touch: stack the shell controls under the radar so they never overlap the ship status block on
               narrow screens; desktop keeps them in a row left of the radar. */}
-          <div className={mobile ? "absolute right-3 flex flex-col gap-2" : "absolute top-[calc(12px+var(--safe-top))] flex gap-2"} style={mobile ? { top: "calc(146px + var(--safe-top))" } : { right: 250 }}>
+          {/* Touch: a row left of the radar (≤130px wide) — the column under it collided with the EMP/shield touch buttons. */}
+          <div className="absolute top-[calc(12px+var(--safe-top))] flex gap-2" style={{ right: mobile ? 158 : 250 }}>
             <button type="button" className="nf-iconbtn" aria-label={t("nav.chat")} onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
             <button type="button" className="nf-iconbtn" aria-label={t("play.leave")} onClick={exit}><Icon name="logout" size={18} /></button>
           </div>
@@ -178,13 +181,20 @@ export default function PlayPage() {
           </div>
           {!mobile && (
             <div className="absolute bottom-[calc(14px+var(--safe-bottom))] left-1/2 grid -translate-x-1/2 justify-items-center gap-2">
-              {hud.dockPrompt && <NeonButton variant="primary" onClick={() => actions.dock()} icon={<span className="nf-kbd">F</span>}>{t("play.dockAt", { name: hud.dockPrompt.name })}</NeonButton>}
+              {hud.dockPrompt && <NeonButton variant="primary" onClick={() => actions.dock()} icon={<span className="nf-kbd">E</span>}>{t("play.dockAt", { name: hud.dockPrompt.name })}</NeonButton>}
               <SkillBar hud={hud} actions={actions} />
             </div>
           )}
           {mobile && (
             <>
-              {hud.dockPrompt && <div className="absolute left-1/2 top-[calc(110px+var(--safe-top))] -translate-x-1/2"><NeonButton size="sm" variant="primary" onClick={() => actions.dock()}>{t("play.dock")}</NeonButton></div>}
+              {(hud.dockPrompt || hud.nearby.portal || hud.nearby.asteroid || hud.nearby.loot) && !hud.dead && !hud.docked && (
+                <div className="absolute left-1/2 top-[calc(110px+var(--safe-top))] flex -translate-x-1/2 gap-2" data-testid="touch-context-actions">
+                  {hud.dockPrompt && <NeonButton size="sm" variant="primary" onClick={() => actions.dock()} icon={<Icon name="station" size={14} />}>{t("play.dock")}</NeonButton>}
+                  {hud.nearby.portal && <NeonButton size="sm" variant="primary" onClick={() => actions.jump()} icon={<Icon name="galaxy" size={14} />}>{t("play.jump")}</NeonButton>}
+                  {hud.nearby.loot && <NeonButton size="sm" onClick={() => actions.pickup()} icon={<Icon name="gems" size={14} />}>{t("play.collect")}</NeonButton>}
+                  {hud.nearby.asteroid && <NeonButton size="sm" onClick={() => actions.mine()} icon={<Icon name="pickaxe" size={14} />}>{t("play.mine")}</NeonButton>}
+                </div>
+              )}
               {!hud.dead && !hud.docked && <MobileControls hud={hud} actions={actions} />}
             </>
           )}
@@ -195,9 +205,11 @@ export default function PlayPage() {
               <ChatPanel me={me} embedded />
             </div>
           )}
+          {/* ARIA flight tips: bottom-left (desktop) / bottom-centre between joystick and action buttons (touch). */}
+          <AriaGameCoach hud={hud} touch={mobile} hidden={chatOpen} />
         </div>
       )}
-      {phase.kind === "ticket" && <LoadingScreen label="Requesting launch clearance" />}
+      {phase.kind === "ticket" && <LoadingScreen label={t("play.clearance")} />}
       {phase.kind === "loading" && (warp ? <MapTransition mapId={warp} mode="launch" progress={phase.progress} /> : <LoadingScreen label={phase.label} progress={phase.progress} />)}
       {phase.kind === "running" && warp && <MapTransition mapId={warp} mode="warp" />}
       {phase.kind === "error" && (

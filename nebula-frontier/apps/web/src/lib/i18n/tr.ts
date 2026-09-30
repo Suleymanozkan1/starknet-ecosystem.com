@@ -1,4 +1,5 @@
 import type { TKey } from "./en.js";
+import { ARIA_TR } from "./aria.tr.js";
 
 /** Turkish UI strings. Typed as a complete record: a missing key is a compile error. */
 export const TR: Readonly<Record<TKey, string>> = {
@@ -297,6 +298,17 @@ export const TR: Readonly<Record<TKey, string>> = {
   "play.dockAt": "Yanaş: {name}",
   "play.dock": "Yanaş",
   "play.aborted": "Kalkış iptal edildi",
+  "play.levelUp": "Seviye {n}!",
+  "play.levelUpBody": "Yeni ekipmanlar ve sektörler açıldı.",
+  "play.loot": "Ganimet: {label}",
+  "play.reward": "Ödül",
+  "play.bossPhase": "Boss evresi {n}",
+  "play.loadingSector": "Sektör yükleniyor",
+  "play.clearance": "Kalkış izni isteniyor",
+  "play.loadingEngine": "Motor yükleniyor",
+  "play.connecting": "Sektöre bağlanılıyor",
+  "play.readyShort": "Hazır",
+  "play.lockHint": "Önce hedef düğmeleriyle bir hedef seç, sonra kilitle.",
   "home.playAria": "Oyna — galaksiye kalkış yap",
   "home.deploy": "Konuşlan",
   "home.deployTo": "Konuşlan · {map}",
@@ -827,11 +839,17 @@ export const TR: Readonly<Record<TKey, string>> = {
   "settings.key.fire": "Ateş",
   "settings.key.skills": "Yetenekler",
   "settings.key.dash": "Atılma",
-  "settings.key.dock": "Yanaşma",
-  "settings.key.map": "Harita",
+  "settings.key.dock": "Yanaşma / atlama",
+  "settings.key.boost": "Hızlanma",
+  "settings.key.target": "En yakın hedef / temizle",
+  "settings.key.missiles": "Füzeler açık / kapalı",
+  "settings.key.mine": "Kazı",
+  "settings.key.pickup": "Ganimet topla",
+  "settings.key.respawn": "Yeniden doğ",
+  "settings.kbd.space": "Boşluk",
   "settings.key.chat": "Sohbet",
   "settings.kbd.mouse": "Fare · tıkla",
-  "settings.kbd.fire": "Boşluk / sol tık basılı",
+  "settings.kbd.fire": "Sol tık basılı tut",
   "settings.kbd.enter": "Enter",
   "settings.device": "Cihaz",
   "settings.platform": "Platform",
@@ -997,4 +1015,7 @@ export const TR: Readonly<Record<TKey, string>> = {
   "event.repaired": "Gövde {n} krediye onarıldı",
   "event.jumpFailed": "Atlama başarısız",
   "event.reconnecting": "Bağlantı koptu — yeniden bağlanılıyor…",
+
+  // ------------------------------------------------------------------ ARIA tutorial guide (aria.tr.ts)
+  ...ARIA_TR,
 };

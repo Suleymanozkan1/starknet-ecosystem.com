@@ -13,6 +13,7 @@ import { BOTTOM_NAV, MAIN_MENU, SECONDARY_MENU } from "./nav.js";
 import { NotificationDropdown } from "./NotificationDropdown.js";
 import { ChatPanel } from "./ChatPanel.js";
 import { ErrorBoundary } from "./ErrorBoundary.js";
+import { AriaHelpButton, AriaPageGuide } from "../tutorial/AriaPageGuide.js";
 
 export function LevelHex({ level, size = 40 }: { level: number; size?: number }) {
   return (
@@ -76,7 +77,7 @@ function Bell() {
   );
 }
 
-function TopBar({ me, mobile }: { me: MeResponse; mobile: boolean }) {
+function TopBar({ me, mobile, pathname }: { me: MeResponse; mobile: boolean; pathname: string }) {
   const t = useT();
   const logout = useLogout();
   const setChat = useUi((s) => s.setChatOpen);
@@ -99,6 +100,7 @@ function TopBar({ me, mobile }: { me: MeResponse; mobile: boolean }) {
         </Tooltip>
       </div>
       <div className="flex items-center gap-2">
+        <AriaHelpButton pathname={pathname} />
         <Bell />
         {!mobile && (
           <>
@@ -161,7 +163,7 @@ export function AppShell() {
   useFactionAccent(me.faction);
   return (
     <div className="nf-shell">
-      <TopBar me={me} mobile={mobile} />
+      <TopBar me={me} mobile={mobile} pathname={loc.pathname} />
       <div className="flex min-h-0 flex-1">
         {!mobile && <SideNav />}
         <main className="nf-main" id="main">
@@ -176,6 +178,7 @@ export function AppShell() {
       </div>
       {mobile && <BottomNav />}
       {chatOpen && <ChatPanel me={me} />}
+      <AriaPageGuide pathname={loc.pathname} mobile={mobile} hidden={chatOpen} />
     </div>
   );
 }

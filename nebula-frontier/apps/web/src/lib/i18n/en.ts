@@ -2,6 +2,8 @@
  * English UI strings (source of truth for the key set). `{name}` placeholders are filled by `t(key, vars)`.
  * Every key must also exist in `tr.ts` (enforced by the type of `TR` and by i18n.test.ts).
  */
+import { ARIA_EN } from "./aria.en.js";
+
 export const EN = {
   // ------------------------------------------------------------------ navigation
   "nav.play": "Play",
@@ -298,6 +300,17 @@ export const EN = {
   "play.dockAt": "Dock at {name}",
   "play.dock": "Dock",
   "play.aborted": "Launch aborted",
+  "play.levelUp": "Level {n}!",
+  "play.levelUpBody": "New gear and sectors unlocked.",
+  "play.loot": "Loot: {label}",
+  "play.reward": "Reward",
+  "play.bossPhase": "Boss phase {n}",
+  "play.loadingSector": "Loading sector",
+  "play.clearance": "Requesting launch clearance",
+  "play.loadingEngine": "Loading engine",
+  "play.connecting": "Connecting to sector",
+  "play.readyShort": "Ready",
+  "play.lockHint": "Select a target first (target buttons), then lock it.",
   "home.playAria": "Play — launch into the galaxy",
   "home.deploy": "Deploy",
   "home.deployTo": "Deploy · {map}",
@@ -828,11 +841,17 @@ export const EN = {
   "settings.key.fire": "Fire",
   "settings.key.skills": "Skills",
   "settings.key.dash": "Dash",
-  "settings.key.dock": "Dock",
-  "settings.key.map": "Map",
+  "settings.key.dock": "Dock / jump",
+  "settings.key.boost": "Boost",
+  "settings.key.target": "Target nearest / clear",
+  "settings.key.missiles": "Missiles on / off",
+  "settings.key.mine": "Mine",
+  "settings.key.pickup": "Pick up loot",
+  "settings.key.respawn": "Respawn",
+  "settings.kbd.space": "Space",
   "settings.key.chat": "Chat",
   "settings.kbd.mouse": "Mouse · click",
-  "settings.kbd.fire": "Space / hold LMB",
+  "settings.kbd.fire": "Hold left mouse",
   "settings.kbd.enter": "Enter",
   "settings.device": "Device",
   "settings.platform": "Platform",
@@ -998,6 +1017,9 @@ export const EN = {
   "event.repaired": "Hull repaired for {n} credits",
   "event.jumpFailed": "Jump failed",
   "event.reconnecting": "Connection lost — reconnecting…",
+
+  // ------------------------------------------------------------------ ARIA tutorial guide (aria.en.ts)
+  ...ARIA_EN,
 } as const;
 
 export type TKey = keyof typeof EN;
