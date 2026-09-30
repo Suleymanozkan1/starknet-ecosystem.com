@@ -9,6 +9,8 @@ const API_TARGET = process.env.VITE_DEV_API_PROXY ?? "http://localhost:8080";
 // three.js (hangar + game), phaser (game HUD layer), solana web3 (wallet).
 function manualChunks(id: string): string | undefined {
   if (!id.includes("node_modules")) return undefined;
+  // GLTF/Draco/KTX2 loaders (production ship GLBs) load lazily with the world renderer.
+  if (/[\\/]three[\\/]examples[\\/]jsm[\\/](loaders|libs|utils[\\/]SkeletonUtils)/.test(id)) return "vendor-three-gltf";
   if (/[\\/]three[\\/]/.test(id)) return "vendor-three";
   if (/[\\/]phaser[\\/]/.test(id)) return "vendor-phaser";
   if (/@colyseus|msgpackr/.test(id)) return "vendor-net";

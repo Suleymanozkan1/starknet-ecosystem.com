@@ -16,6 +16,7 @@ import {
 import type { MaterialLibrary } from "./materials.js";
 import { MATERIAL_SLOTS, type MaterialSlot, type ShipPalette, type SlotMaterials } from "./materials.js";
 import { resolveLook, type ResolvedLook } from "./cosmetics.js";
+import type { GlbLibrary } from "./glb.js";
 
 /** Geometry-affecting fields of a ship visual → stable cache key. Colors are NOT part of the key. */
 export function shipGeometryKey(v: ShipVisualDef): string {
@@ -43,6 +44,11 @@ export interface ShipFactoryOptions {
   materials: MaterialLibrary;
   greebles: boolean;
   lodBias: number;
+  /**
+   * Production GLB loader. When set, ships whose visual has a `glb` URL get it attached to their high LOD
+   * as soon as it loads; the procedural mesh stays in place until then (and on load failure).
+   */
+  glb?: GlbLibrary | null;
 }
 
 const DETAIL_FOR_LEVEL: Detail[] = [2, 1, 0];
@@ -164,10 +170,12 @@ export class ShipFactory {
   private readonly greebleGeo: BufferGeometry;
   private readonly glowTex: DataTexture;
   private greeblesEnabled: boolean;
+  private readonly glb: GlbLibrary | null;
   lodBias: number;
 
   constructor(opts: ShipFactoryOptions) {
     this.materials = opts.materials;
+    this.glb = opts.glb ?? null;
     this.greeblesEnabled = opts.greebles;
     this.lodBias = opts.lodBias;
     this.flameGeo = new CylinderGeometry(0.05, 1, 1, 10, 1, true).rotateX(-Math.PI / 2).translate(0, 0, -0.5);
@@ -237,7 +245,9 @@ export class ShipFactory {
     const set = this.geometry(look.visual);
     set.refs++;
     const mats = this.materials.get(look.palette, opts.variant ?? "");
-    return new ShipModel(this, set, look, mats, opts.engines ?? opts.variant !== "wreck");
+    const model = new ShipModel(this, set, look, mats, opts.engines ?? opts.variant !== "wreck");
+    if (this.glb && look.visual.glb && (opts.variant ?? "") === "") void this.glb.apply(model);
+    return model;
   }
 
   /** Internal: create LOD levels for a model. */
@@ -305,6 +315,7 @@ export class ShipFactory {
 }
 
 const tmpV = new Vector3();
+const tmpV2 = new Vector3();
 
 /** A live ship visual (one per entity). Owns only its scene-graph nodes; geometry/materials are shared. */
 export class ShipModel {
@@ -400,19 +411,44 @@ export class ShipModel {
     return this.root.localToWorld(out);
   }
 
-  /** Replace/augment the procedural high LOD with a loaded production GLB. */
+  /** True once a production GLB has been attached (see `GlbLibrary.apply`). */
+  get hasGlb(): boolean {
+    return this.glb !== null;
+  }
+
+  /**
+   * Replace/augment the procedural high LOD with a loaded production GLB. Meshes named after a material
+   * slot ("primary", "trim", …) are re-skinned with this ship's shared slot materials so palettes,
+   * cosmetics and material overrides (cloak) behave exactly like the procedural mesh.
+   */
   attachGlb(obj: Object3D, mode: "replace" | "augment" = "replace"): void {
-    if (this.disposed) return;
+    if (this.disposed || this.glb) return;
     this.glb = obj;
+    obj.traverse((o) => {
+      const m = o as Mesh;
+      if (!m.isMesh) return;
+      const slot = m.name as MaterialSlot;
+      if (MATERIAL_SLOTS.includes(slot)) {
+        m.material = this.materials[slot];
+        if (slot === "engine" || slot === "glow") m.castShadow = false;
+      } else {
+        m.userData.glbMaterial = m.material;
+      }
+    });
     const high = this.lod.levels[0]?.object;
     if (high && mode === "replace") {
       for (const c of high.children) c.visible = false;
     }
-    // fit to procedural length
+    // Fit the asset to the procedural bounds (same forward length, same centre).
+    obj.position.set(0, 0, 0);
+    obj.scale.setScalar(1);
     const box = new Box3().setFromObject(obj);
     const size = box.getSize(tmpV);
-    const s = size.z > 0 ? this.length / size.z : 1;
+    const target = this.bounds.getSize(tmpV2);
+    const s = size.z > 0 && target.z > 0 ? target.z / size.z : 1;
     obj.scale.setScalar(s);
+    const c = box.getCenter(tmpV).multiplyScalar(s);
+    obj.position.copy(this.bounds.getCenter(tmpV2)).sub(c);
     high?.add(obj);
   }
 
@@ -422,7 +458,8 @@ export class ShipModel {
       const m = o as Mesh;
       if (!m.isMesh) return;
       const slot = m.name as MaterialSlot;
-      m.material = mat ?? this.materials[slot] ?? this.materials.trim;
+      const own = m.userData.glbMaterial as Material | undefined;
+      m.material = mat ?? own ?? this.materials[slot] ?? this.materials.trim;
     });
     for (const f of this.flames) f.visible = mat === null;
     for (const g of this.glows) g.visible = mat === null;

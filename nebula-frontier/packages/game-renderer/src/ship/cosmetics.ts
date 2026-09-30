@@ -61,7 +61,9 @@ export function resolveLook(base: ShipVisualDef, cosmetics: readonly CosmeticPay
         if (e) palette.engine = e;
         if (c.geometry) {
           const { hardpoints, ...rest } = c.geometry;
-          visual = { ...visual, ...rest, ...(hardpoints ? { hardpoints } : {}) };
+          // A geometry-changing skin no longer matches the ship's production GLB → keep it procedural.
+          const { glb: _glb, ...base } = visual;
+          visual = { ...base, ...rest, ...(hardpoints ? { hardpoints } : {}) };
         }
         if (c.effect) look.hullEffect = c.effect;
         break;

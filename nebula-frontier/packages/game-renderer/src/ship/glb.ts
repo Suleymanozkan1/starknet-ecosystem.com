@@ -64,6 +64,13 @@ export class GlbLibrary {
   dispose(): void {
     this.draco?.dispose();
     this.ktx2?.dispose();
+    // Clones share geometry with the cached source scenes: free it once, here.
+    for (const p of this.cache.values()) {
+      p.then((scene) => scene.traverse((o) => {
+        const m = o as Mesh;
+        if (m.isMesh) m.geometry.dispose();
+      }), () => undefined);
+    }
     this.cache.clear();
   }
 }

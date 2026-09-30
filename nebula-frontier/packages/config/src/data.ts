@@ -175,6 +175,8 @@ export function validateGameData(data: GameDataSet = GAME_DATA): string[] {
     if (s.faction && !factionIds.has(s.faction)) err(`${ctx}: unknown faction "${s.faction}"`);
     if (s.visual.hardpoints.length !== s.slots.laser + s.slots.missile) err(`${ctx}: hardpoints (${s.visual.hardpoints.length}) != laser+missile slots`);
     if (s.visual.nozzles.length === 0) err(`${ctx}: no nozzles`);
+    // Production GLBs are served by the web app from public/models/ships/<shipId>.glb (see game-renderer export:glb).
+    if (s.visual.glb !== undefined && s.visual.glb !== `/models/ships/${s.id}.glb`) err(`${ctx}: glb must be "/models/ships/${s.id}.glb" (got "${s.visual.glb}")`);
     const kinds = s.abilities.map((a) => a.kind).sort().join(",");
     if (kinds !== "ACTIVE,PASSIVE,ULTIMATE") err(`${ctx}: abilities must be PASSIVE/ACTIVE/ULTIMATE (got ${kinds})`);
     if (!itemIds.has(`item_${s.id}`)) err(`${ctx}: missing item entry item_${s.id}`);

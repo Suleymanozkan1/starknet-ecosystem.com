@@ -16,6 +16,7 @@ import type { BeamHandle } from "./fx/beams.js";
 import { WarpTunnel } from "./fx/warp.js";
 import { MaterialLibrary } from "./ship/materials.js";
 import { ShipFactory, type ShipModel } from "./ship/ShipFactory.js";
+import type { GlbLibrary } from "./ship/glb.js";
 import { npcVisual, parseCosmeticIds, resolveCosmeticPayloads } from "./ship/cosmetics.js";
 import { BossVisual, type BossLayer } from "./npc/BossVisual.js";
 import { DroneFactory } from "./npc/drones.js";
@@ -53,6 +54,10 @@ export interface WorldRendererOptions {
   backend?: BackendPreference;
   /** Keep the drawing buffer for screenshots. */
   preserveDrawingBuffer?: boolean;
+  /** Load production ship GLBs (`visual.glb`) over the procedural meshes. Default true. */
+  shipGlbs?: boolean;
+  /** Where the Draco decoder is served (copied to apps/web/public/draco by `export:glb`). Default "/draco/". */
+  dracoPath?: string;
 }
 
 export interface FrameStats {
@@ -122,6 +127,7 @@ export class WorldRenderer {
   readonly materials: MaterialLibrary;
   readonly backend: RenderBackend;
   private tier: TierSettings;
+  private readonly glb: GlbLibrary | null;
   private readonly background: SpaceBackground;
   private readonly asteroids: AsteroidLayer;
   private readonly loot: LootLayer;
@@ -156,11 +162,12 @@ export class WorldRenderer {
   /** Show cloaked enemies (scanned). */
   revealCloaked = new Set<string>();
 
-  private constructor(backend: RenderBackend, tier: TierSettings) {
+  private constructor(backend: RenderBackend, tier: TierSettings, glb: GlbLibrary | null) {
     this.backend = backend;
     this.tier = tier;
+    this.glb = glb;
     this.materials = new MaterialLibrary({ textureSize: tier.textureSize, physical: tier.physicalMaterials, anisotropy: tier.anisotropy });
-    this.factory = new ShipFactory({ materials: this.materials, greebles: tier.greebles, lodBias: tier.lodBias });
+    this.factory = new ShipFactory({ materials: this.materials, greebles: tier.greebles, lodBias: tier.lodBias, glb });
     this.drones = new DroneFactory(this.materials);
     this.camera = new FollowCamera(1);
     this.fx = new EffectsSystem(tier);
@@ -200,7 +207,9 @@ export class WorldRenderer {
   static async create(opts: WorldRendererOptions): Promise<WorldRenderer> {
     const tier = TIER_SETTINGS[opts.tier];
     const backend = await createRenderBackend({ canvas: opts.canvas, tier, preference: opts.backend ?? "webgl", preserveDrawingBuffer: opts.preserveDrawingBuffer });
-    const w = new WorldRenderer(backend, tier);
+    // GLTF/Draco loaders are only needed for production ship assets → separate lazily-loaded chunk.
+    const glb = opts.shipGlbs === false ? null : new (await import("./ship/glb.js")).GlbLibrary({ dracoPath: opts.dracoPath ?? "/draco/" });
+    const w = new WorldRenderer(backend, tier, glb);
     const rect = opts.canvas.getBoundingClientRect();
     w.resize(Math.max(1, rect.width), Math.max(1, rect.height));
     return w;
@@ -854,6 +863,7 @@ export class WorldRenderer {
     this.background.dispose();
     this.drones.dispose();
     this.factory.dispose();
+    this.glb?.dispose();
     this.materials.dispose();
     this.key.dispose();
     this.rim.dispose();

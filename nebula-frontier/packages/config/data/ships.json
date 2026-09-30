@@ -90,6 +90,7 @@
       "secondaryColor": "#7fb8ff",
       "accentColor": "#ffd36b",
       "engineColor": "#6ee7ff",
+      "glb": "/models/ships/ship_aurora_lumen.glb",
       "hardpoints": [
         [0.6, 0, 1.26],
         [-0.6, 0, 1.26],
@@ -196,6 +197,7 @@
       "secondaryColor": "#f28c28",
       "accentColor": "#ffe066",
       "engineColor": "#ff9f43",
+      "glb": "/models/ships/ship_vortex_gale.glb",
       "hardpoints": [
         [0.72, 0, 1.43],
         [-0.72, 0, 1.43],
@@ -304,6 +306,7 @@
       "secondaryColor": "#d4a017",
       "accentColor": "#ff4d6d",
       "engineColor": "#ff6b35",
+      "glb": "/models/ships/ship_nova_ember.glb",
       "hardpoints": [
         [0.72, 0, 1.34],
         [-0.72, 0, 1.34],
@@ -406,6 +409,7 @@
       "secondaryColor": "#4ecdc4",
       "accentColor": "#f7fff7",
       "engineColor": "#9bf6ff",
+      "glb": "/models/ships/ship_wisp.glb",
       "hardpoints": [
         [0.36, 0, 1.09],
         [-0.36, 0, 1.09]
@@ -509,6 +513,7 @@
       "secondaryColor": "#4a4e57",
       "accentColor": "#f5f3ce",
       "engineColor": "#ffb703",
+      "glb": "/models/ships/ship_prospector.glb",
       "hardpoints": [
         [1, 0, 1.76],
         [-1, 0, 1.76]
@@ -612,6 +617,7 @@
       "secondaryColor": "#a8dadc",
       "accentColor": "#e63946",
       "engineColor": "#48cae4",
+      "glb": "/models/ships/ship_kestrel.glb",
       "hardpoints": [
         [0.68, 0, 1.26],
         [-0.67, 0, 1.26],
@@ -719,6 +725,7 @@
       "secondaryColor": "#2a9d8f",
       "accentColor": "#e9c46a",
       "engineColor": "#80ffdb",
+      "glb": "/models/ships/ship_pathfinder.glb",
       "hardpoints": [
         [0.92, 0, 1.93],
         [-0.92, 0, 1.93],
@@ -824,6 +831,7 @@
       "secondaryColor": "#52b788",
       "accentColor": "#b7e4c7",
       "engineColor": "#95d5b2",
+      "glb": "/models/ships/ship_mender.glb",
       "hardpoints": [
         [0.95, 0, 1.6],
         [-0.95, 0, 1.6],
@@ -927,6 +935,7 @@
       "secondaryColor": "#adb5bd",
       "accentColor": "#ffd166",
       "engineColor": "#ffaa00",
+      "glb": "/models/ships/ship_bastion.glb",
       "hardpoints": [
         [1.13, 0, 2.52],
         [-1.12, 0, 2.52],
@@ -1038,6 +1047,7 @@
       "secondaryColor": "#8d99ae",
       "accentColor": "#ef233c",
       "engineColor": "#ff5400",
+      "glb": "/models/ships/ship_harrow.glb",
       "hardpoints": [
         [1.28, 0, 2.69],
         [-1.28, 0, 2.69],
@@ -1147,6 +1157,7 @@
       "secondaryColor": "#1f2833",
       "accentColor": "#c5c6c7",
       "engineColor": "#7b2cbf",
+      "glb": "/models/ships/ship_umbra.glb",
       "hardpoints": [
         [0.99, 0, 1.51],
         [-0.99, 0, 1.51],
@@ -1256,6 +1267,7 @@
       "secondaryColor": "#5a189a",
       "accentColor": "#e0aaff",
       "engineColor": "#c77dff",
+      "glb": "/models/ships/ship_cipher.glb",
       "hardpoints": [
         [0.9, 0, 1.68],
         [-0.9, 0, 1.68],
@@ -1363,6 +1375,7 @@
       "secondaryColor": "#669bbc",
       "accentColor": "#fdf0d5",
       "engineColor": "#00b4d8",
+      "glb": "/models/ships/ship_cradle.glb",
       "hardpoints": [
         [2.55, 0, 3.57],
         [-2.55, 0, 3.57],
@@ -1475,6 +1488,7 @@
       "secondaryColor": "#e5e5e5",
       "accentColor": "#fca311",
       "engineColor": "#ffd60a",
+      "glb": "/models/ships/ship_sovereign.glb",
       "hardpoints": [
         [2.03, 0, 3.78],
         [-2.02, 0, 3.78],
@@ -1591,6 +1605,7 @@
       "secondaryColor": "#3a0ca3",
       "accentColor": "#f72585",
       "engineColor": "#b5179e",
+      "glb": "/models/ships/ship_zenith.glb",
       "hardpoints": [
         [2.38, 0, 4.2],
         [-2.37, 0, 4.2],
@@ -1707,6 +1722,7 @@
       "secondaryColor": "#6a040f",
       "accentColor": "#00f5d4",
       "engineColor": "#9d4edd",
+      "glb": "/models/ships/ship_riftbreaker.glb",
       "hardpoints": [
         [1.3, 0, 2.18],
         [-1.3, 0, 2.18],
