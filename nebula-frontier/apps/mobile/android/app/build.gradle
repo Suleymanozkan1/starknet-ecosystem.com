@@ -7,8 +7,8 @@ android {
         applicationId "com.nebulafrontier.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode((System.getenv("NF_VERSION_CODE") ?: "1") as int)
+        versionName System.getenv("NF_VERSION_NAME") ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +16,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing: the upload keystore never lives in git. Point these env vars at it locally or in CI
+    // (CI decodes it from the ANDROID_KEYSTORE_BASE64 secret). Without them, release builds stay unsigned.
+    def ksFile = System.getenv("NF_KEYSTORE_FILE")
+    signingConfigs {
+        if (ksFile) {
+            release {
+                storeFile file(ksFile)
+                storePassword System.getenv("NF_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("NF_KEY_ALIAS")
+                keyPassword System.getenv("NF_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (ksFile) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

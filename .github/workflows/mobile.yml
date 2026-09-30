@@ -86,6 +86,28 @@ jobs:
           test -n "$ANDROID_HOME" && echo "sdk.dir=$ANDROID_HOME" > local.properties
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           ./gradlew assembleDebug --no-daemon
+      - name: Assemble signed release APK + AAB (only when the signing secrets are configured)
+        working-directory: nebula-frontier/apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          NF_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          NF_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          NF_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          NF_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then echo "No signing secrets — skipping release build"; exit 0; fi
+          export NF_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$NF_KEYSTORE_FILE"
+          ./gradlew assembleRelease bundleRelease --no-daemon
+          rm -f "$NF_KEYSTORE_FILE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-frontier-android-release
+          path: |
+            nebula-frontier/apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            nebula-frontier/apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: ignore
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: nebula-frontier-android-apk
