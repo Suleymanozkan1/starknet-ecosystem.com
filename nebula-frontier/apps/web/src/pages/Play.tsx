@@ -156,9 +156,10 @@ export default function PlayPage() {
       <div ref={container} className="nf-game-canvas" />
       {phase.kind === "running" && actions && (
         <div className="nf-hud">
-          <div className="absolute left-3 top-[calc(12px+var(--safe-top))] grid gap-2">
+          {/* Touch: never wider than the space left of the radar (≤130px + margins). */}
+          <div className="absolute left-3 top-[calc(12px+var(--safe-top))] grid justify-items-start gap-2" style={mobile ? { maxWidth: "calc(100vw - 172px)" } : undefined}>
             <ShipStatus hud={hud} compact={mobile} />
-            {mobile && <MapStrip hud={hud} />}
+            {mobile && <MapStrip hud={hud} compact />}
             {!mobile && <SquadFrames hud={hud} />}
           </div>
           <div className="absolute left-1/2 grid -translate-x-1/2 justify-items-center gap-2" style={{ top: mobile ? 170 : 12 }}>
@@ -167,10 +168,9 @@ export default function PlayPage() {
           </div>
           {/* The radar/minimap is drawn by the game client's Phaser overlay in the top-right corner
               (≤210px wide desktop, ≤130px touch). Shell controls sit to its left; panels flow below it. */}
-          {/* Touch: stack the shell controls under the radar so they never overlap the ship status block on
-              narrow screens; desktop keeps them in a row left of the radar. */}
-          {/* Touch: a row left of the radar (≤130px wide) — the column under it collided with the EMP/shield touch buttons. */}
-          <div className="absolute top-[calc(12px+var(--safe-top))] flex gap-2" style={{ right: mobile ? 158 : 250 }}>
+          {/* Touch: a row under the radar (it overlapped the ship status block when left of it on phones; the
+              EMP/shield buttons that used to sit there now live in the touch controls' "More" panel). */}
+          <div className="absolute flex gap-2" style={mobile ? { top: "calc(128px + var(--safe-top))", right: 14 } : { top: "calc(12px + var(--safe-top))", right: 250 }}>
             <button type="button" className="nf-iconbtn" aria-label={t("nav.chat")} onClick={() => setChatOpen((o) => !o)}><Icon name="chat" size={18} /></button>
             <button type="button" className="nf-iconbtn" aria-label={t("play.leave")} onClick={exit}><Icon name="logout" size={18} /></button>
           </div>

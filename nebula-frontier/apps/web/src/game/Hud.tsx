@@ -203,15 +203,17 @@ export function DeathScreen({ hud, actions }: { hud: HudView; actions: GameActio
   );
 }
 
-export function MapStrip({ hud }: { hud: HudView }) {
+export function MapStrip({ hud, compact = false }: { hud: HudView; compact?: boolean }) {
   useT();
   const map = MAPS_BY_ID.get(hud.mapId);
   const zone = hud.zone ? ZONE_META[hud.zone] : undefined;
+  const link = hud.pingMs !== null ? `${hud.pingMs} ms` : enumLabel(hud.connection);
   return (
-    <div className="nf-hud-panel flex items-center gap-2 px-3 py-1.5 text-[12px] uppercase tracking-[0.14em]">
+    <div className={`nf-hud-panel flex flex-wrap items-center gap-x-2 gap-y-0.5 uppercase ${compact ? "px-2 py-1 text-[10px] tracking-[0.1em]" : "px-3 py-1.5 text-[12px] tracking-[0.14em]"}`}>
       <span className="font-bold" lang="en">{map?.name ?? hud.mapId}</span>
       {zone && hud.zone && <span style={{ color: zone.color }}>· {zoneLabel(hud.zone)}</span>}
-      <span className="flex items-center gap-1 text-mute"><Icon name="signal" size={12} style={{ color: hud.connection === "connected" ? "var(--nf-good)" : "var(--nf-warn)" }} />{hud.pingMs !== null ? `${hud.pingMs} ms` : enumLabel(hud.connection)}</span>
+      {/* Touch: the link state is just the coloured signal icon (the text label crowded the radar). */}
+      <span className="flex items-center gap-1 text-mute" title={link}><Icon name="signal" size={12} style={{ color: hud.connection === "connected" ? "var(--nf-good)" : "var(--nf-warn)" }} />{!compact && link}</span>
     </div>
   );
 }

@@ -1004,6 +1004,7 @@ export const EN = {
   "mc.ability2": "Ability 2",
   "mc.emp": "EMP",
   "mc.fire": "Fire",
+  "mc.more": "More controls",
   "mc.dash": "Dash",
   "mc.enemy": "Enemy",
   "mc.player": "Player",

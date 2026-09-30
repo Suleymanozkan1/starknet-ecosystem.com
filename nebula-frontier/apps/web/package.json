@@ -47,6 +47,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@nebula/game-network": "workspace:*",
     "@tailwindcss/vite": "^4.1.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

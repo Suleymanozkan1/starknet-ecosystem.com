@@ -338,7 +338,7 @@ body {
 .nf-aria-game-slot > * { pointer-events: auto; }
 .nf-aria-game-slot--touch { left: 50%; transform: translateX(-50%); bottom: calc(10px + var(--safe-bottom)); width: min(400px, calc(100vw - 460px)); }
 @media (max-width: 759px) {
-  .nf-aria-game-slot--touch { left: 12px; right: 76px; top: calc(160px + var(--safe-top)); bottom: auto; width: auto; transform: none; }
+  .nf-aria-game-slot--touch { left: 12px; right: 12px; top: calc(184px + var(--safe-top)); bottom: auto; width: auto; transform: none; }
 }
 
 @media (max-width: 767px) {

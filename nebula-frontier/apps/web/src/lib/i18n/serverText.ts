@@ -11,6 +11,8 @@ export const SERVER_TEXT_TR: Readonly<Record<string, string>> = {
   // ------------------------------------------------ in-game notices / errors (game server + offline simulation)
   "Demo mode: offline simulation — progress is kept in this browser only.": "Demo modu: çevrimdışı simülasyon — ilerleme yalnızca bu tarayıcıda saklanır.",
   "No dash ability equipped": "Takılı atılma yeteneği yok",
+  "No weapons fitted on this ship — equip lasers in the Hangar": "Bu gemide takılı silah yok — Hangar'dan lazer tak",
+  "No missile launcher fitted on this ship — equip one in the Hangar": "Bu gemide füze rampası yok — Hangar'dan bir tane tak",
   "Move closer to pick up": "Toplamak için yaklaş",
   "Repairs in progress": "Onarım sürüyor",
   "Undock first": "Önce istasyondan ayrıl",

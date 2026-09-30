@@ -532,7 +532,64 @@ export function grantTesterKit(acc: DemoAccount): void {
   const season = activeSeason();
   const bp = season ? battlePassRow(acc, season.id) : null;
   if (bp) bp.premium = true;
+  fitTesterShips(acc);
   notify(acc, "SYSTEM", "Tester kit unlocked", "Every ship, item and resource has been added to your demo account so you can try everything.");
+}
+
+/** Fit score: rarer first, then raw output (DPS for weapons). */
+function gearScore(def: ItemDef): number {
+  const w = def.ref ? WEAPONS_BY_ID.get(def.ref) : undefined;
+  return RARITY_ORDER[def.rarity] * 1_000_000 + (w ? w.damage * w.fireRate : 0);
+}
+
+/** Best combat item defs per slot family (mining lasers excluded: they cannot shoot ships). */
+function fitCandidates(family: SlotType, level: number): ItemDef[] {
+  return ITEMS.filter((d) => {
+    if (slotFamilyFor(d) !== family || !d.ref) return false;
+    const w = WEAPONS_BY_ID.get(d.ref);
+    if (w && w.type === "MINING_LASER") return false;
+    const req = w?.requiredLevel ?? MODULES_BY_ID.get(d.ref)?.requiredLevel ?? DRONES_BY_ID.get(d.ref)?.requiredLevel ?? 0;
+    return req <= level;
+  }).sort((a, b) => gearScore(b) - gearScore(a));
+}
+
+/**
+ * Demo tester kit: every ship arrives with an empty loadout, so without this only the starter ship could
+ * fire. Fits each ship whose loadouts carry no weapon at all: free inventory copies first, then fresh demo
+ * copies of the best item for the slot. Ships the pilot already fitted are left untouched.
+ */
+export function fitTesterShips(acc: DemoAccount): void {
+  if (!acc.testerKit || acc.testerFitted) return;
+  acc.testerFitted = true;
+  const used = new Set(acc.ships.flatMap((s) => s.loadouts.flatMap((l) => loadoutItemIds(l.config))));
+  const take = (def: ItemDef): string => {
+    const free = acc.inventory.find((i) => i.itemId === def.id && !i.lockedBy && !used.has(i.id));
+    const id = free?.id ?? grantItems(acc, [{ itemId: def.id, quantity: 1 }])[0];
+    if (!id) throw new Error(`could not grant ${def.id}`);
+    used.add(id);
+    return id;
+  };
+  for (const ship of acc.ships) {
+    const def = SHIPS_BY_ID.get(ship.defId);
+    const lo = ship.loadouts.find((l) => l.id === ship.activeLoadoutId) ?? ship.loadouts[0];
+    if (!def || !lo) continue;
+    const armed = ship.loadouts.some((l) => [...l.config.weapons, ...l.config.missiles].some(Boolean));
+    if (armed) continue;
+    for (const family of ["weapons", "missiles", "generators", "modules", "drones"] as const) {
+      const n = slotCount(def.slots, family);
+      const arr = lo.config[family];
+      while (arr.length < n) arr.push(null);
+      arr.length = n;
+      const picks = fitCandidates(family, acc.level);
+      if (!picks.length) continue;
+      // Modules differ in effect: rotate through the best distinct ones; guns/missiles/drones stack the best.
+      for (let i = 0; i < n; i++) {
+        if (arr[i]) continue;
+        const pick = family === "modules" || family === "generators" ? picks[i % Math.min(picks.length, n)] : picks[0];
+        if (pick) arr[i] = take(pick);
+      }
+    }
+  }
 }
 
 /** apps/api lib/me.ts buildMe. */

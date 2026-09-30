@@ -15,7 +15,7 @@ import {
 import type { CraftJobDto, FactionDto, GameTicketResponse, ShipCatalogEntry, ShipsResponse, ShopProductView, UpgradeCostResponse } from "../lib/dto.js";
 import {
   MAX_LOADOUTS_PER_SHIP, MAX_UPGRADE_LEVEL, DEMO_RULES, applyGameplayEvent, assertCanAfford, balancesDto, consumeResources, createAccount, debit, emptyLoadout,
-  equippedMap, gearScoreOf, grantBundle, grantItems, grantShip, grantTesterKit, itemDef, inventoryCapacity, inventoryDto, loadoutDto, loadoutItemIds, meDto, notify, rankId,
+  equippedMap, fitTesterShips, gearScoreOf, grantBundle, grantItems, grantShip, grantTesterKit, itemDef, inventoryCapacity, inventoryDto, loadoutDto, loadoutItemIds, meDto, notify, rankId,
   shipDtos, slotCount, slotFamilyFor, SLOT_TYPES,
 } from "./account.js";
 import { NPC_PILOTS, NPC_PILOTS_BY_ID } from "./catalog.js";
@@ -207,6 +207,10 @@ route("GET", "/api/me", (): MeResponse => {
   if (acc.faction && !acc.testerKit) {
     grantTesterKit(acc);
     save(); // GETs are not persisted automatically
+  } else if (acc.testerKit && !acc.testerFitted) {
+    // Tester kits granted before ships were fitted: arm the ships that still have no weapon.
+    fitTesterShips(acc);
+    save();
   }
   return meDto(acc);
 });

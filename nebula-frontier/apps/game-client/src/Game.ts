@@ -29,6 +29,9 @@ function num(v: number | undefined): number {
 }
 
 /** Orchestrates renderer, overlay, network session, input and audio. */
+/** Default camera distance multiplier in touch mode (pinch zoom still works from there). */
+const MOBILE_ZOOM_OUT = 1.45;
+
 export class Game {
   private readonly opts: GameClientOptions;
   private readonly root: HTMLDivElement;
@@ -64,6 +67,7 @@ export class Game {
   private wasDocked = false;
   private lastDamageAt = -1e9;
   private lastAimSent = 0;
+  private lastNoWeaponsNotice = -Infinity;
   private readonly cooldowns = new Map<number, CooldownStart>();
   private hud: HudState;
   private xpGained = 0;
@@ -101,6 +105,8 @@ export class Game {
     const rect = this.root.getBoundingClientRect();
     this.world = await WorldRenderer.create({ canvas: this.canvas, tier: this.tier, backend: this.opts.renderer ?? "webgl" });
     this.world.resize(rect.width, rect.height);
+    // Phones: small physical screen → start further out so the ship and its surroundings stay readable.
+    if (this.opts.isMobile) this.world.camera.setZoom(this.world.camera.distance * MOBILE_ZOOM_OUT);
     this.overlay = new OverlayLayer(this.overlayHost, rect.width, rect.height);
     this.overlay.model.compact = !!this.opts.isMobile;
     this.overlay.setProjector((mx, my, followId, out) => {
@@ -371,7 +377,19 @@ export class Game {
     this.lastAimSent = now;
   }
 
+  /** A ship with nothing fitted in `group` cannot shoot: say why instead of silently doing nothing. */
+  private warnIfUnarmed(group: "PRIMARY" | "SECONDARY"): void {
+    const weapons = this.self?.weapons;
+    if (!weapons || weapons.some((w) => w.group === group)) return;
+    const now = performance.now();
+    if (now - this.lastNoWeaponsNotice < 5000) return;
+    this.lastNoWeaponsNotice = now;
+    const message = group === "PRIMARY" ? "No weapons fitted on this ship — equip lasers in the Hangar" : "No missile launcher fitted on this ship — equip one in the Hangar";
+    this.emit({ type: "error", code: "NO_WEAPONS", message });
+  }
+
   private sendFire(on: boolean): void {
+    if (on) this.warnIfUnarmed("PRIMARY");
     if (this.firing !== on) {
       if (on) this.sendAim(performance.now());
       this.firing = on;
@@ -380,6 +398,7 @@ export class Game {
   }
 
   private sendSecondary(on: boolean): void {
+    if (on) this.warnIfUnarmed("SECONDARY");
     if (this.secondary !== on) {
       if (on) this.sendAim(performance.now());
       this.secondary = on;

@@ -93,6 +93,8 @@ export interface DemoAccount {
   lastMapId: string | null;
   /** Demo tester kit granted (every ship/item, large balances, max level) — also lifts the inventory cap. */
   testerKit?: boolean;
+  /** Tester-kit ships have been fitted with gear (ships granted with empty loadouts could not fire). */
+  testerFitted?: boolean;
   premiumTier: PremiumTier;
   premiumUntil: string | null;
   /** Integer base units as decimal strings (same representation as the ledger). */

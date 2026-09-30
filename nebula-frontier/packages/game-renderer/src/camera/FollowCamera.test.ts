@@ -21,6 +21,20 @@ describe("FollowCamera (top-down follow camera)", () => {
     expect(horiz).toBeLessThan(cam.camera.position.y);
   });
 
+  it("narrow screens keep the 16:9 horizontal field of view instead of cropping the sides", () => {
+    const hfov = (cam: FollowCamera) => 2 * Math.atan(Math.tan((cam.camera.fov * Math.PI) / 360) * cam.camera.aspect);
+    const desktop = new FollowCamera(16 / 9);
+    expect(desktop.camera.fov).toBe(30);
+    const wide = new FollowCamera(21 / 9);
+    expect(wide.camera.fov).toBe(30); // wider screens are never zoomed in
+    const tablet = new FollowCamera(4 / 3);
+    expect(hfov(tablet)).toBeCloseTo(hfov(desktop), 5);
+    const portrait = new FollowCamera(1);
+    portrait.setAspect(9 / 19.5);
+    expect(portrait.camera.fov).toBe(FollowCamera.MAX_FOV); // capped so the tilt stays readable
+    expect(hfov(portrait)).toBeGreaterThan(2 * Math.atan(Math.tan((30 * Math.PI) / 360) * (9 / 19.5)) * 2);
+  });
+
   it("clamps user zoom to [minDistance, maxDistance]", () => {
     const cam = new FollowCamera(1, { minDistance: 30, maxDistance: 220, distance: 64 });
     for (let i = 0; i < 50; i++) cam.zoomBy(0.5);

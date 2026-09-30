@@ -1002,6 +1002,7 @@ export const TR: Readonly<Record<TKey, string>> = {
   "mc.ability2": "Yetenek 2",
   "mc.emp": "EMP",
   "mc.fire": "Ateş",
+  "mc.more": "Diğer kontroller",
   "mc.dash": "Atılma",
   "mc.enemy": "Düşman",
   "mc.player": "Oyuncu",

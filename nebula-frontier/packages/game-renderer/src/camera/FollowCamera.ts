@@ -43,20 +43,36 @@ export class FollowCamera {
   private readonly aim = new Vector3();
   /** Seconds of free-look where focus stays still (e.g. death cam). */
   frozen = false;
+  /** Vertical FOV (degrees) on a 16:9 screen; narrower screens widen it (see setAspect). */
+  readonly baseFov: number;
 
   constructor(aspect: number, opts: FollowCameraOptions = {}) {
-    this.camera = new PerspectiveCamera(opts.fov ?? 30, aspect, 0.5, 4000);
+    this.baseFov = opts.fov ?? 30;
+    this.camera = new PerspectiveCamera(this.baseFov, aspect, 0.5, 4000);
     this.pitch = opts.pitch ?? 1.08;
     this.minDistance = opts.minDistance ?? 30;
     this.maxDistance = opts.maxDistance ?? 220;
     this.distance = opts.distance ?? 64;
     this.curDistance = this.distance;
+    this.setAspect(aspect);
   }
 
+  /**
+   * Keeps at least the horizontal field of view of a 16:9 screen: on narrower viewports (portrait phones,
+   * tablets, 4:3) the vertical FOV widens instead of cropping the sides, so a phone shows as much of the
+   * battlefield across as a desktop does (capped so the tilt stays readable).
+   */
   setAspect(aspect: number): void {
-    this.camera.aspect = aspect;
+    const a = Math.max(0.1, aspect);
+    const half = (this.baseFov * Math.PI) / 360;
+    const refHalfH = Math.atan(Math.tan(half) * (16 / 9));
+    const needed = (Math.atan(Math.tan(refHalfH) / a) * 360) / Math.PI;
+    this.camera.aspect = a;
+    this.camera.fov = Math.min(FollowCamera.MAX_FOV, Math.max(this.baseFov, needed));
     this.camera.updateProjectionMatrix();
   }
+
+  static readonly MAX_FOV = 62;
 
   /** Mouse-wheel / pinch zoom. Positive = zoom out. */
   zoomBy(delta: number): void {
