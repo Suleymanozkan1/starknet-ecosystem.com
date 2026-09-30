@@ -18,13 +18,24 @@ export interface ShipViewerProps {
   className?: string;
 }
 
+let webglProbe: boolean | null = null;
+
+/**
+ * One-off WebGL probe. The probe context is released right away: browsers cap live WebGL contexts
+ * (~8 on mobile, 16 on desktop) and evict the oldest — i.e. the visible hangar — when a leaked probe
+ * pushes the page over the limit, which blanks the viewer until its context is restored.
+ */
 function hasWebGL(): boolean {
+  if (webglProbe !== null) return webglProbe;
   try {
     const c = document.createElement("canvas");
-    return Boolean(c.getContext("webgl2") ?? c.getContext("webgl"));
+    const gl = c.getContext("webgl2") ?? c.getContext("webgl");
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    webglProbe = Boolean(gl);
   } catch {
-    return false;
+    webglProbe = false;
   }
+  return webglProbe;
 }
 
 /**
@@ -75,11 +86,9 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
         console.warn("3D hangar unavailable, using blueprint view", e);
         if (!disposed) setFailed(true);
       });
-    const ro = new ResizeObserver(() => instance?.resize());
-    ro.observe(canvas);
+    // The viewer observes its own canvas size (and redraws in the same frame), so no second observer here.
     return () => {
       disposed = true;
-      ro.disconnect();
       instance?.dispose();
       setViewer(null);
     };

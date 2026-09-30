@@ -61,6 +61,8 @@ interface Bay {
   damage: number;
   /** Ship id + cosmetics currently mounted (identical remounts are skipped). */
   key: string;
+  /** Previous ship, kept on screen until its replacement is ready so the bay never goes empty. */
+  outgoing: ShipModel | null;
 }
 
 function resolveDef(d: ShipDef | string): ShipDef {
@@ -173,7 +175,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     platform.add(discGroup);
     root.add(platform);
     scene.add(root);
-    return { root, platform, disc: discGroup, model: null, def: null, shield: null, damage: 0, key: "" };
+    return { root, platform, disc: discGroup, model: null, def: null, shield: null, damage: 0, key: "", outgoing: null };
   };
   const main = makeBay();
   let compare: Bay | null = null;
@@ -190,7 +192,14 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     bay.key = key;
     bay.shield?.release();
     bay.shield = null;
-    bay.model?.dispose();
+    // Keep the currently visible ship until the new one is revealed; one still hidden is simply dropped.
+    const prev = bay.model;
+    if (prev?.root.visible) {
+      bay.outgoing?.dispose();
+      bay.outgoing = prev;
+    } else {
+      prev?.dispose();
+    }
     const model = factory.createFromDef(def, { cosmetics: cos });
     const L = model.length;
     const s = Math.max(L * 0.62, model.radius * 1.05);
@@ -209,7 +218,10 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     // instead of popping from the procedural mesh to the GLB.
     model.root.visible = false;
     const reveal = (): void => {
-      if (bay.model === model) model.root.visible = true;
+      if (bay.model !== model || model.root.visible) return;
+      model.root.visible = true;
+      bay.outgoing?.dispose();
+      bay.outgoing = null;
     };
     void model.glbReady.then(reveal, reveal);
     setTimeout(reveal, GLB_REVEAL_TIMEOUT_MS);
@@ -238,15 +250,26 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   resetView();
 
   // --- sizing & loop ---------------------------------------------------------------------
+  // Writing canvas.width/height wipes the drawing buffer, so the canvas is only resized when its size really
+  // changed, and the next frame is drawn immediately — otherwise the browser composites the blank buffer
+  // until the next animation frame (the ship "blinks" whenever the layout around the hangar settles).
+  let sized = "";
+  let disposed = false;
   const resize = (): void => {
     const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    backend.setPixelRatio(Math.min(dpr, tier.maxPixelRatio));
+    const ratio = Math.min(dpr, tier.maxPixelRatio);
+    const next = `${w}x${h}@${ratio}`;
+    if (next === sized) return;
+    const first = sized === "";
+    sized = next;
+    backend.setPixelRatio(ratio);
     backend.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     fx.setViewport(h * backend.pixelRatio, (camera.fov * Math.PI) / 180);
     reflector?.getRenderTarget().setSize(Math.min(1024, w), Math.min(1024, h));
+    if (!first && !disposed) backend.render(scene, camera);
   };
   resize();
   const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => resize()) : null;
@@ -256,7 +279,6 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   let previewTimer: ReturnType<typeof setInterval> | null = null;
   let last = -1;
   let time = 0;
-  let disposed = false;
   const tick = (now: number): void => {
     if (disposed) return;
     raf = requestAnimationFrame(tick);
@@ -353,6 +375,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
         if (compare) {
           compare.shield?.release();
           compare.model?.dispose();
+          compare.outgoing?.dispose();
           compare.root.removeFromParent();
           compare = null;
         }
@@ -388,6 +411,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
       for (const bay of [main, compare]) {
         bay?.shield?.release();
         bay?.model?.dispose();
+        bay?.outgoing?.dispose();
       }
       fx.dispose();
       factory.dispose();
