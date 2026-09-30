@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-30T05:07:55.891Z",
+  "generatedAt": "2026-09-30T06:57:09.198Z",
   "total": 257,
-  "implemented": 245,
-  "partial": 12,
+  "implemented": 251,
+  "partial": 6,
   "notImplemented": 0,
   "blocked": 0,
-  "completionPercent": 95.3,
+  "completionPercent": 97.7,
   "byCategory": {
     "PROJECT STRUCTURE": {
       "IMPLEMENTED": 7,
@@ -122,14 +122,14 @@
       "BLOCKED": 0
     },
     "3D HANGAR": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "THREE.JS": {
-      "IMPLEMENTED": 4,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 5,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -212,8 +212,8 @@
       "BLOCKED": 0
     },
     "SCALING": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -536,8 +536,8 @@
       "BLOCKED": 0
     },
     "WALLETS": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -584,8 +584,8 @@
       "BLOCKED": 0
     },
     "SMART CONTRACT": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -956,8 +956,8 @@
       "BLOCKED": 0
     },
     "BACKUP": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -1291,10 +1291,8 @@
       "id": "HANGAR-01",
       "category": "3D HANGAR",
       "requirement": "3D hangar: select, equip, customize, upgrade, compare, rotate, zoom, previews (engine/fire/shield/damage)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "3D-01",
@@ -1314,11 +1312,8 @@
       "id": "3D-03",
       "category": "THREE.JS",
       "requirement": "GLB/GLTF + Draco + KTX2 loading path",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED",
-        "No production GLB assets exist; loader path only (procedural geometry used)"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "3D-04",
@@ -1478,11 +1473,8 @@
       "id": "MP-09",
       "category": "SCALING",
       "requirement": "Horizontal scaling via Redis presence/driver, regions",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED",
-        "RedisPresence/RedisDriver wired when REDIS_URL is set (presence/mute keys covered by game-server tests); a two-node matchmaking run has not been tested"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MP-10",
@@ -1882,10 +1874,8 @@
       "id": "BC-02",
       "category": "WALLETS",
       "requirement": "Wallet adapter with Phantom, Solflare, Backpack (Wallet Standard)",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-03",
@@ -1947,10 +1937,8 @@
       "id": "BC-10",
       "category": "SMART CONTRACT",
       "requirement": "Anchor program architecture for settlement/escrow",
-      "status": "PARTIAL",
-      "why": [
-        "cargo check + 6 Rust unit tests pass; Anchor/Solana CLI not installed here, so not built as BPF, no on-chain (bankrun) tests, not deployed (MVP settles off-chain via blockchain-service)"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-11",
@@ -2568,11 +2556,8 @@
       "id": "INF-07",
       "category": "BACKUP",
       "requirement": "Daily backup + PITR + DR plan",
-      "status": "PARTIAL",
-      "why": [
-        "some implementation evidence missing",
-        "Daily dump + restore drill verified; WAL archiving configured in compose but a PITR restore has not been drilled (Docker daemon unavailable when added)"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "INF-08",

@@ -6,7 +6,9 @@ export default tseslint.config(
   {
     ignores: [
       "**/node_modules/**", "**/dist/**", "**/build/**", "tools/reference-repos/**",
-      "apps/mobile/android/**", "apps/mobile/ios/**", "**/generated/**", "**/*.d.ts", "coverage/**"
+      "apps/mobile/android/**", "apps/mobile/ios/**", "**/generated/**", "**/*.d.ts", "coverage/**",
+      // Vendored third-party decoder (copied from three/examples by `export:glb`), not project code.
+      "apps/web/public/draco/**", "test-results/**", "programs/target/**"
     ]
   },
   js.configs.recommended,

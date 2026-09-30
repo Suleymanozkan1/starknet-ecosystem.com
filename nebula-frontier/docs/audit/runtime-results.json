@@ -49,7 +49,7 @@
   },
   "web_wallet_ui": {
     "status": "PASS",
-    "evidence": "Playwright: /login shows wallet sign-in (Phantom/Solflare adapters + Wallet Standard); a real browser wallet extension cannot be driven headless"
+    "evidence": "tests/e2e/wallet-standard.wallet.spec.ts against the real API: injected Wallet Standard wallet detected, SIWS challenge signed, /api/me 200 with the wallet; tampered signature rejected (401) (2026-09-30)"
   },
   "api_faction": {
     "status": "PASS",
@@ -113,7 +113,7 @@
   },
   "web_hangar": {
     "status": "PASS",
-    "evidence": "Playwright: hangar page with 3D viewer (docs/screenshots/desktop-hangar.png)"
+    "evidence": "tests/e2e/hangar.demo.spec.ts on the demo build: canvas renders, drag-rotate/wheel-zoom change the image, engine/fire/shield/damage previews, select/equip/cosmetic/compare/upgrade (2026-09-30)"
   },
   "web_pages": {
     "status": "PASS",
@@ -145,11 +145,11 @@
   },
   "anchor_cargo_test": {
     "status": "PASS",
-    "evidence": "cd programs && cargo test -p nebula_settlement: 6 passed (config/emission-epoch/fee-cap/refund rules), 2026-09-28"
+    "evidence": "anchor build (Anchor 1.2.0, Agave 4.3) \u2192 nebula_settlement.so 340 KB + IDL; cargo test -p nebula_settlement: 6 unit + 7 LiteSVM on-chain tests passed; solana-test-validator initialize succeeded (2026-09-30)"
   },
   "backup_drill": {
     "status": "PASS",
-    "evidence": "scripts/backup/pg-backup.sh against local Postgres 16 (11.9 MB dump, pg_restore --list ok, sha256) + pg-restore-drill.sh restored into a scratch DB with identical row counts for User/BalanceLedger/BalanceAccount/Withdrawal/Reward/AuditLog, 2026-09-28"
+    "evidence": "scripts/backup/pg-backup.sh against local Postgres 16 (11.9 MB dump, pg_restore --list ok, sha256) + pg-restore-drill.sh restored into a scratch DB with identical row counts for User/BalanceLedger/BalanceAccount/Withdrawal/Reward/AuditLog, 2026-09-28; scripts/backup/pitr-drill.sh (2026-09-30): base backup + WAL replay to recovery_target_time restored 5/5 pre-T markers, post-T damage absent, key-table counts identical, restore+replay 1.2 s"
   },
   "load_100": {
     "status": "PASS",
@@ -170,5 +170,9 @@
   "perf_profile": {
     "status": "PASS",
     "evidence": "CDP CPU profile during combat: shader compile share 18.4% \u2192 2.6%, canvas resize 8.2% \u2192 3.3% (SwiftShader)"
+  },
+  "two_node": {
+    "status": "PASS",
+    "evidence": "tests/integration/horizontal-scaling.test.ts: 2 game-server processes on one Redis \u2014 cross-node matchmaking via remote seat reservation, join-by-id across nodes, cross-node GLOBAL/FACTION chat + presence; 3/3 green three runs in a row (2026-09-30)"
   }
 }
