@@ -11,10 +11,10 @@ skip-lint = false
 
 # NOT deployed in the MVP (see docs/BLOCKCHAIN.md). Devnet id reserved for a future deployment.
 [programs.devnet]
-nebula_settlement = "Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH"
+nebula_settlement = "DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL"
 
 [programs.localnet]
-nebula_settlement = "Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH"
+nebula_settlement = "DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL"
 
 # Devnet only. The provider wallet is a dedicated deployer / upgrade-authority key — never the
 # treasury key, which is held exclusively by apps/blockchain-service. The upgrade authority is also

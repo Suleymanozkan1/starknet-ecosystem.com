@@ -19,7 +19,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH");
+declare_id!("DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL");
 
 pub const CONFIG_SEED: &[u8] = b"config";
 pub const VAULT_SEED: &[u8] = b"vault";

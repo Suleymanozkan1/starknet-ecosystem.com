@@ -1,0 +1,41 @@
+{
+  "name": "Zenith #1",
+  "symbol": "NEBF",
+  "description": "NEBULA FRONTIER legendary ship — cosmetic ownership record (devnet).",
+  "image": "https://nebulafrontier.vercel.app/nft/ship_zenith.png",
+  "attributes": [
+    {
+      "trait_type": "Family",
+      "value": "LEGENDARY_SHIP"
+    },
+    {
+      "trait_type": "Item",
+      "value": "ship_zenith"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "LEGENDARY"
+    },
+    {
+      "trait_type": "Ship Class",
+      "value": "BATTLECRUISER"
+    },
+    {
+      "trait_type": "Edition",
+      "value": 1
+    },
+    {
+      "trait_type": "Max Edition",
+      "value": 100
+    }
+  ],
+  "properties": {
+    "category": "image",
+    "files": [
+      {
+        "uri": "https://nebulafrontier.vercel.app/nft/ship_zenith.png",
+        "type": "image/png"
+      }
+    ]
+  }
+}

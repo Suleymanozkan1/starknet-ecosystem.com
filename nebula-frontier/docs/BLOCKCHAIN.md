@@ -184,7 +184,7 @@ cargo test -p nebula_settlement
 
 Result on 2026-09-30: `test result: ok. 6 passed` (unit) and `test result: ok. 7 passed` (`tests/litesvm.rs`, about 2 s).
 
-**Local validator smoke test** (optional, 127.0.0.1 only, never devnet or mainnet). `solana-test-validator --reset --upgradeable-program Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH target/deploy/nebula_settlement.so <local-authority-pubkey> --mint <local-authority-pubkey>` loads the program with a throwaway local upgrade authority, created with `solana-keygen new` in a temp directory and never committed. The `initialize` instruction was then sent with a small `@solana/kit` script that uses the IDL discriminator and a borsh-encoded argument layout. It succeeded (13,259 CU). The config PDA `Auhoeu2x…SFJJ` is owned by the program and stores the right authority, reward signer, `fee_bps` = 500 and the caps.
+**Local validator smoke test** (optional, 127.0.0.1 only, never devnet or mainnet). `solana-test-validator --reset --upgradeable-program DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL target/deploy/nebula_settlement.so <local-authority-pubkey> --mint <local-authority-pubkey>` loads the program with a throwaway local upgrade authority, created with `solana-keygen new` in a temp directory and never committed. The `initialize` instruction was then sent with a small `@solana/kit` script that uses the IDL discriminator and a borsh-encoded argument layout. It succeeded (13,259 CU). The config PDA `Auhoeu2x…SFJJ` is owned by the program and stores the right authority, reward signer, `fee_bps` = 500 and the caps.
 
 Not done: devnet deployment. It needs the dedicated deployer keypair and program-deploy SOL; follow the pre-deployment steps above.
 

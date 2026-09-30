@@ -3,8 +3,9 @@
  * Requires NFT_MINTING_ENABLED=true and a funded treasury. Metadata JSON is printed (host it and pass
  * --uri, otherwise a placeholder data URI host is used).
  *
- *   NFT_MINTING_ENABLED=true SERVICE_ROLE=blockchain npx tsx scripts/mint-devnet-nft.ts --item ship_x --owner <addr> [--uri https://...]
+ *   NFT_MINTING_ENABLED=true SERVICE_ROLE=blockchain npx tsx scripts/mint-devnet-nft.ts --item ship_x --owner <addr> [--uri https://...] [--out meta.json] [--dry-run]
  */
+import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -67,6 +68,10 @@ export async function main(): Promise<void> {
   });
   console.info("Metadata JSON (host this at --uri):");
   console.info(JSON.stringify(json, null, 2));
+  // --dry-run --out <file>: only write the metadata JSON (to publish it at --uri before minting).
+  const out = arg("out");
+  if (out) writeFileSync(out, `${JSON.stringify(json, null, 2)}\n`);
+  if (process.argv.includes("--dry-run")) return;
   const rpc = createRpcFromEnv();
   // Never submit a treasury-funded mint to an unintended cluster.
   await assertRpcCluster(rpc);
