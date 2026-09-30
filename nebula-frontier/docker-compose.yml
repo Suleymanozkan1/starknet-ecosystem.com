@@ -7,8 +7,10 @@ services:
     image: postgres:16-alpine
     environment: { POSTGRES_USER: nebula, POSTGRES_PASSWORD: nebula, POSTGRES_DB: nebula }
     ports: ["5432:5432"]
-    # WAL archiving (base for point-in-time recovery together with the daily dumps below).
-    command: ["sh", "-c", "mkdir -p /wal-archive && chown postgres:postgres /wal-archive && exec docker-entrypoint.sh postgres -c wal_level=replica -c archive_mode=on -c 'archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/%f'"]
+    # WAL archiving (base for point-in-time recovery together with the daily dumps below). Segments are
+    # published atomically (copy to .tmp, then rename) so a restore never replays a partial segment;
+    # archive_timeout=60 bounds the RPO of a low-traffic server to ~1 min. Drill: scripts/backup/pitr-drill.sh.
+    command: ["sh", "-c", "mkdir -p /wal-archive && chown postgres:postgres /wal-archive && exec docker-entrypoint.sh postgres -c wal_level=replica -c archive_mode=on -c archive_timeout=60 -c 'archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/%f.tmp && mv /wal-archive/%f.tmp /wal-archive/%f'"]
     volumes: [pgdata:/var/lib/postgresql/data, walarchive:/wal-archive]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U nebula"], interval: 5s, retries: 20 }
   backup:
