@@ -4,6 +4,7 @@ import type { HangarPreviewMode, HangarViewer } from "@nebula/game-renderer";
 import { useGraphicsTier } from "../hooks/useGraphicsTier.js";
 import { ShipBlueprint } from "./ShipBlueprint.js";
 import { useT } from "../lib/i18n.js";
+import { viewerMounted } from "../lib/viewerPresence.js";
 
 export type PreviewMode = HangarPreviewMode;
 
@@ -53,6 +54,9 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
   const initial = useRef({ def, cosmetics, autoRotate });
   initial.current = { def, cosmetics, autoRotate };
 
+  // Pause the animated starfield behind the page while this viewer is on screen.
+  useEffect(() => viewerMounted(), []);
+
   // Create once per canvas + graphics tier.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -72,6 +76,8 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
           tier,
           autoRotate: initial.current.autoRotate,
           transparent: true,
+          // Only automated pixel tests need the last frame kept readable.
+          preserveDrawingBuffer: navigator.webdriver === true,
         }),
       )
       .then((v) => {
@@ -112,7 +118,7 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
   }, [viewer, preview]);
 
   return (
-    <div className={className} style={{ position: "absolute", inset: 0 }}>
+    <div className={className} style={{ position: "absolute", inset: 0 }} data-nf-3d="">
       <canvas
         ref={canvasRef}
         className="h-full w-full touch-none"

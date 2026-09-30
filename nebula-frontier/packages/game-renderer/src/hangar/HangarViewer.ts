@@ -27,6 +27,11 @@ export interface HangarViewerOptions {
   transparent?: boolean;
   /** Load production ship GLBs (`visual.glb`) over the procedural meshes. Default true. */
   shipGlbs?: boolean;
+  /**
+   * Keep the last frame readable (canvas pixel tests). Off by default: it forces an extra buffer copy
+   * per frame, which some mobile GPUs answer with flicker.
+   */
+  preserveDrawingBuffer?: boolean;
   /** Where the Draco decoder is served. Default "/draco/". */
   dracoPath?: string;
 }
@@ -91,14 +96,16 @@ const tmpQ = new Quaternion();
 export async function createHangarViewer(canvas: HTMLCanvasElement, opts: HangarViewerOptions): Promise<HangarViewer> {
   const tierName = resolveTier(opts.tier ?? "AUTO");
   const tier = TIER_SETTINGS[tierName];
-  const backend: RenderBackend = await createRenderBackend({ canvas, tier, preference: opts.backend ?? "webgl", alpha: opts.transparent ?? false, preserveDrawingBuffer: true });
+  const backend: RenderBackend = await createRenderBackend({ canvas, tier, preference: opts.backend ?? "webgl", alpha: opts.transparent ?? false, preserveDrawingBuffer: opts.preserveDrawingBuffer ?? false });
   const scene = new Scene();
   if (!opts.transparent) scene.background = new Color("#05070d");
   if (backend.environment) {
     scene.environment = backend.environment;
     scene.environmentIntensity = 0.55;
   }
-  const camera = new PerspectiveCamera(35, 1, 0.1, 500);
+  // near/far kept tight (orbit distance 3..90, floor radius 60): mobile GPUs often only have a 16-bit
+  // depth buffer, where near = 0.1 made the stacked floor / grid / halo layers z-fight (shimmer).
+  const camera = new PerspectiveCamera(35, 1, 0.5, 260);
   camera.position.set(9, 5.5, 11);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -130,7 +137,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   if (backend.kind === "webgl" && (tierName === "ULTRA" || tierName === "HIGH")) {
     reflector = new Reflector(new CircleGeometry(60, 64), { color: new Color("#1a1e28"), textureWidth: 1024, textureHeight: 1024, clipBias: 0.003 });
     reflector.rotation.x = -Math.PI / 2;
-    reflector.position.y = -0.02;
+    reflector.position.y = -0.08;
     floorGroup.add(reflector);
   }
   const floorMat = new MeshStandardMaterial({ color: "#05070b", roughness: 0.85, metalness: 0.1, envMapIntensity: 0.05, transparent: !!reflector, opacity: reflector ? 0.9 : 1 });
@@ -138,9 +145,14 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   const floor = new Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
+  // Push the floor back in depth so the grid / platform halo drawn just above it never fight it.
+  floorMat.polygonOffset = true;
+  floorMat.polygonOffsetFactor = 2;
+  floorMat.polygonOffsetUnits = 2;
   floorGroup.add(floor);
   const grid = new GridHelper(120, 60, 0x1f3550, 0x121a28);
-  grid.position.y = 0.005;
+  grid.position.y = 0.03;
+  grid.material.depthWrite = false;
   grid.material.transparent = true;
   grid.material.opacity = 0.35;
   floorGroup.add(grid);
@@ -170,7 +182,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     const ring = new Mesh(ringGeo, ringMat);
     ring.position.y = 0.19;
     const halo = new Mesh(haloGeo, haloMat);
-    halo.position.y = 0.01;
+    halo.position.y = 0.05; // clear of the floor + grid (see the depth notes on the camera)
     discGroup.add(disc, ring, halo);
     platform.add(discGroup);
     root.add(platform);

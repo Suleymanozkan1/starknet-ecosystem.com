@@ -203,22 +203,23 @@ test.describe("hangar · 3D viewer interaction (demo build)", () => {
       await expect.poll(async () => diff(before, await sample(canvas)), { timeout: 10_000 }).toBeGreaterThan(threshold);
     });
 
-    await test.step("equips and unequips an item", async () => {
-      const emptySlot = page.locator('[data-testid^="slot-weapons-"][data-filled="false"]').first();
-      const slotId = await emptySlot.getAttribute("data-testid");
-      if (!slotId) throw new Error("no empty weapon slot");
+    await test.step("unequips and re-equips an item", async () => {
+      // Tester-kit ships arrive fully fitted: free a weapon slot, then fit an item into it again.
+      const filled = page.locator('[data-testid^="slot-weapons-"][data-filled="true"]').first();
+      const slotId = await filled.getAttribute("data-testid");
+      if (!slotId) throw new Error("no fitted weapon slot");
       const slot = page.getByTestId(slotId);
-      await slot.click();
       const dialog = page.locator('[role="dialog"][aria-modal="true"]');
-      await expect(dialog).toBeVisible();
-      await dialog.getByTestId("item-tile").first().click();
-      await expect(dialog).toBeHidden();
-      await expect(slot).toHaveAttribute("data-filled", "true");
       await slot.click();
       await expect(dialog).toBeVisible();
       await dialog.getByRole("button", { name: /^unequip$/i }).click();
       await expect(dialog).toBeHidden();
       await expect(slot).toHaveAttribute("data-filled", "false");
+      await slot.click();
+      await expect(dialog).toBeVisible();
+      await dialog.getByTestId("item-tile").first().click();
+      await expect(dialog).toBeHidden();
+      await expect(slot).toHaveAttribute("data-filled", "true");
     });
 
     await test.step("customizes the ship with a cosmetic", async () => {

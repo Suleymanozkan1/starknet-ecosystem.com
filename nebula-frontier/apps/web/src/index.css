@@ -221,6 +221,9 @@ body {
 .nf-game-canvas { position: absolute; inset: 0; }
 .nf-hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--nf-font-ui); }
 .nf-hud > * { pointer-events: auto; }
+/* A panel hosting a live WebGL viewer gets no backdrop blur: blurring the animated starfield behind a
+   WebGL layer every frame made the hangar flicker on Android WebView / mobile GPUs. */
+.nf-panel:has([data-nf-3d]) { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--nf-panel-solid, #060a14); }
 .nf-hud-panel { background: rgba(4, 9, 20, 0.62); border: 1px solid var(--nf-line); border-radius: 10px; backdrop-filter: blur(8px); }
 .nf-skill {
   position: relative; width: 52px; height: 52px; border-radius: 10px; overflow: hidden;

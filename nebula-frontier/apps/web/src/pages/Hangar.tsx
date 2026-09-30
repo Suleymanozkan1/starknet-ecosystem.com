@@ -185,7 +185,10 @@ export default function HangarPage() {
 
   const compareDef = compareId ? SHIPS_BY_ID.get(compareId) : undefined;
   const statsNow: Record<string, number> = { ...def.stats, ...ship.stats };
-  const pickerItems = picker ? items.filter((i) => slotFamilyOf(i) === picker.slotType) : [];
+  // Items fitted on another ship cannot be equipped here (ITEM_IN_USE): list free ones first, then this ship's.
+  const pickerItems = picker
+    ? items.filter((i) => slotFamilyOf(i) === picker.slotType && (!i.equippedOn || i.equippedOn === ship.id)).sort((a, b) => Number(Boolean(a.equippedOn)) - Number(Boolean(b.equippedOn)))
+    : [];
   const pickerCurrent = picker && loadout ? slotArray(loadout, picker.slotType, def.slots[SLOT_TYPES.find((s) => s.key === picker.slotType)!.shipSlot])[picker.slotIndex] : null;
   const cosmeticsOwned = items.filter((i) => (i.category === "SKIN" || i.category === "COSMETIC") && cosmeticSlotOf(i.itemId) && (!cosmeticShipOf(i.itemId) || cosmeticShipOf(i.itemId) === ship.defId));
   const equippables = items.filter((i) => slotFamilyOf(i) && !i.equippedOn);

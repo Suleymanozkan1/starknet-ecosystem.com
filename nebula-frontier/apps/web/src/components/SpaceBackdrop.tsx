@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { onAppActiveChange, isAppActive } from "../native/lifecycle.js";
 import { useSettings } from "../store/settings.js";
+import { liveViewers } from "../lib/viewerPresence.js";
 
 interface Star { x: number; y: number; z: number; tw: number; hue: number }
 
@@ -64,7 +65,8 @@ export function SpaceBackdrop({ density = 1 }: { density?: number }) {
     };
 
     const loop = (t: number): void => {
-      draw(t);
+      // Hold the last starfield frame while a WebGL viewer (hangar) is on screen.
+      if (liveViewers() === 0) draw(t);
       if (running && !prefersReduced) raf = requestAnimationFrame(loop);
     };
     const onMove = (e: PointerEvent): void => {
