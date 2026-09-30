@@ -69,7 +69,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: android-actions/setup-android@v3
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
@@ -82,8 +81,10 @@ jobs:
           NODE_ENV: production
       - name: Assemble debug APK
         working-directory: nebula-frontier/apps/mobile/android
+        # ubuntu-latest ships the Android SDK (ANDROID_HOME); Gradle installs missing platform packages itself.
         run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          test -n "$ANDROID_HOME" && echo "sdk.dir=$ANDROID_HOME" > local.properties
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
