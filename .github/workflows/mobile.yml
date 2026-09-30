@@ -1,0 +1,142 @@
+name: Mobile builds (demo)
+
+# Builds the offline demo (VITE_DEMO_MODE=true) for Android and iOS and uploads the results as artifacts:
+#  - android: debug-signed APK (sideload on any Android 7.0+ device)
+#  - ios: simulator .app (zip) + an UNSIGNED device .ipa — re-sign it with your Apple Developer team
+#    (Xcode, AltStore, Sideloadly…) before installing on a device. No signing secrets live in this repo.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "claude/**"]
+    paths:
+      - "nebula-frontier/apps/web/**"
+      - "nebula-frontier/apps/mobile/**"
+      - "nebula-frontier/apps/game-client/**"
+      - "nebula-frontier/packages/**"
+      - "nebula-frontier/pnpm-lock.yaml"
+      - ".github/workflows/mobile.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: nebula-frontier
+
+jobs:
+  web:
+    name: Web bundle (demo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: nebula-frontier/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nebula/web build
+        env:
+          VITE_DEMO_MODE: "true"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: nebula-frontier/apps/web/dist
+          retention-days: 3
+
+  android:
+    name: Android APK
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: nebula-frontier/pnpm-lock.yaml
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: nebula-frontier/apps/web/dist
+      - name: Sync web bundle into the Android project
+        working-directory: nebula-frontier/apps/mobile
+        run: npx cap sync android
+        env:
+          NODE_ENV: production
+      - name: Assemble debug APK
+        working-directory: nebula-frontier/apps/mobile/android
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-frontier-android-apk
+          path: nebula-frontier/apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+  ios:
+    name: iOS (simulator app + unsigned ipa)
+    needs: web
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: nebula-frontier/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: nebula-frontier/apps/web/dist
+      - name: Sync web bundle into the iOS project (Swift Package Manager, no CocoaPods)
+        working-directory: nebula-frontier/apps/mobile
+        run: npx cap sync ios
+        env:
+          NODE_ENV: production
+      - name: Build for the iOS Simulator
+        working-directory: nebula-frontier/apps/mobile/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphonesimulator -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build
+          cd build/sim/Build/Products/Debug-iphonesimulator
+          zip -qry "$GITHUB_WORKSPACE/NebulaFrontier-simulator.app.zip" App.app
+      - name: Build an unsigned device archive (.ipa)
+        working-directory: nebula-frontier/apps/mobile/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination "generic/platform=iOS" \
+            -archivePath build/App.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+          mkdir -p build/ipa/Payload
+          cp -R build/App.xcarchive/Products/Applications/App.app build/ipa/Payload/
+          cd build/ipa && zip -qry "$GITHUB_WORKSPACE/NebulaFrontier-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nebula-frontier-ios
+          path: |
+            NebulaFrontier-simulator.app.zip
+            NebulaFrontier-unsigned.ipa
+          retention-days: 14
