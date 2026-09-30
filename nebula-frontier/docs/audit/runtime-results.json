@@ -5,15 +5,15 @@
   },
   "lint": {
     "status": "PASS",
-    "evidence": "pnpm lint: 0 errors, 0 warnings"
+    "evidence": "eslint . \u2014 0 errors, 0 warnings (2026-09-30)"
   },
   "build": {
     "status": "PASS",
-    "evidence": "pnpm build: all 22 workspaces (tsc libs, tsup api/game-server/blockchain-service, vite web/admin/game-client)"
+    "evidence": "pnpm build: all workspaces (2026-09-30); VITE_DEMO_MODE=true web build"
   },
   "tests": {
     "status": "PASS",
-    "evidence": "pnpm test: 38 files / 331 tests (unit parallel + integration sequential) green; Playwright web e2e 9 specs green"
+    "evidence": "vitest run: 89 files / 659 tests green incl. DB/Redis integration (2026-09-30); Playwright web e2e specs from the earlier audit"
   },
   "db_migrate": {
     "status": "PASS",
@@ -29,7 +29,7 @@
   },
   "docker_compose": {
     "status": "PASS",
-    "evidence": "docker compose up: postgres, redis, migrate+seed, api(healthy), game-server(healthy), web(nginx :8088 → /api 200); blockchain-service alive (/health 200, /ready 503) because containers have no internet egress in this sandbox"
+    "evidence": "docker compose up: postgres, redis, migrate+seed, api(healthy), game-server(healthy), web(nginx :8088 \u2192 /api 200); blockchain-service alive (/health 200, /ready 503) because containers have no internet egress in this sandbox"
   },
   "api_health": {
     "status": "PASS",
@@ -37,7 +37,7 @@
   },
   "game_server_boot": {
     "status": "PASS",
-    "evidence": "game-server :2567 /health 200 /ready 200; 60-bot load run tick p95 ≤ 5 ms (docs/NETWORKING.md)"
+    "evidence": "game-server :2567 /health 200 /ready 200; 60-bot load run tick p95 \u2264 5 ms (docs/NETWORKING.md)"
   },
   "blockchain_service_boot": {
     "status": "PASS",
@@ -45,7 +45,7 @@
   },
   "api_wallet_login": {
     "status": "PASS",
-    "evidence": "vertical-slice: SIWS nonce → ed25519 signature → verify → cookie session; auth.test replay/expiry rejected"
+    "evidence": "vertical-slice: SIWS nonce \u2192 ed25519 signature \u2192 verify \u2192 cookie session; auth.test replay/expiry rejected"
   },
   "web_wallet_ui": {
     "status": "PASS",
@@ -57,7 +57,7 @@
   },
   "game_join": {
     "status": "PASS",
-    "evidence": "vertical-slice + Playwright Play: API ticket → Colyseus sector room (single-use gt:<jti>)"
+    "evidence": "vertical-slice + Playwright Play: API ticket \u2192 Colyseus sector room (single-use gt:<jti>)"
   },
   "game_move": {
     "status": "PASS",
@@ -65,7 +65,7 @@
   },
   "game_kill_npc": {
     "status": "PASS",
-    "evidence": "vertical-slice: target + fire kills NPC, XP/credits persisted, level ≥ 2 reached"
+    "evidence": "vertical-slice: target + fire kills NPC, XP/credits persisted, level \u2265 2 reached"
   },
   "game_loot": {
     "status": "PASS",
@@ -85,7 +85,7 @@
   },
   "leaderboard_update": {
     "status": "PASS",
-    "evidence": "vertical-slice: GET /api/leaderboard?board=pvp_kills shows pilot score ≥ 1"
+    "evidence": "vertical-slice: GET /api/leaderboard?board=pvp_kills shows pilot score \u2265 1"
   },
   "event_reward": {
     "status": "PASS",
@@ -121,7 +121,7 @@
   },
   "web_mobile": {
     "status": "PASS",
-    "evidence": "Playwright 390×844 touch: bottom nav, touch combat HUD with joystick/fire (docs/screenshots/mobile-play.png)"
+    "evidence": "Playwright 390\u00d7844 touch: bottom nav, touch combat HUD with joystick/fire (docs/screenshots/mobile-play.png)"
   },
   "admin_build": {
     "status": "PASS",
@@ -133,7 +133,7 @@
   },
   "android_build": {
     "status": "PASS",
-    "evidence": "./gradlew assembleDebug → app-debug.apk (11 MB) with Android SDK 35"
+    "evidence": "./gradlew assembleDebug \u2192 app-debug.apk (11 MB) with Android SDK 35"
   },
   "economy_simulation": {
     "status": "PASS",
@@ -141,7 +141,7 @@
   },
   "coderabbit": {
     "status": "PASS",
-    "evidence": "PR #2 reviewed (22 findings, all fixed); PR #3 review in progress — see docs/CODERABBIT_REPORT.md"
+    "evidence": "PR #2 reviewed (22 findings, all fixed); PR #3 review in progress \u2014 see docs/CODERABBIT_REPORT.md"
   },
   "anchor_cargo_test": {
     "status": "PASS",
@@ -153,6 +153,22 @@
   },
   "load_100": {
     "status": "PASS",
-    "evidence": "100 fighter bots in one map_vanta_rift sector room (50v50-scale) on a 4-core sandbox, bots on the same machine; 60 s steady window: 1201 ticks (20 Hz held), mean 13.2 ms, p95 in (20,35] ms, 99.75% of ticks ≤ 50 ms budget, 0 errors. First run exposed and fixed: SPEED_HACK false positives from jittered input clumps (MovementBudget now 1 s burst + 25% sustained-excess flag) and TransactionWriteConflict in SERIALIZABLE recordRiskSignal (now per-user row lock), 2026-09-28"
+    "evidence": "100 fighter bots in one map_vanta_rift sector room (50v50-scale) on a 4-core sandbox, bots on the same machine; 60 s steady window: 1201 ticks (20 Hz held), mean 13.2 ms, p95 in (20,35] ms, 99.75% of ticks \u2264 50 ms budget, 0 errors. First run exposed and fixed: SPEED_HACK false positives from jittered input clumps (MovementBudget now 1 s burst + 25% sustained-excess flag) and TransactionWriteConflict in SERIALIZABLE recordRiskSignal (now per-user row lock), 2026-09-28"
+  },
+  "demo_vercel": {
+    "status": "PASS",
+    "evidence": "Vercel builds main with VITE_DEMO_MODE=true (vercel.json); headless Chromium run: demo pilot \u2192 faction \u2192 ship \u2192 /play (offline sim) \u2192 hangar/shop/inventory/wallet/leaderboard/market/clan/missions with no errors"
+  },
+  "android_apk": {
+    "status": "PASS",
+    "evidence": "cap sync android + gradlew assembleDebug: app-debug.apk (com.nebulafrontier.app, minSdk 24, targetSdk 36) built locally and on GitHub Actions run 36669684682"
+  },
+  "ios_ci": {
+    "status": "PASS",
+    "evidence": "GitHub Actions macos-15 runs 36668589990 and 36669684682: xcodebuild simulator build + unsigned device archive (.ipa) succeeded"
+  },
+  "perf_profile": {
+    "status": "PASS",
+    "evidence": "CDP CPU profile during combat: shader compile share 18.4% \u2192 2.6%, canvas resize 8.2% \u2192 3.3% (SwiftShader)"
   }
 }

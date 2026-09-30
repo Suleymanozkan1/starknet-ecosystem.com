@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-28T21:29:12.719Z",
-  "total": 249,
-  "implemented": 236,
+  "generatedAt": "2026-09-30T05:07:55.891Z",
+  "total": 257,
+  "implemented": 245,
   "partial": 12,
   "notImplemented": 0,
-  "blocked": 1,
-  "completionPercent": 94.8,
+  "blocked": 0,
+  "completionPercent": 95.3,
   "byCategory": {
     "PROJECT STRUCTURE": {
       "IMPLEMENTED": 7,
@@ -272,7 +272,7 @@
       "BLOCKED": 0
     },
     "COMBAT TARGETING": {
-      "IMPLEMENTED": 1,
+      "IMPLEMENTED": 2,
       "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
@@ -866,16 +866,40 @@
       "BLOCKED": 0
     },
     "ANDROID": {
-      "IMPLEMENTED": 1,
+      "IMPLEMENTED": 2,
       "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "IOS": {
-      "IMPLEMENTED": 0,
+      "IMPLEMENTED": 1,
       "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
-      "BLOCKED": 1
+      "BLOCKED": 0
+    },
+    "DEMO": {
+      "IMPLEMENTED": 3,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "PERFORMANCE": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "LOCALIZATION": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
+    },
+    "TUTORIAL": {
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
+      "NOT_IMPLEMENTED": 0,
+      "BLOCKED": 0
     },
     "MOBILE NATIVE": {
       "IMPLEMENTED": 1,
@@ -2418,10 +2442,64 @@
       "id": "MOB-03",
       "category": "IOS",
       "requirement": "iOS project + build",
-      "status": "BLOCKED",
-      "why": [
-        "macOS/Xcode not available in this Linux environment — iOS build cannot run"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "MOB-07",
+      "category": "ANDROID",
+      "requirement": "Installable Android APK of the demo",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DEMO-01",
+      "category": "DEMO",
+      "requirement": "Static Vercel demo with no backend (in-browser mock API, localStorage state)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DEMO-02",
+      "category": "DEMO",
+      "requirement": "Offline in-browser game simulation using the same game-core rules",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "DEMO-03",
+      "category": "DEMO",
+      "requirement": "Tester kit: every ship/item, large balances, max level, premium; hangar loadout used in game",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "COMBAT-FA",
+      "category": "COMBAT TARGETING",
+      "requirement": "Hold-to-fire free aim (no lock required), server-authoritative",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "PERF-01",
+      "category": "PERFORMANCE",
+      "requirement": "No mid-combat freezes (shader compiles / resize hitches)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "I18N-TR",
+      "category": "LOCALIZATION",
+      "requirement": "Complete Turkish UI (pages, HUD, toasts, server texts)",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "TUT-01",
+      "category": "TUTORIAL",
+      "requirement": "Guide character (ARIA) explaining everything on the landing page, shell pages and in game",
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "MOB-04",
