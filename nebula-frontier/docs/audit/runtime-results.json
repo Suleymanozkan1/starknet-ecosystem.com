@@ -96,12 +96,12 @@
     "evidence": "vertical-slice: PvP Reward + RewardLiability OUTSTANDING; /api/rewards/claim credits NEBX via ledger"
   },
   "devnet_payout": {
-    "status": "BLOCKED",
-    "evidence": "Payout pipeline verified end-to-end against a mock chain that decodes the real signed transactions (vertical-slice + e2e-mock: COMPLETED with signature). Real devnet: faucet returns 429 to this environment; treasury Hd6r6rGc8CNXRzYV8DwsU6vqh8aPM3711r2UC8Z3vbhe holds 0 SOL, so no devnet signature exists yet."
+    "status": "PASS",
+    "evidence": "Real devnet (2026-09-30, devnet:e2e): reward grant + claim \u2192 withdrawal cmunrvdsx000icv7d4k9qh42c signed, persisted, broadcast and confirmed by the blockchain-service processor \u2014 payout tx 4zmy7USj3A8UNf2rbSz3WJcgotDuhsBJfsRy8tzAkjBxnu4GZVSNSqunTmMZ5sxbKAgcBBA8hLDCYouUNZ45sySH, status COMPLETED, ledger integrity true"
   },
   "devnet_deposit": {
-    "status": "BLOCKED",
-    "evidence": "Deposit verification tested against mock chain (e2e-mock, blockchain.test fake-tx cases); no funded devnet wallet available (faucet 429)."
+    "status": "PASS",
+    "evidence": "Real devnet (2026-09-30, pnpm --filter @nebula/blockchain-service devnet:e2e): player \u2192 treasury SOL+memo deposit 5xJedtWpwuUgTbNsxGYQ6ehD2rJdTMHzZEFEoQgs1VKgK9z1oN77AqUPpY6SjhLJ1hTPytSSxr6byWkzyT8dNw9q verified (recipient/amount/memo/sender/confirmation) and credited; replay rejected (MEMO_MISMATCH)"
   },
   "renderer_showcase": {
     "status": "PASS",
