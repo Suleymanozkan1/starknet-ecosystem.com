@@ -39,13 +39,13 @@ const msg = k.pipe(k.createTransactionMessage({ version: 0 }), (m) => k.setTrans
 const tx = await k.signTransactionMessageWithSigners(msg);
 await k.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })(tx, { commitment: 'confirmed' });
 const sig = k.getSignatureFromTransaction(tx);
-console.log('initialize signature', sig);
+console.info('initialize signature', sig);
 const acc = await rpc.getAccountInfo(config, { encoding: 'base64' }).send();
 const buf = Buffer.from(acc.value.data[0], 'base64');
 const dec = k.getAddressDecoder();
-console.log('config', config, 'owner', acc.value.owner, 'len', buf.length);
-console.log('config.authority == signer:', dec.decode(buf.subarray(8, 40)) === authority.address);
-console.log('config.reward_signer ok:', dec.decode(buf.subarray(72, 104)) === rewardSigner, 'fee_bps', buf.readUInt16LE(104),
+console.info('config', config, 'owner', acc.value.owner, 'len', buf.length);
+console.info('config.authority == signer:', dec.decode(buf.subarray(8, 40)) === authority.address);
+console.info('config.reward_signer ok:', dec.decode(buf.subarray(72, 104)) === rewardSigner, 'fee_bps', buf.readUInt16LE(104),
   'max_per_claim', buf.readBigUInt64LE(106), 'max_per_epoch', buf.readBigUInt64LE(114));
 const logs = await rpc.getTransaction(sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }).send();
-console.log(logs.meta.logMessages.join('\n'));
+console.info(logs.meta.logMessages.join('\n'));
