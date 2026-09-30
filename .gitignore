@@ -1,3 +1,8 @@
 # Local Redis snapshots (never commit)
 dump.rdb
 *.rdb
+
+# Locally built mobile packages (delivered separately / via CI artifacts)
+*.apk
+*.aab
+*.ipa
