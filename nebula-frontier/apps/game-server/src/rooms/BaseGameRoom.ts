@@ -85,6 +85,8 @@ const PRESENCE_REFRESH_MS = 20_000;
 const PVP_KILL_LOG_PRUNE_TICKS = 200;
 const chatTopicFaction = (f: string) => `nf:chat:faction:${f}`;
 const chatTopicClan = (c: string) => `nf:chat:clan:${c}`;
+const factionChatFilter = (o: PlayerActor, e: ChatEvent): boolean => !!e.faction && o.profile.factionId === e.faction;
+const clanChatFilter = (clanId: string) => (o: PlayerActor): boolean => o.profile.clanId === clanId;
 
 export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: RoomMeta }> {
   override state = new WorldState();
@@ -349,6 +351,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     void this.setMatchmaking({ metadata: { ...this.metadata } }).catch(() => undefined);
     this.onPlayerJoined(p);
     void this.setPresence(p);
+    this.subscribeSocialChat(p);
     this.log.info({ userId: p.userId, entityId: p.id }, "player joined");
   }
 
@@ -2100,6 +2103,18 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
     await handler(CHAT_TOPIC_GLOBAL, () => true);
   }
 
+  /**
+   * Faction/clan chat is presence pub/sub: a room must be subscribed to the topics of every player
+   * it hosts, otherwise messages published by another room (or another node) never reach them.
+   */
+  private subscribeSocialChat(p: PlayerActor): void {
+    const factionId = p.profile.factionId;
+    const clanId = p.profile.clanId;
+    const fail = (err: unknown) => this.log.warn({ err, userId: p.userId }, "chat topic subscription failed");
+    if (factionId) void this.ensureTopic(chatTopicFaction(factionId), factionChatFilter).catch(fail);
+    if (clanId) void this.ensureTopic(chatTopicClan(clanId), clanChatFilter(clanId)).catch(fail);
+  }
+
   private async ensureTopic(topic: string, filter: (p: PlayerActor, e: ChatEvent) => boolean): Promise<void> {
     if (this.presenceSubs.some((s) => s.topic === topic)) return;
     const cb = (data: unknown) => {
@@ -2141,7 +2156,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         if (!p.profile.factionId) return this.error(p, "NO_FACTION", "No faction");
         key = p.profile.factionId;
         const topic = chatTopicFaction(key);
-        void this.ensureTopic(topic, (o, e) => o.profile.factionId === e.faction).then(() => this.presence.publish(topic, evt));
+        void this.ensureTopic(topic, factionChatFilter).then(() => this.presence.publish(topic, evt));
         break;
       }
       case "CLAN": {
@@ -2149,7 +2164,7 @@ export abstract class BaseGameRoom extends Room<{ state: WorldState; metadata: R
         if (!clanId) return this.error(p, "NO_CLAN", "Not in a clan");
         key = clanId;
         const topic = chatTopicClan(clanId);
-        void this.ensureTopic(topic, (o) => o.profile.clanId === clanId).then(() => this.presence.publish(topic, evt));
+        void this.ensureTopic(topic, clanChatFilter(clanId)).then(() => this.presence.publish(topic, evt));
         break;
       }
       case "SQUAD":

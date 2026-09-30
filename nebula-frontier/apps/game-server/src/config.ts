@@ -26,6 +26,11 @@ export interface GameServerConfig {
   publicUrl: string;
   flushIntervalMs: number;
   nodeEnv: string;
+  /**
+   * Address advertised in seat reservations (`GAME_PUBLIC_ADDRESS`, normalised by resolvePublicAddress);
+   * null = clients reuse the host they did matchmaking with (single node only).
+   */
+  publicAddress: string | null;
   /** Bearer token for GET /metrics (`METRICS_TOKEN`); required (>= MIN_METRICS_TOKEN_LENGTH chars) in production. */
   metricsToken: string | null;
 }
@@ -59,6 +64,18 @@ export function resolveApiInternalUrl(raw: string | undefined, token: string | n
   return value;
 }
 
+/**
+ * Normalise GAME_PUBLIC_ADDRESS to the `host[:port][/path]` form Colyseus expects. The SDK prepends
+ * its own ws:// or wss:// scheme to the advertised address, so a configured `wss://play.example/game`
+ * would otherwise produce `wss://wss://play.example/game` and every cross-node join would fail.
+ */
+export function resolvePublicAddress(raw: string | undefined): string | null {
+  const value = raw?.trim().replace(/^(?:wss?|https?):\/\//i, "").replace(/\/+$/, "");
+  if (!value) return null;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value) || /\s/.test(value)) throw new Error("GAME_PUBLIC_ADDRESS must be host[:port][/path] (an optional ws(s):// prefix is stripped)");
+  return value;
+}
+
 export function loadConfig(): GameServerConfig {
   const gameTicketKeys = keyRingFromEnv("GAME_TICKET");
   const nodeEnv = process.env.NODE_ENV ?? "development";
@@ -87,5 +104,6 @@ export function loadConfig(): GameServerConfig {
     flushIntervalMs: Math.max(1000, num("GAME_FLUSH_INTERVAL_MS", 5000)),
     nodeEnv,
     metricsToken,
+    publicAddress: resolvePublicAddress(process.env.GAME_PUBLIC_ADDRESS),
   };
 }

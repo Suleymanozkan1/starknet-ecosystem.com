@@ -228,11 +228,36 @@ Assume the worst case: the whole fight is inside one AOI, so each client sees ab
 - With `REDIS_URL` set, the server uses `RedisPresence` (pub/sub, used for global/faction/clan chat and event
   triggers) and `RedisDriver` (matchmaking room cache). Without Redis it uses in-process `LocalPresence`/`LocalDriver`.
 - Several processes and nodes can share one Redis. Set `GAME_PUBLIC_ADDRESS` per node so seat reservations point
-  at the right host. `joinOrCreate` finds rooms across processes.
+  at the right host. `joinOrCreate` finds rooms across processes. The value is `host[:port][/path]`; the client adds
+  `ws://` or `wss://` itself, so a configured scheme is stripped at boot (`resolvePublicAddress`).
+- Faction and clan chat are presence topics. A room subscribes to the faction and clan topics of every player it
+  hosts at join, so messages published from any room on any node reach them.
 - Scheduled event windows are computed from the clock in every process (deterministic, no coordination).
 - `REGION` (`EU`/`NA`/`ASIA`) goes into room metadata, the `GameRoom` heartbeat rows, metrics labels and the state.
   Deploy one Redis and node pool per region. The API chooses `gameServerUrl` by region.
 - Redis never holds critical state. It holds only ticket jti markers, presence, mutes and the matchmaker cache.
+
+### Horizontal scaling verification
+
+`npx vitest run tests/integration/horizontal-scaling.test.ts` needs local PostgreSQL and Redis. It starts two real
+game-server processes (`node --import tsx apps/game-server/src/index.ts`) on free ports. Both use the same
+`REDIS_URL` (logical DB 11, flushed before and after the run) and each gets its own `GAME_PUBLIC_ADDRESS`. It then
+drives them with `@colyseus/sdk` clients and real game tickets, and asserts:
+
+- **(a) Cross-node matchmaking.** Two players enter the same map, the second through the node that does not host the
+  room. Both land in the same sector room, the second over a seat reserved on the hosting node through
+  RedisDriver/presence IPC. Each player sees the other's entity.
+- **(b) Join by id across nodes.** A room hosted on one node is joined by id through the other node. The WebSocket
+  opens directly to the hosting node's advertised address.
+- **(c) Presence across nodes.** Rooms are opened until each node hosts one. GLOBAL and FACTION chat sent in the
+  node-A room reach a player in the node-B room, and both nodes write `presence:<userId>` into the shared Redis.
+
+The suite stops both processes with SIGTERM, then SIGKILL after 15 s, with a process-exit safety net. Running it
+found and fixed two bugs:
+
+- Faction and clan topics were subscribed only by the room of a player who had sent on them, so other rooms and
+  nodes never received those messages.
+- A `ws(s)://`-prefixed `GAME_PUBLIC_ADDRESS` produced `ws://ws://…` reservation URLs.
 
 ## 10. Anti-cheat hooks
 

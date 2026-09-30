@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ARCHETYPES, decide, type BotMemory, type BotWorld, type EntityView } from "./bots/behaviors.js";
 import { deadlinePassed, parseArgs } from "./bots/cli.js";
-import { loadConfig, MIN_METRICS_TOKEN_LENGTH, resolveApiInternalUrl, type GameServerConfig } from "./config.js";
+import { loadConfig, MIN_METRICS_TOKEN_LENGTH, resolveApiInternalUrl, resolvePublicAddress, type GameServerConfig } from "./config.js";
 import { createRoutes, metricsAccess } from "./http.js";
 import { PingGuard, GALAXY_PING_LIMITS } from "./rooms/GalaxyRoom.js";
 import type { GameServices } from "./services/context.js";
@@ -74,6 +74,18 @@ describe("round 3: internal API URL requires TLS when the service token is set",
     for (const u of ["http://localhost:8080", "http://127.0.0.1:9000", "http://[::1]:8080"]) expect(resolveApiInternalUrl(u, "t".repeat(32))).toBe(u);
     expect(resolveApiInternalUrl("http://api.internal:8080", null)).toBe("http://api.internal:8080");
     expect(resolveApiInternalUrl(undefined, "t".repeat(32))).toBe("http://localhost:8080");
+  });
+});
+
+describe("MP-09: GAME_PUBLIC_ADDRESS is advertised without a scheme", () => {
+  it("strips ws(s)/http(s) prefixes and trailing slashes, rejects other schemes", () => {
+    expect(resolvePublicAddress(undefined)).toBeNull();
+    expect(resolvePublicAddress("  ")).toBeNull();
+    expect(resolvePublicAddress("127.0.0.1:2567")).toBe("127.0.0.1:2567");
+    expect(resolvePublicAddress("wss://play.example/game/")).toBe("play.example/game");
+    expect(resolvePublicAddress("WS://node-2.internal:2567")).toBe("node-2.internal:2567");
+    expect(resolvePublicAddress("https://play.example/game-1")).toBe("play.example/game-1");
+    expect(() => resolvePublicAddress("ftp://play.example")).toThrow(/GAME_PUBLIC_ADDRESS/);
   });
 });
 

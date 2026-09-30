@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const svc = buildServices(config);
   await ensureCatalog(svc.db);
-  const server = createGameServer({ redisUrl: config.redisUrl, publicAddress: process.env.GAME_PUBLIC_ADDRESS || undefined });
+  const server = createGameServer({ redisUrl: config.redisUrl, publicAddress: config.publicAddress ?? undefined });
   server.onShutdown(async () => {
     svc.log.info("shutting down: rooms persisted, closing connections");
     svc.events.stop();
