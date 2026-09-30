@@ -449,7 +449,7 @@ In every run the reward pool is ring-fenced, and circuit breakers engage under t
 | Testing | READY | See §21: unit, integration and e2e green |
 | Performance | READY (single node) | 100 players in one room: 20 Hz, p95 ≤ 35 ms (§23); production hardware not profiled |
 | Scalability | READY | Two-node run on shared Redis verified (cross-node matchmaking, chat, presence) |
-| Blockchain | READY (devnet) | Real devnet deposit/payout/NFT; Anchor program built and tested, devnet deployment pending deployer funding |
+| Blockchain | READY (devnet) | Real devnet deposit/payout/NFT; Anchor program deployed + initialized on devnet |
 | Economy | READY | Invariants hold in 270 simulation runs; controls tested |
 | Mobile | NEEDS_WORK | Signed Android release APK/AAB ready for Play; iOS builds on CI but cannot be signed without an Apple Developer account |
 | Deployment | NEEDS_WORK | Compose stack runs and the PITR drill passes; production secrets, TLS and a managed DB are pending |
@@ -459,6 +459,6 @@ In every run the reward pool is ring-fenced, and circuit breakers engage under t
 The project covers all 257 extracted requirements with implementation, integration, test and runtime evidence (**100%**): nothing is partial, not implemented or blocked. The last gaps were closed with real runs — devnet deposit/payout/NFT signatures, a two-node Colyseus test on shared Redis, a PITR restore drill, production GLB assets, hangar and Wallet Standard e2e tests, and an SBF build of the Anchor program with on-chain LiteSVM tests.
 
 No feature is presented as done without evidence. Remaining operational steps (outside the requirement list):
-1. Deploy the Anchor program to devnet (deployer `6MoFW2YkhGmV3ugUm2i7MGbva3jd9TVPStcxt3zmTk8U` needs ~3 SOL; program id `DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL`).
+1. Switch blockchain-service to the on-chain settlement path (`verify_reward` / `settle_tournament`) behind a feature flag — the Anchor program is deployed and initialized on devnet (`DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL`).
 2. iOS distribution needs an Apple Developer account (signing, TestFlight).
 3. Production: real secrets, TLS, managed Postgres with PITR, Play Console listing with the owner's upload key.

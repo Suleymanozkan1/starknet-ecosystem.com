@@ -145,7 +145,7 @@
   },
   "anchor_cargo_test": {
     "status": "PASS",
-    "evidence": "anchor build (Anchor 1.2.0, Agave 4.3) \u2192 nebula_settlement.so 340 KB + IDL; cargo test -p nebula_settlement: 6 unit + 7 LiteSVM on-chain tests passed; solana-test-validator initialize succeeded (2026-09-30)"
+    "evidence": "anchor build (Anchor 1.2.0, Agave 4.3) \u2192 nebula_settlement.so 340 KB + IDL; cargo test -p nebula_settlement: 6 unit + 7 LiteSVM on-chain tests passed; solana-test-validator initialize succeeded (2026-09-30); DEVNET: program DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL deployed (tx 3xC9je4QCXhC56vAoKa5ouU67bjBsimb6CMY5fLafXPB1tEESgwW3Qb2oCQR8XsYayV97F8hNMGc48TznTdTjZpj, upgrade authority 6MoFW2YkhGmV3ugUm2i7MGbva3jd9TVPStcxt3zmTk8U) and initialized (tx 2Yx2kQDYKyAiz6j1Za5gEznH7f2StMRLjq7a4h4esXwWbwswTJwDjawTMW27hygDkBZN5DM7p6PQacSuRPUZyxd5, config GG6QLkLk9VzTWdpjH7bTfNF71r9AjbM5n94okZMQ4UjH, reward signer = treasury)"
   },
   "backup_drill": {
     "status": "PASS",

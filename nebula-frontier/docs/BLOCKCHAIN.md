@@ -186,7 +186,17 @@ Result on 2026-09-30: `test result: ok. 6 passed` (unit) and `test result: ok. 7
 
 **Local validator smoke test** (optional, 127.0.0.1 only, never devnet or mainnet). `solana-test-validator --reset --upgradeable-program DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL target/deploy/nebula_settlement.so <local-authority-pubkey> --mint <local-authority-pubkey>` loads the program with a throwaway local upgrade authority, created with `solana-keygen new` in a temp directory and never committed. The `initialize` instruction was then sent with a small `@solana/kit` script that uses the IDL discriminator and a borsh-encoded argument layout. It succeeded (13,259 CU). The config PDA `Auhoeu2x…SFJJ` is owned by the program and stores the right authority, reward signer, `fee_bps` = 500 and the caps.
 
-Not done: devnet deployment. It needs the dedicated deployer keypair and program-deploy SOL; follow the pre-deployment steps above.
+**Devnet deployment (2026-09-30):**
+
+| | |
+|---|---|
+| Program id | `DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL` |
+| Upgrade authority | `6MoFW2YkhGmV3ugUm2i7MGbva3jd9TVPStcxt3zmTk8U` (dedicated deployer; keypair kept out of git in `.secrets/`) |
+| Deploy tx | `3xC9je4QCXhC56vAoKa5ouU67bjBsimb6CMY5fLafXPB1tEESgwW3Qb2oCQR8XsYayV97F8hNMGc48TznTdTjZpj` |
+| Initialize tx | `2Yx2kQDYKyAiz6j1Za5gEznH7f2StMRLjq7a4h4esXwWbwswTJwDjawTMW27hygDkBZN5DM7p6PQacSuRPUZyxd5` |
+| Config PDA | `GG6QLkLk9VzTWdpjH7bTfNF71r9AjbM5n94okZMQ4UjH` (reward signer = treasury, fee 500 bps, 1 SOL/claim, 2 SOL/epoch, 1-day epoch) |
+
+Deploy: `solana program deploy target/deploy/nebula_settlement.so --program-id <program-keypair> --keypair <deployer> --upgrade-authority <deployer> --url devnet --use-rpc` (`--use-rpc` avoids the public RPC's TPU write limits). Initialize: `node scripts/devnet-initialize.mjs <deployer-keypair> <reward-signer>` (refuses any non-devnet genesis). The program id changed from the originally reserved `Huqa9x…` because that keypair was never available; the old id was never deployed.
 
 It is intentionally **not deployed** for the MVP because:
 1. The economy's safety controls (eligibility, caps, bot/risk review, circuit breakers, treasury health throttling) live off-chain and change often; moving settlement on-chain now would duplicate them or bypass them.
