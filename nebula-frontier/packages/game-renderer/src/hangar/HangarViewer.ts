@@ -59,6 +59,8 @@ interface Bay {
   def: ShipDef | null;
   shield: ShieldHandle | null;
   damage: number;
+  /** Ship id + cosmetics currently mounted (identical remounts are skipped). */
+  key: string;
 }
 
 function resolveDef(d: ShipDef | string): ShipDef {
@@ -74,6 +76,8 @@ function resolvePayloads(list: readonly (string | CosmeticPayload)[]): CosmeticP
   return [...resolveCosmeticPayloads(ids), ...payloads];
 }
 
+/** Show the procedural ship anyway if its GLB takes longer than this (slow network / failed decode). */
+const GLB_REVEAL_TIMEOUT_MS = 2500;
 const tmpA = new Vector3();
 const tmpB = new Vector3();
 const tmpQ = new Quaternion();
@@ -169,7 +173,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     platform.add(discGroup);
     root.add(platform);
     scene.add(root);
-    return { root, platform, disc: discGroup, model: null, def: null, shield: null, damage: 0 };
+    return { root, platform, disc: discGroup, model: null, def: null, shield: null, damage: 0, key: "" };
   };
   const main = makeBay();
   let compare: Bay | null = null;
@@ -177,7 +181,13 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   let engines = true;
   let autoRotate = opts.autoRotate ?? true;
 
-  const mountShip = (bay: Bay, def: ShipDef, cos: readonly CosmeticPayload[]): void => {
+  // Remounting rebuilds the model (and its GLB swap), so identical requests are ignored — React effects
+  // re-applying the same ship/cosmetics used to rebuild it up to three times while loading (visible flicker).
+  const mountKey = (def: ShipDef, cos: readonly CosmeticPayload[]): string => `${def.id}|${JSON.stringify(cos)}`;
+  const mountShip = (bay: Bay, def: ShipDef, cos: readonly CosmeticPayload[]): boolean => {
+    const key = mountKey(def, cos);
+    if (bay.model && bay.key === key) return false;
+    bay.key = key;
     bay.shield?.release();
     bay.shield = null;
     bay.model?.dispose();
@@ -195,6 +205,15 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     bay.model = model;
     bay.def = def;
     bay.damage = 0;
+    // Show the ship once, in its final form: hidden until its production GLB is attached (or failed / slow),
+    // instead of popping from the procedural mesh to the GLB.
+    model.root.visible = false;
+    const reveal = (): void => {
+      if (bay.model === model) model.root.visible = true;
+    };
+    void model.glbReady.then(reveal, reveal);
+    setTimeout(reveal, GLB_REVEAL_TIMEOUT_MS);
+    return true;
   };
 
   const widthOf = (bay: Bay | null): number | null => (bay?.model ? bayWidth(bay.model.length, bay.model.radius) : null);
@@ -270,14 +289,13 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   const viewer: HangarViewer = {
     controls,
     setShip(def) {
-      mountShip(main, resolveDef(def), cosmetics);
+      if (!mountShip(main, resolveDef(def), cosmetics)) return;
       frame();
       resetView();
     },
     setCosmetics(list) {
       cosmetics = resolvePayloads(list);
-      if (main.def) mountShip(main, main.def, cosmetics);
-      frame();
+      if (main.def && mountShip(main, main.def, cosmetics)) frame();
     },
     previewEngines(on) {
       engines = on;
@@ -340,7 +358,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
         }
       } else {
         compare ??= makeBay();
-        mountShip(compare, resolveDef(def), []);
+        if (!mountShip(compare, resolveDef(def), [])) return;
       }
       frame();
       resetView();

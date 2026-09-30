@@ -246,7 +246,7 @@ export class ShipFactory {
     set.refs++;
     const mats = this.materials.get(look.palette, opts.variant ?? "");
     const model = new ShipModel(this, set, look, mats, opts.engines ?? opts.variant !== "wreck");
-    if (this.glb && look.visual.glb && (opts.variant ?? "") === "") void this.glb.apply(model);
+    if (this.glb && look.visual.glb && (opts.variant ?? "") === "") model.glbReady = this.glb.apply(model);
     return model;
   }
 
@@ -333,6 +333,8 @@ export class ShipModel {
   private readonly glows: Sprite[] = [];
   private greebles: InstancedMesh | null;
   private glb: Object3D | null = null;
+  /** Resolves once the production GLB is attached (true) or unavailable (false); false immediately without one. */
+  glbReady: Promise<boolean> = Promise.resolve(false);
   private thrust = 0;
   private disposed = false;
   readonly materials: SlotMaterials;
