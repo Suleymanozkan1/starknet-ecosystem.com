@@ -25,3 +25,17 @@ anchor-lang = "1.2.0"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+
+# On-chain tests (tests/litesvm.rs): load the SBF build (target/deploy/nebula_settlement.so) into
+# an in-process Solana VM — no validator, no network. litesvm 0.16 (agave 4.2.x) is the newest line
+# that builds on rustc 1.94; 0.17 pulls agave 4.3 (rustc >= 1.97.1). Cargo.lock pins the versions; when
+# re-resolving on an older rustc use `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo update`.
+[dev-dependencies]
+litesvm = "0.16.0"
+solana-account = "4"
+solana-clock = "3"
+solana-instruction = "3.4"
+solana-keypair = "3"
+solana-message = "4"
+solana-signer = "3"
+solana-transaction = "4"

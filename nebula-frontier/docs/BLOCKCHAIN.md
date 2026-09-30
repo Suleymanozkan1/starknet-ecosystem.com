@@ -7,7 +7,7 @@ NEBULA FRONTIER uses Solana **devnet only**. `SOLANA_NETWORK` accepts `devnet` /
 | `@nebula/blockchain` | `packages/blockchain` | `@solana/kit` 8.4 helpers: RPC, SIWS login message + signature verification, deposit verification, payout build/send/confirm, memo idempotency lookup, NFT metadata/mint, mock RPC |
 | blockchain-service | `apps/blockchain-service` | **The only process that holds the treasury key.** Withdrawal queue (BullMQ + Postgres), confirmations, retries, economy controller, reward expiry, internal HTTP |
 | API wallet routes | `apps/api/src/routes/wallet.ts` | Wallet link, deposits, withdrawal requests (no keys) |
-| Settlement program | `programs/nebula_settlement` | Anchor 1.2 program (reward verification / escrow / tournament settlement). **Not deployed in the MVP** |
+| Settlement program | `programs/nebula_settlement` | Anchor 1.2 program (reward verification / escrow / tournament settlement). Built for SBF and tested on-chain in LiteSVM; **not deployed to devnet in the MVP** |
 
 ## Wallet authentication (Sign-In-With-Solana)
 
@@ -129,7 +129,7 @@ Treasury bootstrap (`scripts/economy-bootstrap.ts` → `bootstrapTreasury`): rea
 
 ## Why the Anchor program is not deployed in the MVP
 
-`programs/nebula_settlement` (Anchor 1.2, `cargo check` clean) contains real instruction handlers with account validation and events:
+`programs/nebula_settlement` (Anchor 1.2, builds for SBF, see [Build and on-chain tests](#build-and-on-chain-tests)) contains real instruction handlers with account validation and events:
 - **Admin:** `initialize` (only the program's upgrade authority, checked via `ProgramData`), `update_config` (rotate the reward signer and change the fee / per-claim cap / per-epoch emission cap), two-step authority transfer (`propose_authority` → `accept_authority`), and `set_paused`.
 - **Rewards:** `fund_vault` and `verify_reward`. `verify_reward` needs a reward-signer co-signature and creates a per-reward receipt PDA, so a reward can't be claimed twice. It also enforces the per-claim cap, a **per-epoch emission cap** and a vault rent floor.
 - **SOL escrow:** `open_escrow`, `release_escrow`, `refund_escrow`. Opening is rejected while paused.
@@ -145,12 +145,53 @@ Treasury bootstrap (`scripts/economy-bootstrap.ts` → `bootstrapTreasury`): rea
 2. Create a **separate admin key**, ideally a multisig, and hand config authority to it with `propose_authority(<admin>)`, signed by the deployer, then `accept_authority`, signed by the admin. The deployer then keeps only upgrade rights. Consider moving those to the multisig as well, or making the program immutable.
 3. Set the reward signer with `update_config`. The reward signer is the game-reward co-signing key, distinct from both the treasury and the admin. Also set the per-claim and per-epoch emission caps.
 
-The Anchor provider wallet is a dedicated deployer key (`.secrets/program-deployer-devnet.json`), never the treasury key. `anchor test` runs `cargo test`, which runs the Rust unit tests for the config and emission checks, fee cap and refund rules. On-chain (bankrun) tests are not written yet.
+The Anchor provider wallet is a dedicated deployer key (`.secrets/program-deployer-devnet.json`), never the treasury key. The `[scripts] test` entry in `Anchor.toml` runs `cargo test -p nebula_settlement`: the Rust unit tests plus the LiteSVM on-chain tests described below.
+
+### Build and on-chain tests
+
+**Toolchain** (verified 2026-09-30 in the dev container, Linux x86_64):
+
+| Tool | Version | How it was installed |
+|---|---|---|
+| Rust (host) | rustc / cargo 1.94.1 | preinstalled (rustup) |
+| Solana / Agave CLI | `solana-cli 4.3.0` (Agave, src 44b42d45) | `sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"`, then `export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"` |
+| SBF toolchain | `cargo-build-sbf 4.4.0`, platform-tools v1.57 | bundled with the Agave install (platform tools are downloaded on the first build) |
+| Anchor CLI | `anchor-cli 1.2.0` (matches `anchor-lang = "1.2.0"`) | prebuilt binary: `curl -sSfL -o ~/.local/bin/anchor https://github.com/solana-foundation/anchor/releases/download/v1.2.0/anchor-1.2.0-x86_64-unknown-linux-gnu && chmod +x ~/.local/bin/anchor` (`avm` / `cargo install --git` also work but compile for a long time) |
+| LiteSVM (dev-dependency) | `litesvm 0.16.0` (agave 4.2.x runtime) | Cargo. 0.17 needs rustc >= 1.97.1; see the comment in `nebula_settlement/Cargo.toml` |
+
+**Build** (from `programs/`):
+
+```bash
+anchor build --ignore-keys   # → target/deploy/nebula_settlement.so, target/idl/nebula_settlement.json, target/types/nebula_settlement.ts
+# or, without Anchor (no IDL): cd nebula_settlement && cargo build-sbf
+```
+
+`Anchor.toml` lists the workspace member explicitly (`[workspace] members = ["nebula_settlement"]`) because the crate lives in `programs/nebula_settlement`, not in Anchor's default `programs/*` under the Anchor.toml directory. Without that entry `anchor build` finds no program and does nothing. `--ignore-keys` is needed because the reserved devnet program ID (`Huqa9x…vPQH`, in `declare_id!`) has no keypair in this checkout; the build writes a throwaway `target/deploy/nebula_settlement-keypair.json` (git-ignored). Do **not** run `anchor keys sync`, because it would rewrite the program ID. Result: `nebula_settlement.so`, 340,232 bytes, `ELF 64-bit LSB, eBPF`; IDL is 36,857 bytes.
+
+**Tests** (from `programs/`; build first, because the on-chain tests load the `.so`):
+
+```bash
+cargo test -p nebula_settlement
+```
+
+- 6 unit tests in `src/lib.rs` for the pure helpers.
+- 7 on-chain tests in `nebula_settlement/tests/litesvm.rs`. These run the compiled SBF program in LiteSVM, an in-process SVM with no validator and no network. The program is loaded through the upgradeable loader and its `ProgramData` upgrade authority is set to a test key, so the real `initialize` gate is exercised. Every keypair is generated per test. The tests cover:
+  - `initialize`: rejects any signer that is not the upgrade authority, rejects a fee above `MAX_FEE_BPS`, per-claim > per-epoch and a zero epoch; a second initialize fails; checks the stored fields.
+  - Admin: `update_config`, `set_paused` and `propose_authority` reject non-authorities. The two-step transfer rejects accept with nothing pending and accept by the wrong key. After the transfer the old authority loses its rights.
+  - `verify_reward`: rejects a wrong reward signer, a zero amount and an amount above the per-claim cap. A duplicate reward id fails (receipt PDA) with no second payout. The per-epoch emission cap is enforced and rolls over after the epoch (clock warp). Rejected while paused; the vault rent floor is kept.
+  - Escrow: `release_escrow` is authority-only and pays the taker (rent goes back to the maker, account closed). `refund_escrow` needs expiry for the maker but the authority can refund any time; invalid amount and expiry are rejected; opening is rejected while paused.
+  - Tournaments: `create_tournament` is authority-only (and needs `max_players >= 2`); one entry per player; `TournamentFull`. `settle_tournament` checks authority, `PayoutExceedsPot`, a house fee above `fee_bps` (`FeeTooHigh`) and winner/payout count mismatch. A settled tournament cannot be settled again. `refund_entry` is blocked while open, returns only rent after settlement, and fee + rent after `cancel_tournament`.
+
+Result on 2026-09-30: `test result: ok. 6 passed` (unit) and `test result: ok. 7 passed` (`tests/litesvm.rs`, about 2 s).
+
+**Local validator smoke test** (optional, 127.0.0.1 only, never devnet or mainnet). `solana-test-validator --reset --upgradeable-program Huqa9xhLz97jhGsQVLuNovd2FuepHWnD9BRvcBifvPQH target/deploy/nebula_settlement.so <local-authority-pubkey> --mint <local-authority-pubkey>` loads the program with a throwaway local upgrade authority, created with `solana-keygen new` in a temp directory and never committed. The `initialize` instruction was then sent with a small `@solana/kit` script that uses the IDL discriminator and a borsh-encoded argument layout. It succeeded (13,259 CU). The config PDA `Auhoeu2x…SFJJ` is owned by the program and stores the right authority, reward signer, `fee_bps` = 500 and the caps.
+
+Not done: devnet deployment. It needs the dedicated deployer keypair and program-deploy SOL; follow the pre-deployment steps above.
 
 It is intentionally **not deployed** for the MVP because:
 1. The economy's safety controls (eligibility, caps, bot/risk review, circuit breakers, treasury health throttling) live off-chain and change often; moving settlement on-chain now would duplicate them or bypass them.
 2. Treasury transfers through one audited service give a single choke point with idempotency, manual review and compensating ledger entries; an on-chain vault would need an audit, upgrade-authority governance and key management first.
-3. Deploying requires the Solana BPF toolchain and program-deploy SOL; the MVP only needs system transfers.
+3. Deploying requires an upgrade-authority/governance setup and program-deploy SOL; the MVP only needs system transfers.
 The path forward: deploy to devnet behind a feature flag, have blockchain-service call `verify_reward` / `settle_tournament` instead of plain transfers, keep the off-chain policy as the signer's gate.
 
 ## Scripts
