@@ -6,11 +6,13 @@ import { api } from "../lib/api.js";
 import { isNative, isPluginAvailable, platform } from "./platform.js";
 import { getDeviceId } from "./secureStorage.js";
 import { deepLinkToRoute } from "./deepLinks.js";
+import { DEMO_MODE } from "../lib/demoMode.js";
 
 let registered = false;
 
 export async function registerPush(navigate: (route: string) => void): Promise<"registered" | "denied" | "unsupported" | "error"> {
-  if (!isNative || !isPluginAvailable("PushNotifications")) return "unsupported";
+  // Demo builds ship without Firebase/APNs credentials (FCM would fail natively) and have no push backend.
+  if (DEMO_MODE || !isNative || !isPluginAvailable("PushNotifications")) return "unsupported";
   if (registered) return "registered";
   try {
     const { PushNotifications } = await import("@capacitor/push-notifications");
