@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ShipDef } from "@nebula/shared";
-import type { HangarViewer } from "@nebula/game-renderer";
+import type { HangarPreviewMode, HangarViewer } from "@nebula/game-renderer";
 import { useGraphicsTier } from "../hooks/useGraphicsTier.js";
 import { ShipBlueprint } from "./ShipBlueprint.js";
 import { useT } from "../lib/i18n.js";
 
-export type PreviewMode = "idle" | "engine" | "fire" | "shield" | "damage";
+export type PreviewMode = HangarPreviewMode;
 
 export interface ShipViewerProps {
   def: ShipDef;
@@ -99,16 +99,7 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
     viewer?.setCompare(compare);
   }, [viewer, compare]);
   useEffect(() => {
-    if (!viewer) return undefined;
-    viewer.previewEngines(preview === "engine" || preview === "fire");
-    viewer.previewDamage(preview === "damage" ? 0.65 : 0);
-    if (preview === "fire" || preview === "shield") {
-      const tick = (): void => (preview === "fire" ? viewer.fireWeapons() : viewer.previewShield());
-      tick();
-      const t = window.setInterval(tick, preview === "fire" ? 900 : 1600);
-      return () => window.clearInterval(t);
-    }
-    return undefined;
+    viewer?.setPreview(preview);
   }, [viewer, preview]);
 
   return (
@@ -118,6 +109,8 @@ export function ShipViewer({ def, cosmetics = {}, preview = "idle", autoRotate =
         className="h-full w-full touch-none"
         style={{ display: failed ? "none" : "block", opacity: viewer ? 1 : 0, transition: "opacity .6s" }}
         aria-label={t("ship.previewAria", { name: def.name })}
+        data-testid="ship-viewer-canvas"
+        data-ready={viewer ? "true" : "false"}
       />
       {failed && <ShipBlueprint def={def} />}
       {!viewer && !failed && (

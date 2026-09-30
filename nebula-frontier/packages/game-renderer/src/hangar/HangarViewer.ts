@@ -13,6 +13,7 @@ import { ShipFactory, type ShipModel } from "../ship/ShipFactory.js";
 import { resolveCosmeticPayloads } from "../ship/cosmetics.js";
 import { EffectsSystem } from "../fx/EffectsSystem.js";
 import type { ShieldHandle } from "../fx/shield.js";
+import { HANGAR_ORBIT, bayWidth, damageLevel, hangarFraming, hangarHomePose, hangarPreviewPlan, zoomedDistance, type HangarPreviewMode } from "./interaction.js";
 
 export interface HangarViewerOptions {
   shipDef: ShipDef | string;
@@ -24,6 +25,10 @@ export interface HangarViewerOptions {
   autoRotate?: boolean;
   /** Transparent background (compose over web UI). */
   transparent?: boolean;
+  /** Load production ship GLBs (`visual.glb`) over the procedural meshes. Default true. */
+  shipGlbs?: boolean;
+  /** Where the Draco decoder is served. Default "/draco/". */
+  dracoPath?: string;
 }
 
 export interface HangarViewer {
@@ -33,6 +38,8 @@ export interface HangarViewer {
   fireWeapons(): void;
   previewShield(): void;
   previewDamage(pct: number): void;
+  /** Drive one preview mode (engines / repeating fire or shield pulses / damage); "idle" stops them. */
+  setPreview(mode: HangarPreviewMode): void;
   setCompare(def: ShipDef | string | null): void;
   setAutoRotate(on: boolean): void;
   zoom(delta: number): void;
@@ -89,11 +96,11 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   camera.position.set(9, 5.5, 11);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-  controls.enablePan = false;
-  controls.minDistance = 3;
-  controls.maxDistance = 90;
-  controls.maxPolarAngle = Math.PI * 0.49;
+  controls.dampingFactor = HANGAR_ORBIT.dampingFactor;
+  controls.enablePan = HANGAR_ORBIT.enablePan;
+  controls.minDistance = HANGAR_ORBIT.minDistance;
+  controls.maxDistance = HANGAR_ORBIT.maxDistance;
+  controls.maxPolarAngle = HANGAR_ORBIT.maxPolarAngle;
   controls.target.set(0, 0.8, 0);
 
   // --- studio lighting -----------------------------------------------------------------
@@ -134,7 +141,9 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
 
   // --- shared runtime ------------------------------------------------------------------------
   const materials = new MaterialLibrary({ textureSize: Math.max(256, tier.textureSize), physical: tier.physicalMaterials, anisotropy: tier.anisotropy });
-  const factory = new ShipFactory({ materials, greebles: true, lodBias: 50 });
+  // Same production GLBs as the game world (procedural mesh stays as the fallback until/unless they load).
+  const glb = opts.shipGlbs === false ? null : new (await import("../ship/glb.js")).GlbLibrary({ dracoPath: opts.dracoPath ?? "/draco/" });
+  const factory = new ShipFactory({ materials, greebles: true, lodBias: 50, glb });
   const fx = new EffectsSystem({ ...tier, particleBudget: Math.max(1500, tier.particleBudget) });
   scene.add(fx.group);
 
@@ -188,28 +197,20 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     bay.damage = 0;
   };
 
+  const widthOf = (bay: Bay | null): number | null => (bay?.model ? bayWidth(bay.model.length, bay.model.radius) : null);
   const frame = (): void => {
-    const models = [main, compare].filter((b): b is Bay => !!b && !!b.model);
-    const widths = models.map((b) => Math.max(b.model?.length ?? 3, (b.model?.radius ?? 1.5) * 2));
-    if (compare && main.model && compare.model) {
-      const gap = (widths[0] ?? 3) / 2 + (widths[1] ?? 3) / 2 + 2;
-      main.root.position.x = -gap / 2;
-      compare.root.position.x = gap / 2;
-    } else {
-      main.root.position.x = 0;
-    }
-    const extent = compare ? (widths[0] ?? 3) + (widths[1] ?? 3) + 2 : Math.max(widths[0] ?? 3, 3);
-    controls.minDistance = extent * 0.6;
-    controls.maxDistance = extent * 6;
-    key.shadow.camera.far = extent * 12;
+    const f = hangarFraming(widthOf(main), widthOf(compare), compare !== null);
+    main.root.position.x = f.mainX;
+    if (compare && f.compareX !== null) compare.root.position.x = f.compareX;
+    controls.minDistance = f.minDistance;
+    controls.maxDistance = f.maxDistance;
+    key.shadow.camera.far = f.shadowFar;
   };
 
   const resetView = (): void => {
-    const L = Math.max(main.model?.length ?? 3, (main.model?.radius ?? 1.5) * 1.6);
-    const ext = compare ? L * 2.6 : L;
-    const d = Math.max(9, ext * 2.7);
-    camera.position.set(d * 0.72, d * 0.42, d * 0.85);
-    controls.target.set(0, Math.max(0.6, L * 0.1), 0);
+    const pose = hangarHomePose(main.model ? { length: main.model.length, radius: main.model.radius } : null, compare !== null);
+    camera.position.set(...pose.position);
+    controls.target.set(...pose.target);
     controls.update();
   };
 
@@ -233,6 +234,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   ro?.observe(canvas);
 
   let raf = 0;
+  let previewTimer: ReturnType<typeof setInterval> | null = null;
   let last = -1;
   let time = 0;
   let disposed = false;
@@ -313,8 +315,20 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
       }
     },
     previewDamage(pct) {
-      const v = Math.max(0, Math.min(1, pct > 1 ? pct / 100 : pct));
+      const v = damageLevel(pct);
       for (const bay of [main, compare]) if (bay) bay.damage = v;
+    },
+    setPreview(mode) {
+      if (previewTimer !== null) clearInterval(previewTimer);
+      previewTimer = null;
+      const plan = hangarPreviewPlan(mode);
+      viewer.previewEngines(plan.engines);
+      viewer.previewDamage(plan.damage);
+      if (plan.pulse) {
+        const pulse = plan.pulse === "fire" ? () => viewer.fireWeapons() : () => viewer.previewShield();
+        pulse();
+        previewTimer = setInterval(pulse, plan.intervalMs);
+      }
     },
     setCompare(def) {
       if (!def) {
@@ -336,8 +350,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     },
     zoom(delta) {
       const dir = tmpA.copy(camera.position).sub(controls.target);
-      const len = Math.min(controls.maxDistance, Math.max(controls.minDistance, dir.length() * (1 + delta)));
-      dir.setLength(len);
+      dir.setLength(zoomedDistance(dir.length(), delta, controls.minDistance, controls.maxDistance));
       camera.position.copy(controls.target).add(dir);
       controls.update();
     },
@@ -351,6 +364,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
       if (disposed) return;
       disposed = true;
       cancelAnimationFrame(raf);
+      if (previewTimer !== null) clearInterval(previewTimer);
       ro?.disconnect();
       controls.dispose();
       for (const bay of [main, compare]) {
@@ -359,6 +373,7 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
       }
       fx.dispose();
       factory.dispose();
+      glb?.dispose();
       materials.dispose();
       platformGeo.dispose();
       platformMat.dispose();

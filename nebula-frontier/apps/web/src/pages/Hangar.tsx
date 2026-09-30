@@ -37,7 +37,7 @@ const PREVIEWS: { key: PreviewMode; label: TKey }[] = [
 
 type Picker = { slotType: SlotType; slotIndex: number } | null;
 
-function SlotTile({ item, label, onClick, onDrop, index }: { item: InventoryItemDto | undefined; label: string; index: number; onClick: () => void; onDrop: (inventoryItemId: string) => void }) {
+function SlotTile({ item, label, onClick, onDrop, index, testId }: { item: InventoryItemDto | undefined; label: string; index: number; testId: string; onClick: () => void; onDrop: (inventoryItemId: string) => void }) {
   const t = useT();
   const [over, setOver] = useState(false);
   const handlers = {
@@ -59,6 +59,7 @@ function SlotTile({ item, label, onClick, onDrop, index }: { item: InventoryItem
     <button
       type="button"
       className="nf-slot"
+      data-testid={testId}
       data-filled={Boolean(item)}
       data-drop={over}
       style={item ? rarityStyle(item.rarity) : undefined}
@@ -107,7 +108,7 @@ function UpgradePanel({ ship }: { ship: ShipInstanceDto }) {
   };
   return (
     <>
-      <NeonButton size="sm" onClick={() => void openModal()} icon={<Icon name="arrowRight" size={14} style={{ transform: "rotate(-90deg)" }} />}>{t("hangar.upgradeN", { n: ship.upgradeLevel + 1 })}</NeonButton>
+      <NeonButton size="sm" onClick={() => void openModal()} data-testid="hangar-upgrade" icon={<Icon name="arrowRight" size={14} style={{ transform: "rotate(-90deg)" }} />}>{t("hangar.upgradeN", { n: ship.upgradeLevel + 1 })}</NeonButton>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -223,7 +224,7 @@ export default function HangarPage() {
           {owned.map((s) => {
             const d = SHIPS_BY_ID.get(s.defId);
             return (
-              <button key={s.id} type="button" onClick={() => { setSelectedId(s.id); setLoadoutId(null); }} className="nf-panel nf-panel--interactive flex shrink-0 items-center gap-2 px-3 py-2" style={{ borderColor: s.id === ship.id ? "var(--nf-accent)" : undefined, ...(d ? rarityStyle(d.rarity) : {}) }}>
+              <button key={s.id} type="button" data-testid="hangar-ship" data-ship-def={s.defId} aria-pressed={s.id === ship.id} onClick={() => { setSelectedId(s.id); setLoadoutId(null); }} className="nf-panel nf-panel--interactive flex shrink-0 items-center gap-2 px-3 py-2" style={{ borderColor: s.id === ship.id ? "var(--nf-accent)" : undefined, ...(d ? rarityStyle(d.rarity) : {}) }}>
                 <Icon name="ship" size={16} style={{ color: d ? rarityColor(d.rarity) : undefined }} />
                 <span className="nf-ui text-[14px] font-bold">{s.name}{s.upgradeLevel ? ` +${s.upgradeLevel}` : ""}</span>
                 {s.active && <span className="h-2 w-2 rounded-full bg-good" />}
@@ -239,10 +240,10 @@ export default function HangarPage() {
             <ShipViewer def={def} cosmetics={ship.cosmetics} preview={preview} autoRotate={autoRotate} compare={compareDef ?? null} />
             <div className="absolute left-3 right-3 top-3 flex flex-wrap gap-1.5">
               {PREVIEWS.map((p) => (
-                <button key={p.key} type="button" className="nf-chip cursor-pointer" style={p.key === preview ? { color: "var(--nf-accent)", borderColor: "var(--nf-accent)" } : undefined} onClick={() => setPreview(p.key)}>{t(p.label)}</button>
+                <button key={p.key} type="button" data-testid={`hangar-preview-${p.key}`} aria-pressed={p.key === preview} className="nf-chip cursor-pointer" style={p.key === preview ? { color: "var(--nf-accent)", borderColor: "var(--nf-accent)" } : undefined} onClick={() => setPreview(p.key)}>{t(p.label)}</button>
               ))}
             </div>
-            <button type="button" className="nf-chip absolute bottom-3 right-3 cursor-pointer" onClick={() => setAutoRotate((a) => !a)} aria-pressed={autoRotate}>
+            <button type="button" className="nf-chip absolute bottom-3 right-3 cursor-pointer" onClick={() => setAutoRotate((a) => !a)} aria-pressed={autoRotate} data-testid="hangar-autorotate">
               <Icon name="refresh" size={12} /> {autoRotate ? t("hangar.autoOn") : t("hangar.autoOff")}
             </button>
             <div className="nf-ui pointer-events-none absolute bottom-4 left-4 hidden text-[11px] uppercase tracking-[0.2em] text-mute sm:block">{t("hangar.dragHint")}</div>
@@ -280,7 +281,7 @@ export default function HangarPage() {
                         <div className="nf-label flex items-center gap-2"><Icon name={st.icon} size={13} />{t(st.label)} <span className="text-mute">({arr.filter(Boolean).length}/{count})</span></div>
                         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${mobile ? 4 : 5}, minmax(0, 1fr))` }}>
                           {arr.map((id, i) => (
-                            <SlotTile key={i} index={i} label={t(st.label)} item={id ? byId.get(id) : undefined} onClick={() => setPicker({ slotType: st.key, slotIndex: i })} onDrop={(itemId) => onDropItem(st.key, i, itemId)} />
+                            <SlotTile key={i} index={i} testId={`slot-${st.key}-${i}`} label={t(st.label)} item={id ? byId.get(id) : undefined} onClick={() => setPicker({ slotType: st.key, slotIndex: i })} onDrop={(itemId) => onDropItem(st.key, i, itemId)} />
                           ))}
                         </div>
                       </div>
@@ -339,7 +340,7 @@ export default function HangarPage() {
 
           {tab === "compare" && (
             <HoloPanel title={t("hangar.compareWith")}>
-              <select className="nf-input" value={compareId} onChange={(e) => setCompareId(e.target.value)}>
+              <select className="nf-input" value={compareId} onChange={(e) => setCompareId(e.target.value)} data-testid="hangar-compare-select">
                 <option value="">{t("hangar.selectShip")}</option>
                 {(ships.data?.catalog ?? []).filter((c) => c.id !== ship.defId).map((c) => <option key={c.id} value={c.id}>{t("hangar.compareOption", { name: c.name, tier: c.tier, cls: enumLabel(c.class) })}</option>)}
               </select>

@@ -28,3 +28,7 @@ export { buildMapDecor, createPlanet, type DecorItem } from "./world/decor.js";
 export { FollowCamera, type FollowCameraOptions } from "./camera/FollowCamera.js";
 export { WorldRenderer, type EntityRenderInput, type FrameStats, type WorldRendererOptions } from "./WorldRenderer.js";
 export { createHangarViewer, type HangarViewer, type HangarViewerOptions } from "./hangar/HangarViewer.js";
+export {
+  HANGAR_ORBIT, PREVIEW_DAMAGE, bayWidth, damageLevel, hangarFraming, hangarHomePose, hangarPreviewPlan, zoomedDistance,
+  type HangarFraming, type HangarPose, type HangarPreviewMode, type HangarPreviewPlan,
+} from "./hangar/interaction.js";

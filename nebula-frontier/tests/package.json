@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:demo": "playwright test -c e2e/playwright.demo.config.ts",
+    "test:e2e:wallet": "playwright test -c e2e/playwright.wallet.config.ts"
   },
   "dependencies": {
     "@colyseus/core": "^0.18.17",
