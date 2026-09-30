@@ -1,6 +1,6 @@
 import {
   AmbientLight, CircleGeometry, Color, CylinderGeometry, DirectionalLight, GridHelper, Group, Mesh, MeshBasicMaterial,
-  MeshStandardMaterial, PerspectiveCamera, Quaternion, Scene, SpotLight, TorusGeometry, Vector3, AdditiveBlending,
+  MeshLambertMaterial, MeshStandardMaterial, PerspectiveCamera, Quaternion, Scene, ShadowMaterial, SpotLight, TorusGeometry, Vector3, AdditiveBlending,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Reflector } from "three/addons/objects/Reflector.js";
@@ -85,6 +85,8 @@ function resolvePayloads(list: readonly (string | CosmeticPayload)[]): CosmeticP
 
 /** Show the procedural ship anyway if its GLB takes longer than this (slow network / failed decode). */
 const GLB_REVEAL_TIMEOUT_MS = 2500;
+/** Floor / mirror radius: large enough that its rim sits near the horizon at the lowest orbit angle. */
+const FLOOR_RADIUS = 160;
 const tmpA = new Vector3();
 const tmpB = new Vector3();
 const tmpQ = new Quaternion();
@@ -103,9 +105,9 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
     scene.environment = backend.environment;
     scene.environmentIntensity = 0.55;
   }
-  // near/far kept tight (orbit distance 3..90, floor radius 60): mobile GPUs often only have a 16-bit
+  // near/far kept tight (orbit distance 3..90, floor radius FLOOR_RADIUS): mobile GPUs often only have a 16-bit
   // depth buffer, where near = 0.1 made the stacked floor / grid / halo layers z-fight (shimmer).
-  const camera = new PerspectiveCamera(35, 1, 0.5, 260);
+  const camera = new PerspectiveCamera(35, 1, 0.5, FLOOR_RADIUS * 2.5);
   camera.position.set(9, 5.5, 11);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -131,26 +133,43 @@ export async function createHangarViewer(canvas: HTMLCanvasElement, opts: Hangar
   scene.add(key, key.target, fill, rimL, rimR, new AmbientLight("#1b2233", 0.6));
 
   // --- floor ---------------------------------------------------------------------------------
+  // HIGH/ULTRA: one mirror surface (tinted by the Reflector itself) plus a shadow-only plane above it.
+  // A semi-transparent floor stacked on the mirror z-fought toward the horizon: a torn, shimmering edge
+  // that crawled while the camera/ship turned — the hangar flicker seen on real GPUs.
+  // LOW/MEDIUM: a plain opaque floor.
   const floorGroup = new Group();
   scene.add(floorGroup);
   let reflector: Reflector | null = null;
+  const floorGeo = new CircleGeometry(FLOOR_RADIUS, 96);
+  let floorMat: MeshLambertMaterial | ShadowMaterial;
   if (backend.kind === "webgl" && (tierName === "ULTRA" || tierName === "HIGH")) {
-    reflector = new Reflector(new CircleGeometry(60, 64), { color: new Color("#1a1e28"), textureWidth: 1024, textureHeight: 1024, clipBias: 0.003 });
+    reflector = new Reflector(new CircleGeometry(FLOOR_RADIUS, 96), { color: new Color("#10131b"), textureWidth: 1024, textureHeight: 1024, clipBias: 0.003 });
     reflector.rotation.x = -Math.PI / 2;
-    reflector.position.y = -0.08;
     floorGroup.add(reflector);
+    floorMat = new ShadowMaterial({ opacity: 0.45, depthWrite: false });
+  } else {
+    // Lambert: no environment-map specular. A rough PBR floor still mirrored the bright studio environment
+    // at grazing angles (a washed-out teal plane that brightened and dimmed as the view turned).
+    floorMat = new MeshLambertMaterial({ color: "#070a12" });
   }
-  const floorMat = new MeshStandardMaterial({ color: "#05070b", roughness: 0.85, metalness: 0.1, envMapIntensity: 0.05, transparent: !!reflector, opacity: reflector ? 0.9 : 1 });
-  const floorGeo = new CircleGeometry(60, 64);
   const floor = new Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
-  // Push the floor back in depth so the grid / platform halo drawn just above it never fight it.
-  floorMat.polygonOffset = true;
-  floorMat.polygonOffsetFactor = 2;
-  floorMat.polygonOffsetUnits = 2;
+  if (reflector) {
+    // Shadow plane sits a hair above the mirror and always wins the depth test against it.
+    floor.position.y = 0.01;
+    floorMat.polygonOffset = true;
+    floorMat.polygonOffsetFactor = -2;
+    floorMat.polygonOffsetUnits = -2;
+  } else {
+    // Push the floor back in depth so the grid / platform halo drawn just above it never fight it.
+    floorMat.polygonOffset = true;
+    floorMat.polygonOffsetFactor = 2;
+    floorMat.polygonOffsetUnits = 2;
+  }
   floorGroup.add(floor);
-  const grid = new GridHelper(120, 60, 0x1f3550, 0x121a28);
+  // Local deck grid only: thin lines running out toward the horizon alias into a crawling moiré.
+  const grid = new GridHelper(40, 20, 0x1f3550, 0x121a28);
   grid.position.y = 0.03;
   grid.material.depthWrite = false;
   grid.material.transparent = true;
