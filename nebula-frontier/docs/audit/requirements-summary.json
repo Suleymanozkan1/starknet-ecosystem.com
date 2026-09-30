@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-30T06:57:09.198Z",
+  "generatedAt": "2026-09-30T07:36:01.269Z",
   "total": 257,
-  "implemented": 251,
-  "partial": 6,
+  "implemented": 257,
+  "partial": 0,
   "notImplemented": 0,
   "blocked": 0,
-  "completionPercent": 97.7,
+  "completionPercent": 100,
   "byCategory": {
     "PROJECT STRUCTURE": {
       "IMPLEMENTED": 7,
@@ -530,8 +530,8 @@
       "BLOCKED": 0
     },
     "SOLANA": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -548,14 +548,14 @@
       "BLOCKED": 0
     },
     "DEPOSIT": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
     "WITHDRAWAL": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -578,8 +578,8 @@
       "BLOCKED": 0
     },
     "NFT": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -590,8 +590,8 @@
       "BLOCKED": 0
     },
     "DEVNET": {
-      "IMPLEMENTED": 0,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 1,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -980,8 +980,8 @@
       "BLOCKED": 0
     },
     "MVP VERTICAL SLICE": {
-      "IMPLEMENTED": 18,
-      "PARTIAL": 1,
+      "IMPLEMENTED": 19,
+      "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
     },
@@ -1865,10 +1865,8 @@
       "id": "BC-01",
       "category": "SOLANA",
       "requirement": "@solana/kit real integration (RPC, tx build, confirm)",
-      "status": "PARTIAL",
-      "why": [
-        "runtime BLOCKED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-02",
@@ -1888,19 +1886,15 @@
       "id": "BC-04",
       "category": "DEPOSIT",
       "requirement": "Deposit flow with network/mint/amount/recipient/confirmation/signature uniqueness checks",
-      "status": "PARTIAL",
-      "why": [
-        "runtime BLOCKED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-05",
       "category": "WITHDRAWAL",
       "requirement": "Withdrawal with limits, cooldown, review, statuses, signature, retry/backoff, idempotency",
-      "status": "PARTIAL",
-      "why": [
-        "runtime BLOCKED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-06",
@@ -1927,11 +1921,8 @@
       "id": "BC-09",
       "category": "NFT",
       "requirement": "Metaplex token metadata for eligible assets",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED",
-        "Feature-flagged; not minted in the vertical slice"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-10",
@@ -1944,11 +1935,8 @@
       "id": "BC-11",
       "category": "DEVNET",
       "requirement": "Devnet-only operation",
-      "status": "PARTIAL",
-      "why": [
-        "NOT_TESTED",
-        "runtime BLOCKED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "BC-12",
@@ -2794,10 +2782,8 @@
       "id": "SLICE-withdraw",
       "category": "MVP VERTICAL SLICE",
       "requirement": "Devnet withdrawal → tx hash",
-      "status": "PARTIAL",
-      "why": [
-        "runtime BLOCKED"
-      ]
+      "status": "IMPLEMENTED",
+      "why": []
     },
     {
       "id": "CR-01",

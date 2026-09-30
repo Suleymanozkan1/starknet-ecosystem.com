@@ -174,5 +174,9 @@
   "two_node": {
     "status": "PASS",
     "evidence": "tests/integration/horizontal-scaling.test.ts: 2 game-server processes on one Redis \u2014 cross-node matchmaking via remote seat reservation, join-by-id across nodes, cross-node GLOBAL/FACTION chat + presence; 3/3 green three runs in a row (2026-09-30)"
+  },
+  "nft_mint": {
+    "status": "PASS",
+    "evidence": "Real devnet (2026-09-30): Metaplex NonFungible for ship_zenith minted to the test player \u2014 mint BGhMsJHGJH9SM4d2AgwPHFrQ4pcxuoexhvdsaSXEAUE3, tx 3hSTEWAxk6xUdV2xUCHuKf425oor17XrL36XEgyhzwW78HyQDGqGGTVNUaCBhgC1cWkNE38hKZuQa4soP3QLTKwf (CONFIRMED); metadata + image hosted at https://nebulafrontier.vercel.app/nft/ship_zenith.{json,png}"
   }
 }
