@@ -16,16 +16,31 @@
  *    derivable from the withdrawal id, so anyone could send the treasury a spoof tx carrying it.
  *  - COMPLETED + ledger settlement happen only after an on-chain confirmation.
  *  - Row updates are conditional (optimistic concurrency) so two workers can't double-submit.
+ *
+ * On-chain settlement (feature flag ONCHAIN_SETTLEMENT_ENABLED, native SOL only)
+ *  - When enabled and the program can pay it (not paused, within the per-claim / per-epoch caps, vault
+ *    liquid), the payout goes through nebula_settlement `verify_reward` from the program vault, with
+ *    reward id = sha256(withdrawal id). Otherwise it falls back to the direct treasury transfer (logged
+ *    + counted). Both kinds carry the same memo, so the memo lookup finds either.
+ *  - The reward receipt PDA is a second, on-chain idempotency guard: a second verify_reward for the
+ *    same withdrawal fails on chain, and while a receipt exists the withdrawal is never resubmitted
+ *    nor refunded (it waits for its verified signature instead).
  */
 import { ChainTxState, WithdrawalStatus, CircuitBreakerMode, RiskLevel } from "@nebula/shared";
 import type { Db } from "@nebula/database";
 import type { Prisma } from "@nebula/database";
 import {
   buildAndSendPayout,
+  checkSettlementEligibility,
   checkSignature,
+  fetchRewardReceipt,
   findPayoutsByMemo,
+  getSettlementPdas,
   getTransactionFeePayer,
+  rewardIdFor,
+  sendSettlementPayout,
   verifyPayoutTransaction,
+  verifySettlementPayout,
   type ConfirmationOutcome,
   type SolanaRpcClient,
   type SolanaRpcSubscriptionsClient
@@ -50,6 +65,43 @@ export interface ProcessorDeps {
   inlineConfirmMs: number;
   metrics?: Metrics;
   now?: () => Date;
+  /** On-chain settlement through nebula_settlement (null/undefined = feature flag off). */
+  settlement?: { programId: string } | null;
+}
+
+/** Settlement applies to native-SOL payouts only (the program vault holds SOL). */
+const settlementOf = (deps: ProcessorDeps): { programId: string } | null => (deps.settlement && !deps.mint ? deps.settlement : null);
+
+/**
+ * "settlement" when verify_reward can pay this withdrawal right now; otherwise "direct" (flag off, SPL
+ * mint, or the program would refuse it: paused / caps / vault liquidity / RPC error).
+ */
+async function choosePayoutMode(deps: ProcessorDeps, w: WithdrawalRow): Promise<"settlement" | "direct"> {
+  const settlement = settlementOf(deps);
+  if (!settlement) return "direct";
+  let reason: string;
+  try {
+    const e = await checkSettlementEligibility(deps.rpc, { pdas: await getSettlementPdas(settlement.programId), rewardSigner: deps.treasuryAddress, amount: w.final });
+    if (e.ok) return "settlement";
+    reason = e.reason;
+  } catch (err) {
+    reason = `eligibility check failed: ${(err as Error).message}`;
+  }
+  deps.metrics?.inc("withdrawal_settlement_fallback_total");
+  log.warn("on-chain settlement unavailable for this payout; using a direct treasury transfer", { withdrawalId: w.id, reason });
+  return "direct";
+}
+
+/** true = a reward receipt exists for this withdrawal (it was paid through the program), "unknown" on RPC errors. */
+async function receiptExists(deps: ProcessorDeps, w: WithdrawalRow): Promise<boolean | "unknown"> {
+  const settlement = settlementOf(deps);
+  if (!settlement) return false;
+  try {
+    return (await fetchRewardReceipt(deps.rpc, settlement.programId, await rewardIdFor(w.id))) !== null;
+  } catch (err) {
+    log.warn("reward receipt lookup failed", { withdrawalId: w.id, error: (err as Error).message });
+    return "unknown";
+  }
 }
 
 export type StepResult = { done: true; status: string } | { done: false; retryInMs: number; status: string };
@@ -166,9 +218,14 @@ async function findGenuinePayout(deps: ProcessorDeps, w: WithdrawalRow, exclude:
     return "retry";
   }
   let pending = false;
+  const settlement = settlementOf(deps);
+  const rewardId = settlement ? await rewardIdFor(w.id) : null;
   for (const c of candidates) {
     if (c.err || c.signature === exclude) continue;
-    const v = await verifyPayoutTransaction(deps.rpc, { signature: c.signature, treasury: deps.treasuryAddress, destination: w.address, amount: w.final, mint: deps.mint, memo });
+    let v = await verifyPayoutTransaction(deps.rpc, { signature: c.signature, treasury: deps.treasuryAddress, destination: w.address, amount: w.final, mint: deps.mint, memo });
+    if (!v.ok && !v.retryable && settlement && rewardId) {
+      v = await verifySettlementPayout(deps.rpc, { signature: c.signature, treasury: deps.treasuryAddress, destination: w.address, amount: w.final, memo, programId: settlement.programId, rewardId });
+    }
     if (v.ok) return { signature: c.signature };
     if (v.retryable) {
       pending = true;
@@ -178,7 +235,16 @@ async function findGenuinePayout(deps: ProcessorDeps, w: WithdrawalRow, exclude:
     deps.metrics?.inc("withdrawal_spoofed_memo_total");
     await flagSpoofedPayout(deps, w, c.signature, v).catch((err: Error) => log.warn("spoof risk signal failed", { withdrawalId: w.id, error: err.message }));
   }
-  return pending ? "retry" : null;
+  if (pending) return "retry";
+  // The program already paid this withdrawal but its transaction was not (yet) found: never pay again.
+  const receipt = await receiptExists(deps, w);
+  if (receipt === true) {
+    deps.metrics?.inc("withdrawal_receipt_without_signature_total");
+    log.error("reward receipt exists but no verified payout signature was found; holding (no resubmit, no refund)", { withdrawalId: w.id });
+    return "retry";
+  }
+  if (receipt === "unknown") return "retry";
+  return null;
 }
 
 async function submit(deps: ProcessorDeps, w: WithdrawalRow): Promise<StepResult> {
@@ -200,6 +266,8 @@ async function submit(deps: ProcessorDeps, w: WithdrawalRow): Promise<StepResult
     return checkInFlight(deps, fresh);
   }
 
+  const mode = await choosePayoutMode(deps, w);
+
   // Claim this attempt (optimistic concurrency on attempts + chainState).
   const claimed = await db.withdrawal.updateMany({
     where: { id: w.id, status: WithdrawalStatus.PROCESSING, chainState: w.chainState, attempts: w.attempts, signature: null },
@@ -213,31 +281,47 @@ async function submit(deps: ProcessorDeps, w: WithdrawalRow): Promise<StepResult
   let outcome: ConfirmationOutcome;
   try {
     const signer = await deps.getSigner();
-    outcome = await buildAndSendPayout({
-      rpc: deps.rpc,
-      rpcSubscriptions: deps.rpcSubscriptions,
-      signer,
-      destination: w.address,
-      amount: w.final,
-      mint: deps.mint,
-      mintDecimals: deps.mintDecimals,
-      memo,
-      confirmTimeoutMs: deps.inlineConfirmMs,
-      onSigned: async ({ signature, lastValidBlockHeight }) => {
-        signedSig = signature;
-        await db.$transaction([
-          db.withdrawal.update({
-            where: { id: w.id },
-            data: { signature, lastValidBlockHeight, chainState: ChainTxState.SUBMITTED, submittedAt: new Date(), nextAttemptAt: null }
-          }),
-          db.chainTransaction.updateMany({
-            where: { referenceId: w.id },
-            data: { signature, state: ChainTxState.SUBMITTED, attempts: attempt, lastError: null }
+    const onSigned = async ({ signature, lastValidBlockHeight }: { signature: string; lastValidBlockHeight: bigint }): Promise<void> => {
+      signedSig = signature;
+      await db.$transaction([
+        db.withdrawal.update({
+          where: { id: w.id },
+          data: { signature, lastValidBlockHeight, chainState: ChainTxState.SUBMITTED, submittedAt: new Date(), nextAttemptAt: null }
+        }),
+        db.chainTransaction.updateMany({
+          where: { referenceId: w.id },
+          data: { signature, state: ChainTxState.SUBMITTED, attempts: attempt, lastError: null }
+        })
+      ]);
+      log.info("payout signed and persisted; broadcasting", { withdrawalId: w.id, signature, attempt, mode });
+    };
+    const settlement = settlementOf(deps);
+    outcome =
+      mode === "settlement" && settlement
+        ? await sendSettlementPayout({
+            rpc: deps.rpc,
+            signer,
+            destination: w.address,
+            amount: w.final,
+            memo,
+            programId: settlement.programId,
+            rewardId: await rewardIdFor(w.id),
+            confirmTimeoutMs: deps.inlineConfirmMs,
+            onSigned
           })
-        ]);
-        log.info("payout signed and persisted; broadcasting", { withdrawalId: w.id, signature, attempt });
-      }
-    });
+        : await buildAndSendPayout({
+            rpc: deps.rpc,
+            rpcSubscriptions: deps.rpcSubscriptions,
+            signer,
+            destination: w.address,
+            amount: w.final,
+            mint: deps.mint,
+            mintDecimals: deps.mintDecimals,
+            memo,
+            confirmTimeoutMs: deps.inlineConfirmMs,
+            onSigned
+          });
+    deps.metrics?.inc("withdrawal_payouts_by_mode_total", { mode });
   } catch (err) {
     const message = (err as Error).message ?? String(err);
     if (signedSig) {
@@ -329,6 +413,13 @@ async function failAttempt(deps: ProcessorDeps, withdrawalId: string, reason: st
   const previous = Array.isArray(payload.previousSignatures) ? (payload.previousSignatures as string[]) : [];
   const newPayload = { ...payload, previousSignatures: w.signature ? [...previous, w.signature] : previous } as Prisma.InputJsonValue;
   if (w.attempts >= deps.maxAttempts) {
+    // A reward receipt means the program paid it: refunding would pay the player twice.
+    const receipt = await receiptExists(deps, w);
+    if (receipt !== false) {
+      log.error("attempts exhausted but a reward receipt exists (or could not be checked); holding instead of refunding", { withdrawalId: w.id, receipt });
+      await db.withdrawal.update({ where: { id: w.id }, data: { chainState: ChainTxState.RETRYING, signature: null, lastValidBlockHeight: null, failureReason: reason.slice(0, 500) } });
+      return { done: false, retryInMs: deps.confirmPollMs, status: ChainTxState.RETRYING };
+    }
     await db.$transaction(async (tx) => {
       const upd = await tx.withdrawal.updateMany({
         where: { id: w.id, status: WithdrawalStatus.PROCESSING },

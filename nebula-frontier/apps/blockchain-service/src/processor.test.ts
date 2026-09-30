@@ -5,8 +5,9 @@ import { Currency, LedgerAccountType } from "@nebula/shared";
 import { getBalance, post, system, userWallet, verifyLedgerIntegrity, type Db } from "@nebula/database";
 import { bootstrapTreasury, createWithdrawal, withdrawalMemo } from "@nebula/economy";
 import { createIsolatedDb, createTestUser } from "@nebula/economy/testing";
-import { sendSolWithMemo, type SolanaRpcClient } from "@nebula/blockchain";
-import { createMockSolanaRpc, type MockChainState } from "@nebula/blockchain/testing";
+import { fetchRewardReceipt, rewardIdFor, sendSettlementPayout, sendSolWithMemo, type SolanaRpcClient } from "@nebula/blockchain";
+import { createMockSolanaRpc, installMockSettlement, type MockChainState } from "@nebula/blockchain/testing";
+import { Metrics } from "./metrics.js";
 import { flagSpoofedPayout, processWithdrawal, type ProcessorDeps } from "./processor.js";
 import { createWithdrawalQueue, createWithdrawalWorker, enqueueWithdrawal, recoverQueue } from "./queue.js";
 
@@ -216,6 +217,94 @@ describe("withdrawal payout pipeline", () => {
     } finally {
       await db.circuitBreaker.update({ where: { mode: "WITHDRAWAL_REVIEW" }, data: { active: false } });
     }
+  });
+});
+
+describe("on-chain settlement (ONCHAIN_SETTLEMENT_ENABLED)", () => {
+  async function settlementChain(opts: Parameters<typeof installMockSettlement>[1] extends infer O ? Partial<O> : never = {}) {
+    const c = chain();
+    const program = await installMockSettlement(c.state, { rewardSigner: treasury.address, vaultLamports: 2n * SOL, ...opts });
+    return { ...c, program };
+  }
+  const vaultPayouts = (state: MockChainState, addr: string, vault: string) =>
+    [...state.txs.values()].filter((t) => !t.err && t.innerTransfers.some((tr) => tr.source === vault && tr.destination === addr));
+
+  it("pays through verify_reward from the vault, with a receipt, and settles the ledger", async () => {
+    const { rpc, state, program } = await settlementChain();
+    const metrics = new Metrics();
+    const w = await newWithdrawal();
+    const treasuryBefore = state.balances.get(treasury.address) ?? 0n;
+    expect(await runUntilDone(deps(rpc, { settlement: { programId: program.programId }, metrics }), w.id)).toBe("COMPLETED");
+    const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    expect(state.balances.get(w.wallet)).toBe(row.final);
+    expect(vaultPayouts(state, w.wallet, program.vault)).toHaveLength(1);
+    expect(transfersTo(state, w.wallet)).toHaveLength(0); // no direct treasury transfer
+    expect(state.txs.get(row.signature as string)?.memo).toBe(withdrawalMemo(w.id));
+    expect(treasuryBefore - (state.balances.get(treasury.address) ?? 0n)).toBeLessThan(row.final); // only fees left the treasury
+    expect(await fetchRewardReceipt(rpc, program.programId, await rewardIdFor(w.id))).toMatchObject({ player: w.wallet, amount: row.final });
+    expect(metrics.render()).toContain('withdrawal_payouts_by_mode_total{mode="settlement"} 1');
+    expect((await verifyLedgerIntegrity(db)).every((a) => a.ok)).toBe(true);
+  });
+
+  it("falls back to a direct treasury transfer when the program cannot pay (vault empty / above cap / paused)", async () => {
+    for (const opts of [{ vaultLamports: 0n }, { config: { maxRewardPerClaim: 1000n } }, { config: { paused: true } }]) {
+      const { rpc, state, program } = await settlementChain(opts);
+      const metrics = new Metrics();
+      const w = await newWithdrawal();
+      expect(await runUntilDone(deps(rpc, { settlement: { programId: program.programId }, metrics }), w.id)).toBe("COMPLETED");
+      expect(transfersTo(state, w.wallet)).toHaveLength(1);
+      expect(vaultPayouts(state, w.wallet, program.vault)).toHaveLength(0);
+      expect(metrics.render()).toContain("withdrawal_settlement_fallback_total 1");
+      expect(metrics.render()).toContain('withdrawal_payouts_by_mode_total{mode="direct"} 1');
+    }
+  });
+
+  it("flag off → direct transfer even when the program is deployed", async () => {
+    const { rpc, state, program } = await settlementChain();
+    const w = await newWithdrawal();
+    expect(await runUntilDone(deps(rpc), w.id)).toBe("COMPLETED");
+    expect(transfersTo(state, w.wallet)).toHaveLength(1);
+    expect(vaultPayouts(state, w.wallet, program.vault)).toHaveLength(0);
+  });
+
+  it("adopts a settlement payout that already landed (signature lost) instead of paying again", async () => {
+    const { rpc, state, program } = await settlementChain();
+    const w = await newWithdrawal();
+    const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    const landed = await sendSettlementPayout({ rpc, signer: treasury, destination: w.wallet, amount: row.final, memo: withdrawalMemo(w.id), programId: program.programId, rewardId: await rewardIdFor(w.id) });
+    expect(landed.status).toBe("CONFIRMED");
+    expect(await runUntilDone(deps(rpc, { settlement: { programId: program.programId } }), w.id)).toBe("COMPLETED");
+    expect((await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } })).signature).toBe(landed.signature);
+    expect(state.balances.get(w.wallet)).toBe(row.final);
+  });
+
+  it("a dropped settlement tx is resubmitted only after expiry and pays exactly once", async () => {
+    const { rpc, state, program } = await settlementChain();
+    state.sendQueue.push("drop");
+    const w = await newWithdrawal();
+    const d = deps(rpc, { settlement: { programId: program.programId } });
+    expect((await processWithdrawal(d, w.id)).done).toBe(false);
+    expect((await processWithdrawal(d, w.id)).done).toBe(false);
+    state.advance(500);
+    expect(await runUntilDone(d, w.id)).toBe("COMPLETED");
+    expect(vaultPayouts(state, w.wallet, program.vault)).toHaveLength(1);
+  });
+
+  it("never resubmits nor refunds while a reward receipt exists without a findable signature", async () => {
+    const { rpc, state, program } = await settlementChain();
+    const w = await newWithdrawal();
+    const row = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    const landed = await sendSettlementPayout({ rpc, signer: treasury, destination: w.wallet, amount: row.final, memo: withdrawalMemo(w.id), programId: program.programId, rewardId: await rewardIdFor(w.id) });
+    // History pruned by the RPC: the memo lookup no longer returns the landed signature.
+    state.txs.delete(landed.signature);
+    const balanceBefore = await getBalance(db, userWallet(w.userId, Currency.NEBX));
+    const d = deps(rpc, { settlement: { programId: program.programId }, maxAttempts: 1 });
+    for (let i = 0; i < 6; i++) expect((await processWithdrawal(d, w.id)).done).toBe(false);
+    const held = await db.withdrawal.findUniqueOrThrow({ where: { id: w.id } });
+    expect(held.status).toBe("PROCESSING");
+    expect(held.attempts).toBe(0);
+    expect(state.balances.get(w.wallet)).toBe(row.final); // paid once, never twice
+    expect(await getBalance(db, userWallet(w.userId, Currency.NEBX))).toBe(balanceBefore); // not refunded
   });
 });
 

@@ -5,7 +5,7 @@
   },
   "lint": {
     "status": "PASS",
-    "evidence": "eslint . \u2014 0 errors, 0 warnings (2026-09-30)"
+    "evidence": "eslint . — 0 errors, 0 warnings (2026-09-30)"
   },
   "build": {
     "status": "PASS",
@@ -29,7 +29,7 @@
   },
   "docker_compose": {
     "status": "PASS",
-    "evidence": "docker compose up: postgres, redis, migrate+seed, api(healthy), game-server(healthy), web(nginx :8088 \u2192 /api 200); blockchain-service alive (/health 200, /ready 503) because containers have no internet egress in this sandbox"
+    "evidence": "docker compose up: postgres, redis, migrate+seed, api(healthy), game-server(healthy), web(nginx :8088 → /api 200); blockchain-service alive (/health 200, /ready 503) because containers have no internet egress in this sandbox"
   },
   "api_health": {
     "status": "PASS",
@@ -37,7 +37,7 @@
   },
   "game_server_boot": {
     "status": "PASS",
-    "evidence": "game-server :2567 /health 200 /ready 200; 60-bot load run tick p95 \u2264 5 ms (docs/NETWORKING.md)"
+    "evidence": "game-server :2567 /health 200 /ready 200; 60-bot load run tick p95 ≤ 5 ms (docs/NETWORKING.md)"
   },
   "blockchain_service_boot": {
     "status": "PASS",
@@ -45,7 +45,7 @@
   },
   "api_wallet_login": {
     "status": "PASS",
-    "evidence": "vertical-slice: SIWS nonce \u2192 ed25519 signature \u2192 verify \u2192 cookie session; auth.test replay/expiry rejected"
+    "evidence": "vertical-slice: SIWS nonce → ed25519 signature → verify → cookie session; auth.test replay/expiry rejected"
   },
   "web_wallet_ui": {
     "status": "PASS",
@@ -57,7 +57,7 @@
   },
   "game_join": {
     "status": "PASS",
-    "evidence": "vertical-slice + Playwright Play: API ticket \u2192 Colyseus sector room (single-use gt:<jti>)"
+    "evidence": "vertical-slice + Playwright Play: API ticket → Colyseus sector room (single-use gt:<jti>)"
   },
   "game_move": {
     "status": "PASS",
@@ -65,7 +65,7 @@
   },
   "game_kill_npc": {
     "status": "PASS",
-    "evidence": "vertical-slice: target + fire kills NPC, XP/credits persisted, level \u2265 2 reached"
+    "evidence": "vertical-slice: target + fire kills NPC, XP/credits persisted, level ≥ 2 reached"
   },
   "game_loot": {
     "status": "PASS",
@@ -85,7 +85,7 @@
   },
   "leaderboard_update": {
     "status": "PASS",
-    "evidence": "vertical-slice: GET /api/leaderboard?board=pvp_kills shows pilot score \u2265 1"
+    "evidence": "vertical-slice: GET /api/leaderboard?board=pvp_kills shows pilot score ≥ 1"
   },
   "event_reward": {
     "status": "PASS",
@@ -97,11 +97,11 @@
   },
   "devnet_payout": {
     "status": "PASS",
-    "evidence": "Real devnet (2026-09-30, devnet:e2e): reward grant + claim \u2192 withdrawal cmunrvdsx000icv7d4k9qh42c signed, persisted, broadcast and confirmed by the blockchain-service processor \u2014 payout tx 4zmy7USj3A8UNf2rbSz3WJcgotDuhsBJfsRy8tzAkjBxnu4GZVSNSqunTmMZ5sxbKAgcBBA8hLDCYouUNZ45sySH, status COMPLETED, ledger integrity true"
+    "evidence": "Real devnet (2026-09-30, devnet:e2e): reward grant + claim → withdrawal cmunrvdsx000icv7d4k9qh42c signed, persisted, broadcast and confirmed by the blockchain-service processor — payout tx 4zmy7USj3A8UNf2rbSz3WJcgotDuhsBJfsRy8tzAkjBxnu4GZVSNSqunTmMZ5sxbKAgcBBA8hLDCYouUNZ45sySH, status COMPLETED, ledger integrity true"
   },
   "devnet_deposit": {
     "status": "PASS",
-    "evidence": "Real devnet (2026-09-30, pnpm --filter @nebula/blockchain-service devnet:e2e): player \u2192 treasury SOL+memo deposit 5xJedtWpwuUgTbNsxGYQ6ehD2rJdTMHzZEFEoQgs1VKgK9z1oN77AqUPpY6SjhLJ1hTPytSSxr6byWkzyT8dNw9q verified (recipient/amount/memo/sender/confirmation) and credited; replay rejected (MEMO_MISMATCH)"
+    "evidence": "Real devnet (2026-09-30, pnpm --filter @nebula/blockchain-service devnet:e2e): player → treasury SOL+memo deposit 5xJedtWpwuUgTbNsxGYQ6ehD2rJdTMHzZEFEoQgs1VKgK9z1oN77AqUPpY6SjhLJ1hTPytSSxr6byWkzyT8dNw9q verified (recipient/amount/memo/sender/confirmation) and credited; replay rejected (MEMO_MISMATCH)"
   },
   "renderer_showcase": {
     "status": "PASS",
@@ -121,7 +121,7 @@
   },
   "web_mobile": {
     "status": "PASS",
-    "evidence": "Playwright 390\u00d7844 touch: bottom nav, touch combat HUD with joystick/fire (docs/screenshots/mobile-play.png)"
+    "evidence": "Playwright 390×844 touch: bottom nav, touch combat HUD with joystick/fire (docs/screenshots/mobile-play.png)"
   },
   "admin_build": {
     "status": "PASS",
@@ -133,7 +133,7 @@
   },
   "android_build": {
     "status": "PASS",
-    "evidence": "./gradlew assembleDebug \u2192 app-debug.apk (11 MB) with Android SDK 35"
+    "evidence": "./gradlew assembleDebug → app-debug.apk (11 MB) with Android SDK 35"
   },
   "economy_simulation": {
     "status": "PASS",
@@ -141,11 +141,11 @@
   },
   "coderabbit": {
     "status": "PASS",
-    "evidence": "PR #2 reviewed (22 findings, all fixed); PR #3 review in progress \u2014 see docs/CODERABBIT_REPORT.md"
+    "evidence": "PR #2 reviewed (22 findings, all fixed); PR #3 review in progress — see docs/CODERABBIT_REPORT.md"
   },
   "anchor_cargo_test": {
     "status": "PASS",
-    "evidence": "anchor build (Anchor 1.2.0, Agave 4.3) \u2192 nebula_settlement.so 340 KB + IDL; cargo test -p nebula_settlement: 6 unit + 7 LiteSVM on-chain tests passed; solana-test-validator initialize succeeded (2026-09-30); DEVNET: program DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL deployed (tx 3xC9je4QCXhC56vAoKa5ouU67bjBsimb6CMY5fLafXPB1tEESgwW3Qb2oCQR8XsYayV97F8hNMGc48TznTdTjZpj, upgrade authority 6MoFW2YkhGmV3ugUm2i7MGbva3jd9TVPStcxt3zmTk8U) and initialized (tx 2Yx2kQDYKyAiz6j1Za5gEznH7f2StMRLjq7a4h4esXwWbwswTJwDjawTMW27hygDkBZN5DM7p6PQacSuRPUZyxd5, config GG6QLkLk9VzTWdpjH7bTfNF71r9AjbM5n94okZMQ4UjH, reward signer = treasury)"
+    "evidence": "anchor build (Anchor 1.2.0, Agave 4.3) → nebula_settlement.so 340 KB + IDL; cargo test -p nebula_settlement: 6 unit + 7 LiteSVM on-chain tests passed; solana-test-validator initialize succeeded (2026-09-30); DEVNET: program DvgysAhNTnrBjGxo7qXd8QpvP1XNpJvkfXqjwzqTQohL deployed (tx 3xC9je4QCXhC56vAoKa5ouU67bjBsimb6CMY5fLafXPB1tEESgwW3Qb2oCQR8XsYayV97F8hNMGc48TznTdTjZpj, upgrade authority 6MoFW2YkhGmV3ugUm2i7MGbva3jd9TVPStcxt3zmTk8U) and initialized (tx 2Yx2kQDYKyAiz6j1Za5gEznH7f2StMRLjq7a4h4esXwWbwswTJwDjawTMW27hygDkBZN5DM7p6PQacSuRPUZyxd5, config GG6QLkLk9VzTWdpjH7bTfNF71r9AjbM5n94okZMQ4UjH, reward signer = treasury)"
   },
   "backup_drill": {
     "status": "PASS",
@@ -153,11 +153,11 @@
   },
   "load_100": {
     "status": "PASS",
-    "evidence": "100 fighter bots in one map_vanta_rift sector room (50v50-scale) on a 4-core sandbox, bots on the same machine; 60 s steady window: 1201 ticks (20 Hz held), mean 13.2 ms, p95 in (20,35] ms, 99.75% of ticks \u2264 50 ms budget, 0 errors. First run exposed and fixed: SPEED_HACK false positives from jittered input clumps (MovementBudget now 1 s burst + 25% sustained-excess flag) and TransactionWriteConflict in SERIALIZABLE recordRiskSignal (now per-user row lock), 2026-09-28"
+    "evidence": "100 fighter bots in one map_vanta_rift sector room (50v50-scale) on a 4-core sandbox, bots on the same machine; 60 s steady window: 1201 ticks (20 Hz held), mean 13.2 ms, p95 in (20,35] ms, 99.75% of ticks ≤ 50 ms budget, 0 errors. First run exposed and fixed: SPEED_HACK false positives from jittered input clumps (MovementBudget now 1 s burst + 25% sustained-excess flag) and TransactionWriteConflict in SERIALIZABLE recordRiskSignal (now per-user row lock), 2026-09-28"
   },
   "demo_vercel": {
     "status": "PASS",
-    "evidence": "Vercel builds main with VITE_DEMO_MODE=true (vercel.json); headless Chromium run: demo pilot \u2192 faction \u2192 ship \u2192 /play (offline sim) \u2192 hangar/shop/inventory/wallet/leaderboard/market/clan/missions with no errors"
+    "evidence": "Vercel builds main with VITE_DEMO_MODE=true (vercel.json); headless Chromium run: demo pilot → faction → ship → /play (offline sim) → hangar/shop/inventory/wallet/leaderboard/market/clan/missions with no errors"
   },
   "android_apk": {
     "status": "PASS",
@@ -169,14 +169,18 @@
   },
   "perf_profile": {
     "status": "PASS",
-    "evidence": "CDP CPU profile during combat: shader compile share 18.4% \u2192 2.6%, canvas resize 8.2% \u2192 3.3% (SwiftShader)"
+    "evidence": "CDP CPU profile during combat: shader compile share 18.4% → 2.6%, canvas resize 8.2% → 3.3% (SwiftShader)"
   },
   "two_node": {
     "status": "PASS",
-    "evidence": "tests/integration/horizontal-scaling.test.ts: 2 game-server processes on one Redis \u2014 cross-node matchmaking via remote seat reservation, join-by-id across nodes, cross-node GLOBAL/FACTION chat + presence; 3/3 green three runs in a row (2026-09-30)"
+    "evidence": "tests/integration/horizontal-scaling.test.ts: 2 game-server processes on one Redis — cross-node matchmaking via remote seat reservation, join-by-id across nodes, cross-node GLOBAL/FACTION chat + presence; 3/3 green three runs in a row (2026-09-30)"
   },
   "nft_mint": {
     "status": "PASS",
-    "evidence": "Real devnet (2026-09-30): Metaplex NonFungible for ship_zenith minted to the test player \u2014 mint BGhMsJHGJH9SM4d2AgwPHFrQ4pcxuoexhvdsaSXEAUE3, tx 3hSTEWAxk6xUdV2xUCHuKf425oor17XrL36XEgyhzwW78HyQDGqGGTVNUaCBhgC1cWkNE38hKZuQa4soP3QLTKwf (CONFIRMED); metadata + image hosted at https://nebulafrontier.vercel.app/nft/ship_zenith.{json,png}"
+    "evidence": "Real devnet (2026-09-30): Metaplex NonFungible for ship_zenith minted to the test player — mint BGhMsJHGJH9SM4d2AgwPHFrQ4pcxuoexhvdsaSXEAUE3, tx 3hSTEWAxk6xUdV2xUCHuKf425oor17XrL36XEgyhzwW78HyQDGqGGTVNUaCBhgC1cWkNE38hKZuQa4soP3QLTKwf (CONFIRMED); metadata + image hosted at https://nebulafrontier.vercel.app/nft/ship_zenith.{json,png}"
+  },
+  "devnet_settlement": {
+    "status": "PASS",
+    "evidence": "Real devnet (2026-09-30): settlement:fund 100000000 → fund_vault tx 3mMrJVyrByHZh3ctFgYduiW2CcrtTespmbS4ht9PSUknBrc5yb4hmvc6fUvDZWhppmhQAiAh94D9HTt34Zo7QYeP; devnet:e2e:settlement → withdrawal cmunudmdb0008eu7dgoql9yno paid by the processor via verify_reward, tx 5XqKEeWg4dQAbSccJonLrqKpRz9DVpS2d1792oyfCCRgK5MD48j1BcL1CoCmct3dNnmiUFzR82xgn8iBEGDLmaCN (VerifyReward, 89-byte receipt created, vault AXvUbYig…BVfeX → player 8,795,000 lamports, withdrawal memo), status COMPLETED, receipt matches, duplicate verify_reward rejected, ledger integrity true"
   }
 }

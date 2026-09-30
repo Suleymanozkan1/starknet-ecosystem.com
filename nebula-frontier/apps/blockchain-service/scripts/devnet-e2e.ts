@@ -10,8 +10,11 @@
  *   devnet (default): real devnet RPC, keys from .secrets/ + TREASURY_SECRET, public DB schema.
  *   --mock:           same code path against the in-process mock RPC and an isolated DB schema
  *                     (fallback when the devnet faucet is rate-limited).
+ *   --settlement:     step 4 pays through the nebula_settlement program (`verify_reward` from the
+ *                     program vault, the ONCHAIN_SETTLEMENT_ENABLED path); the vault is topped up from
+ *                     the treasury with `fund_vault` when it cannot cover the payout.
  *
- *   SERVICE_ROLE=blockchain npx tsx --env-file=../../.env scripts/devnet-e2e.ts [--mock]
+ *   SERVICE_ROLE=blockchain npx tsx --env-file=../../.env scripts/devnet-e2e.ts [--mock] [--settlement]
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -22,8 +25,15 @@ import { createDb, getBalance, post, system, userWallet, verifyLedgerIntegrity, 
 import {
   buildAndSendPayout,
   createRpcFromEnv,
+  DEFAULT_SETTLEMENT_PROGRAM_ID,
   explorerUrl,
+  fetchRewardReceipt,
+  getSettlementPdas,
   getSolanaNetwork,
+  getVaultAvailable,
+  rewardIdFor,
+  sendFundVault,
+  sendSettlementPayout,
   loadTreasurySigner,
   sendSolWithMemo,
   verifyDepositTransaction,
@@ -51,12 +61,15 @@ export interface E2eResult {
   treasury: string;
   player: string;
   deposit: { signature: string; explorerUrl: string; amount: string; verified: boolean; rejectedReplay: string };
-  payout: { withdrawalId: string; signature: string; explorerUrl: string; final: string; status: string };
+  payout: { withdrawalId: string; signature: string; explorerUrl: string; final: string; status: string; mode: "direct" | "settlement" };
+  settlement?: { programId: string; vault: string; receipt: { player: string; amount: string }; fundSignature: string | null; duplicateRejected: boolean };
   ledgerIntegrity: boolean;
 }
 
 export async function main(argv = process.argv): Promise<E2eResult> {
   const mock = argv.includes("--mock");
+  const useSettlement = argv.includes("--settlement");
+  const programId = process.env.SETTLEMENT_PROGRAM_ID?.trim() || DEFAULT_SETTLEMENT_PROGRAM_ID;
   process.env.SERVICE_ROLE = "blockchain"; // this script IS blockchain-service tooling
   let rpc: SolanaRpcClient;
   let treasury: KeyPairSigner;
@@ -67,7 +80,12 @@ export async function main(argv = process.argv): Promise<E2eResult> {
     player = await generateKeyPairSigner();
     // Test-only mock RPC (no signature verification): loaded lazily and only in --mock mode.
     const { createMockSolanaRpc } = await import("@nebula/blockchain/testing");
-    rpc = createMockSolanaRpc({ balances: { [treasury.address]: 2n * SOL } }).rpc;
+    const mockChain = createMockSolanaRpc({ balances: { [treasury.address]: 2n * SOL } });
+    rpc = mockChain.rpc;
+    if (useSettlement) {
+      const { installMockSettlement } = await import("@nebula/blockchain/testing");
+      await installMockSettlement(mockChain.state, { rewardSigner: treasury.address, programId });
+    }
     db = await createIsolatedDb("e2e_mock", { truncate: true });
   } else {
     if (getSolanaNetwork() !== "devnet") throw new Error("devnet-e2e runs on devnet only");
@@ -148,6 +166,19 @@ export async function main(argv = process.argv): Promise<E2eResult> {
     // ---- 4. withdrawal → blockchain-service processor → on-chain payout
     const w = await createWithdrawal(db, { userId: user.id, amount: min, address: player.address, idempotencyKey: `e2e-wd-${user.id}` });
     console.info(`[e2e] withdrawal ${w.withdrawalId} ${w.status} final=${w.quote.final}`);
+    let fundSignature: string | null = null;
+    if (useSettlement) {
+      const pdas = await getSettlementPdas(programId);
+      const available = await getVaultAvailable(rpc, pdas);
+      console.info(`[e2e] settlement program ${programId} vault ${pdas.vault} available ${available} lamports`);
+      if (available < w.quote.final) {
+        const top = w.quote.final * 2n - available;
+        const f = await sendFundVault({ rpc, funder: treasury, programId, amount: top, confirmTimeoutMs: 60_000 });
+        console.info(`[e2e] fund_vault ${top} lamports: ${f.status} ${url(f.signature)}`);
+        if (f.status !== "CONFIRMED") throw new Error("vault funding not confirmed");
+        fundSignature = f.signature;
+      }
+    }
     const deps = {
       db,
       rpc,
@@ -158,7 +189,8 @@ export async function main(argv = process.argv): Promise<E2eResult> {
       maxAttempts: 5,
       backoffBaseMs: 5_000,
       confirmPollMs: 2_000,
-      inlineConfirmMs: 30_000
+      inlineConfirmMs: 30_000,
+      settlement: useSettlement ? { programId } : null
     };
     let status = "";
     for (let i = 0; i < 60; i++) {
@@ -171,12 +203,32 @@ export async function main(argv = process.argv): Promise<E2eResult> {
     if (row.status !== "COMPLETED" || !row.signature) throw new Error(`payout not completed: ${row.status}/${row.chainState} ${row.failureReason ?? ""}`);
     console.info(`[e2e] payout ${status}: ${url(row.signature)}`);
     const integrity = (await verifyLedgerIntegrity(db)).every((a) => a.ok);
+    let settlement: E2eResult["settlement"];
+    const rewardId = await rewardIdFor(row.id);
+    const receipt = await fetchRewardReceipt(rpc, programId, rewardId).catch(() => null);
+    const mode = useSettlement && receipt ? "settlement" : "direct";
+    if (useSettlement) {
+      if (!receipt || receipt.player !== player.address || receipt.amount !== row.final) throw new Error("settlement payout has no matching reward receipt");
+      // A second claim for the same withdrawal must fail on chain (receipt PDA already exists).
+      const dup = await sendSettlementPayout({ rpc, signer: treasury, destination: player.address, amount: row.final, memo: `nebula:dup-check:${row.id}`, programId, rewardId, confirmTimeoutMs: 60_000 }).catch(
+        (err: Error) => ({ status: "FAILED" as const, signature: "", error: err.message })
+      );
+      console.info(`[e2e] duplicate verify_reward → ${dup.status}`);
+      settlement = {
+        programId,
+        vault: (await getSettlementPdas(programId)).vault,
+        receipt: { player: receipt.player, amount: receipt.amount.toString() },
+        fundSignature,
+        duplicateRejected: dup.status === "FAILED"
+      };
+    }
     const result: E2eResult = {
       mode: mock ? "mock" : "devnet",
       treasury: treasury.address,
       player: player.address,
       deposit: { signature: sent.signature, explorerUrl: url(sent.signature), amount: dep.amount.toString(), verified: true, rejectedReplay },
-      payout: { withdrawalId: row.id, signature: row.signature, explorerUrl: url(row.signature), final: row.final.toString(), status: row.status },
+      payout: { withdrawalId: row.id, signature: row.signature, explorerUrl: url(row.signature), final: row.final.toString(), status: row.status, mode },
+      ...(settlement ? { settlement } : {}),
       ledgerIntegrity: integrity
     };
     console.info(JSON.stringify(result, null, 2));

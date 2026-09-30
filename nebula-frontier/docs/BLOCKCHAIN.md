@@ -7,7 +7,7 @@ NEBULA FRONTIER uses Solana **devnet only**. `SOLANA_NETWORK` accepts `devnet` /
 | `@nebula/blockchain` | `packages/blockchain` | `@solana/kit` 8.4 helpers: RPC, SIWS login message + signature verification, deposit verification, payout build/send/confirm, memo idempotency lookup, NFT metadata/mint, mock RPC |
 | blockchain-service | `apps/blockchain-service` | **The only process that holds the treasury key.** Withdrawal queue (BullMQ + Postgres), confirmations, retries, economy controller, reward expiry, internal HTTP |
 | API wallet routes | `apps/api/src/routes/wallet.ts` | Wallet link, deposits, withdrawal requests (no keys) |
-| Settlement program | `programs/nebula_settlement` | Anchor 1.2 program (reward verification / escrow / tournament settlement). Built for SBF and tested on-chain in LiteSVM; **not deployed to devnet in the MVP** |
+| Settlement program | `programs/nebula_settlement` | Anchor 1.2 program (reward verification / escrow / tournament settlement). Built for SBF, tested on-chain in LiteSVM, **deployed + initialized on devnet**. Withdrawals pay through `verify_reward` when `ONCHAIN_SETTLEMENT_ENABLED=true` (see [On-chain settlement](#on-chain-settlement-feature-flag)) |
 
 ## Wallet authentication (Sign-In-With-Solana)
 
@@ -127,7 +127,7 @@ Treasury bootstrap (`scripts/economy-bootstrap.ts` → `bootstrapTreasury`): rea
 
 `packages/blockchain/src/nft.ts`: Metaplex JSON builder (name ≤ 32 B, symbol, description, image, attributes: family, item, rarity, ship class, faction, edition) and `buildMintNftInstructions` using `@metaplex-foundation/mpl-token-metadata-kit` `createNft` → `[createV1, mintV1]` (works with kit 8). Families: `LEGENDARY_SHIP`, `LIMITED_SKIN`, `FOUNDER_COSMETIC` — only definitions with `nftEligible: true`, never power items. Disabled unless `NFT_MINTING_ENABLED=true`; devnet script `scripts/mint-devnet-nft.ts`.
 
-## Why the Anchor program is not deployed in the MVP
+## The Anchor program
 
 `programs/nebula_settlement` (Anchor 1.2, builds for SBF, see [Build and on-chain tests](#build-and-on-chain-tests)) contains real instruction handlers with account validation and events:
 - **Admin:** `initialize` (only the program's upgrade authority, checked via `ProgramData`), `update_config` (rotate the reward signer and change the fee / per-claim cap / per-epoch emission cap), two-step authority transfer (`propose_authority` → `accept_authority`), and `set_paused`.
@@ -140,7 +140,7 @@ Treasury bootstrap (`scripts/economy-bootstrap.ts` → `bootstrapTreasury`): rea
   - `cancel_tournament`.
   - `refund_entry`: refunds fee + rent when cancelled, and rent only after settlement.
 
-**Required pre-deployment steps** (the program is not deployed yet):
+**Hardening steps** (the devnet deployment uses the deployer as authority and the treasury as reward signer; do these before anything beyond devnet):
 1. Create a dedicated deployer / upgrade-authority keypair at `.secrets/program-deployer-devnet.json`. It must never be the treasury key. Run `anchor deploy`, then call `initialize`, signed by that upgrade authority. `initialize` rejects any other signer.
 2. Create a **separate admin key**, ideally a multisig, and hand config authority to it with `propose_authority(<admin>)`, signed by the deployer, then `accept_authority`, signed by the admin. The deployer then keeps only upgrade rights. Consider moving those to the multisig as well, or making the program immutable.
 3. Set the reward signer with `update_config`. The reward signer is the game-reward co-signing key, distinct from both the treasury and the admin. Also set the per-claim and per-epoch emission caps.
@@ -198,11 +198,25 @@ Result on 2026-09-30: `test result: ok. 6 passed` (unit) and `test result: ok. 7
 
 Deploy: `solana program deploy target/deploy/nebula_settlement.so --program-id <program-keypair> --keypair <deployer> --upgrade-authority <deployer> --url devnet --use-rpc` (`--use-rpc` avoids the public RPC's TPU write limits). Initialize: `node scripts/devnet-initialize.mjs <deployer-keypair> <reward-signer>` (refuses any non-devnet genesis). The program id changed from the originally reserved `Huqa9x…` because that keypair was never available; the old id was never deployed.
 
-It is intentionally **not deployed** for the MVP because:
-1. The economy's safety controls (eligibility, caps, bot/risk review, circuit breakers, treasury health throttling) live off-chain and change often; moving settlement on-chain now would duplicate them or bypass them.
-2. Treasury transfers through one audited service give a single choke point with idempotency, manual review and compensating ledger entries; an on-chain vault would need an audit, upgrade-authority governance and key management first.
-3. Deploying requires an upgrade-authority/governance setup and program-deploy SOL; the MVP only needs system transfers.
-The path forward: deploy to devnet behind a feature flag, have blockchain-service call `verify_reward` / `settle_tournament` instead of plain transfers, keep the off-chain policy as the signer's gate.
+## On-chain settlement (feature flag)
+
+Off by default. `ONCHAIN_SETTLEMENT_ENABLED=true` (+ optional `SETTLEMENT_PROGRAM_ID`, default the devnet id above) makes blockchain-service pay native-SOL withdrawals through `verify_reward` instead of a plain treasury transfer. The off-chain economy policy (eligibility, caps, risk review, breakers, treasury health) stays the gate: the program is only reached after `preflightGate`, and the treasury key signs as reward signer.
+
+| Step | Where | What happens |
+|---|---|---|
+| Choose the path | `apps/blockchain-service/src/processor.ts` `choosePayoutMode` | `checkSettlementEligibility` reads the Config PDA + vault and mirrors the program's checks (not paused, reward signer = treasury, ≤ per-claim cap, epoch emission, vault above its rent floor). Any failure → **direct transfer fallback**, logged and counted (`withdrawal_settlement_fallback_total`). SPL-mint payouts always go direct |
+| Pay | `packages/blockchain/src/settlement.ts` `sendSettlementPayout` | One tx: `verify_reward(reward_id = sha256("nf-reward:" + withdrawalId), amount)` + the same SPL memo (`nebula:wd:<id>`) as a direct payout. Treasury = fee payer + reward signer. Signature persisted **before** broadcast (same `onSigned` as direct payouts) |
+| Confirm / recover | `findGenuinePayout` | The memo lookup finds either kind. A candidate that is not a treasury transfer is checked with `verifySettlementPayout`: success, treasury fee payer, memo, exact vault → player CPI transfer, and the on-chain receipt names the same player + amount |
+| Never twice | receipt PDA `["reward", reward_id]` | A second `verify_reward` for the withdrawal fails on chain. While a receipt exists the processor never resubmits and never refunds (even after max attempts) — it holds and logs until the signature is found |
+| Vault | `scripts/settlement-fund-vault.ts` | `fund_vault` from the treasury (devnet only, ≤ 2 SOL per call); `--status` prints vault liquidity, caps and epoch emission |
+
+Metrics: `settlement_enabled`, `withdrawal_payouts_by_mode_total{mode="settlement"|"direct"}`, `withdrawal_settlement_fallback_total`, `withdrawal_receipt_without_signature_total`.
+
+Tests: `packages/blockchain/src/settlement.test.ts` (PDAs of the deployed program, account layouts, single claim, wrong signer, spoof, eligibility), `apps/blockchain-service/src/processor.test.ts` "on-chain settlement" (vault payout + receipt + ledger, fallbacks for empty vault / cap / pause, flag off, adoption of a landed payout, dropped tx resubmitted only after expiry, receipt without signature → hold, no refund) and `e2e-mock.test.ts --settlement`. The mock RPC emulates `verify_reward` / `fund_vault` with the program's checks (`installMockSettlement`).
+
+**Devnet run (2026-09-30):** `settlement:fund 100000000` → `fund_vault` tx `3mMrJVyrByHZh3ctFgYduiW2CcrtTespmbS4ht9PSUknBrc5yb4hmvc6fUvDZWhppmhQAiAh94D9HTt34Zo7QYeP`; then `devnet:e2e:settlement`: withdrawal `cmunudmdb0008eu7dgoql9yno` paid by the processor through `verify_reward`, tx `5XqKEeWg4dQAbSccJonLrqKpRz9DVpS2d1792oyfCCRgK5MD48j1BcL1CoCmct3dNnmiUFzR82xgn8iBEGDLmaCN` (logs: `Instruction: VerifyReward`, receipt account created (89 bytes), vault `AXvUbYig…BVfeX` → player 8,795,000 lamports, memo `nebula:wd:cmunudmdb0008eu7dgoql9yno`), status COMPLETED, receipt matches, a duplicate `verify_reward` for the same withdrawal was rejected, ledger integrity true.
+
+Before enabling it beyond devnet: a professional program audit, upgrade-authority governance (multisig) and a reward signer separate from the treasury fee payer.
 
 ## Scripts
 
@@ -211,6 +225,8 @@ The path forward: deploy to devnet behind a feature flag, have blockchain-servic
 | `npx tsx --env-file=.env scripts/devnet-setup.ts` | Generate/reuse treasury + test player keypairs in `.secrets/`, update `.env`, request faucet airdrops with retries |
 | `npx tsx --env-file=.env scripts/economy-bootstrap.ts` | Reconcile ledger funding with the real treasury balance |
 | `SERVICE_ROLE=blockchain npx tsx --env-file=.env scripts/devnet-e2e.ts [--mock]` | Real end-to-end: fund player, deposit+verify, bootstrap, reward, withdrawal, payout via the processor. `--mock` runs the identical code against the in-process mock RPC and an isolated DB schema |
+| `pnpm --filter @nebula/blockchain-service devnet:e2e:settlement` | Same flow, payout through `verify_reward` (tops up the vault if needed); `--mock --settlement` against the emulated program |
+| `pnpm --filter @nebula/blockchain-service settlement:fund <lamports>` / `-- --status` | Fund the settlement vault from the treasury / print vault + caps |
 | `NFT_MINTING_ENABLED=true SERVICE_ROLE=blockchain npx tsx --env-file=.env scripts/mint-devnet-nft.ts --owner <addr>` | Mint one devnet NFT |
 | `pnpm --filter @nebula/blockchain-service dev` | Run the service |
 

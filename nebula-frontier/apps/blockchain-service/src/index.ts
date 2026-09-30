@@ -7,7 +7,9 @@ import { Redis } from "ioredis";
 import { createDb } from "@nebula/database";
 import {
   assertRpcCluster,
+  checkSettlementEligibility,
   createRpcFromEnv,
+  getSettlementPdas,
   getRewardMint,
   getSolanaNetwork,
   getTreasuryAddress,
@@ -55,6 +57,15 @@ async function main(): Promise<void> {
       await new Promise((r) => setTimeout(r, waitMs));
     }
   }
+  if (env.settlement) {
+    if (mint) log.warn("ONCHAIN_SETTLEMENT_ENABLED has no effect for SPL payouts (the program vault holds SOL)", { mint });
+    // Boot-time probe only (a 1-lamport check); every payout re-checks eligibility and falls back when needed.
+    const probe = await checkSettlementEligibility(rpc, { pdas: await getSettlementPdas(env.settlement.programId), rewardSigner: treasuryAddress, amount: 1n }).catch((err: Error) => ({ ok: false as const, reason: err.message }));
+    metrics.set("settlement_enabled", 1);
+    log.info("on-chain settlement enabled", { programId: env.settlement.programId, ready: probe.ok, ...(probe.ok ? {} : { reason: probe.reason }) });
+  } else {
+    metrics.set("settlement_enabled", 0);
+  }
   const worker = createWithdrawalWorker(
     connection,
     {
@@ -68,7 +79,8 @@ async function main(): Promise<void> {
       backoffBaseMs: env.backoffBaseMs,
       confirmPollMs: env.confirmPollMs,
       inlineConfirmMs: 30_000,
-      metrics
+      metrics,
+      settlement: env.settlement
     },
     { concurrency: env.concurrency }
   );

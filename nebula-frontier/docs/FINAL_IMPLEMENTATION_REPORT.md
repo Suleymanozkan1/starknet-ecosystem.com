@@ -79,9 +79,9 @@ The full matrix has columns `| ID | Category | Requirement | Expected | Status |
 | Clans, stations, missions, squads, friends, chat, mail, notifications, bounties | Implemented | `apps/api/src/routes/{clans,social}.ts`, `clan-station.test.ts`, `api.test.ts`, `platform.test.ts` |
 | Market, auction, shop, premium, battle pass, seasons, achievements, leaderboards | Implemented | `market.test.ts`, `premium.test.ts`, `api.test.ts` |
 | Economy (budget, caps, treasury health, breakers, inflation, controller) | Implemented | `packages/economy`, 270-run simulation with 0 invariant violations |
-| Wallet login, deposits, withdrawals, payouts | Implemented; real devnet payout BLOCKED | `packages/blockchain`, `apps/blockchain-service`, `wallet.test.ts`, `vertical-slice.test.ts` |
-| NFT (Metaplex) | Partial: feature-flagged, never minted on devnet | `packages/blockchain/src/nft.ts` |
-| Anchor settlement program | Partial: `cargo check` and 6 unit tests pass; not built as BPF, not deployed | `programs/nebula_settlement` |
+| Wallet login, deposits, withdrawals, payouts | Implemented; real devnet deposit + payout done | `packages/blockchain`, `apps/blockchain-service`, `wallet.test.ts`, `vertical-slice.test.ts` |
+| NFT (Metaplex) | Implemented: feature-flagged, minted on devnet | `packages/blockchain/src/nft.ts` |
+| Anchor settlement program | Implemented: SBF build, 6 unit + 7 LiteSVM tests, deployed + initialized on devnet; withdrawals pay through `verify_reward` behind `ONCHAIN_SETTLEMENT_ENABLED` (real devnet payout done) | `programs/nebula_settlement`, `packages/blockchain/src/settlement.ts` |
 
 ## 6. UI Audit
 
@@ -213,13 +213,13 @@ One bad signature no longer strands a paid deposit.
 - The treasury key loads only when `SERVICE_ROLE=blockchain`, from `TREASURY_SECRET_FILE` (0600). It is never in the shared `.env`, the frontend, logs or git.
 - The mock RPC is only exported through `@nebula/blockchain/testing`.
 
-**Runtime:** the payout and deposit pipelines pass end to end against a mock chain that decodes the real signed transactions. **Real devnet transactions are BLOCKED:** the faucet returns 429, and treasury `Hd6r6rGc8CNXRzYV8DwsU6vqh8aPM3711r2UC8Z3vbhe` holds 0 SOL.
+**Runtime:** the payout and deposit pipelines pass end to end against a mock chain that decodes the real signed transactions, and on real devnet: deposit `5xJedtWp…`, direct payout `4zmy7USj…`, program payout through `verify_reward` `5XqKEeWg…` (see docs/BLOCKCHAIN.md).
 
 **Anchor program:**
 - `initialize` is restricted to the upgrade authority.
 - It has `update_config`, a two-step authority transfer, a per-epoch emission cap, and pause checks.
-- `cargo test` runs 6 unit tests, all passing.
-- It is not deployed, by design, for the MVP.
+- `cargo test` runs 6 unit tests and 7 LiteSVM on-chain tests, all passing.
+- Deployed and initialized on devnet (`DvgysAhN…`). blockchain-service pays withdrawals through `verify_reward` when `ONCHAIN_SETTLEMENT_ENABLED=true` (receipt PDA per withdrawal, direct-transfer fallback).
 
 ## 13. Economy Audit
 

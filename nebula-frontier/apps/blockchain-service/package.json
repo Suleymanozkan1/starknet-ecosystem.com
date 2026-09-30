@@ -12,7 +12,9 @@
     "economy:bootstrap": "tsx --env-file-if-exists=../../.env scripts/economy-bootstrap.ts",
     "devnet:e2e": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts",
     "devnet:e2e:mock": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts --mock",
-    "nft:mint": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/mint-devnet-nft.ts"
+    "nft:mint": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/mint-devnet-nft.ts",
+    "devnet:e2e:settlement": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/devnet-e2e.ts --settlement",
+    "settlement:fund": "SERVICE_ROLE=blockchain tsx --env-file-if-exists=../../.env scripts/settlement-fund-vault.ts"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-token-metadata-kit": "0.0.3",

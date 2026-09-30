@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-30T07:46:22.905Z",
-  "total": 257,
-  "implemented": 257,
+  "generatedAt": "2026-09-30T08:28:17.503Z",
+  "total": 258,
+  "implemented": 258,
   "partial": 0,
   "notImplemented": 0,
   "blocked": 0,
@@ -584,7 +584,7 @@
       "BLOCKED": 0
     },
     "SMART CONTRACT": {
-      "IMPLEMENTED": 1,
+      "IMPLEMENTED": 2,
       "PARTIAL": 0,
       "NOT_IMPLEMENTED": 0,
       "BLOCKED": 0
@@ -1935,6 +1935,13 @@
       "id": "BC-11",
       "category": "DEVNET",
       "requirement": "Devnet-only operation",
+      "status": "IMPLEMENTED",
+      "why": []
+    },
+    {
+      "id": "BC-13",
+      "category": "SMART CONTRACT",
+      "requirement": "On-chain settlement wired into the payout service behind a feature flag (verify_reward, receipt-PDA idempotency, fallback)",
       "status": "IMPLEMENTED",
       "why": []
     },

@@ -21,6 +21,11 @@ export interface VerifyDepositInput {
   memo: string;
   /** The user's verified wallet; must be the signer & source of the transfer. */
   expectedSender: string;
+  /**
+   * Default true: the sender must sign. False for program-owned sources (e.g. the settlement vault PDA,
+   * which only the program can debit) — pair it with expectedFeePayer.
+   */
+  senderMustSign?: boolean;
   /** When set, this account must be the transaction fee payer (first account key, a signer). */
   expectedFeePayer?: string;
   /** "confirmed" (default) or "finalized". */
@@ -158,7 +163,7 @@ export async function verifyDepositTransaction(rpc: SolanaRpcClient, input: Veri
 
     const keys = tx.transaction.message.accountKeys;
     const senderKey = keys.find((k) => k.pubkey === input.expectedSender);
-    if (!senderKey || !senderKey.signer) return reject(DepositRejection.WRONG_SENDER, "Transaction was not signed by your verified wallet");
+    if (!senderKey || (input.senderMustSign !== false && !senderKey.signer)) return reject(DepositRejection.WRONG_SENDER, "Transaction was not signed by your verified wallet");
     if (input.expectedFeePayer !== undefined) {
       const feePayer = keys[0];
       if (!feePayer || feePayer.pubkey !== input.expectedFeePayer || !feePayer.signer) {
